@@ -71,6 +71,11 @@ class _Completions:
             call_kwargs["max_completion_tokens"] = max_completion_tokens
         if response_format is not None:
             call_kwargs["response_format"] = response_format
+        # Reasoning models (gpt-5, o-series) otherwise default to heavy reasoning,
+        # which is slow and costly for a simple grounded classification.  Cap it
+        # (override via LLM_REASONING_EFFORT).  litellm.drop_params=True drops it
+        # automatically for models that don't support the parameter.
+        call_kwargs.setdefault("reasoning_effort", os.getenv("LLM_REASONING_EFFORT", "low"))
         return litellm.completion(**call_kwargs)
 
 

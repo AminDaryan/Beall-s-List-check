@@ -164,7 +164,10 @@ def assess_venue(venue_info, candidates, *, client, deployment, token_usage):
             content="",
             token_usage=token_usage,
             empty_payload=_EMPTY_VERDICT,
-            max_completion_tokens=300,
+            # Generous budget: reasoning models (e.g. gpt-5) spend "reasoning
+            # tokens" against this cap, so a small value (e.g. 300) leaves no
+            # room for the actual JSON answer and yields an empty response.
+            max_completion_tokens=3000,
             preview_chars=0,
         )
     answer = str(verdict.get("on_bealls_list", "uncertain")).strip().lower()
