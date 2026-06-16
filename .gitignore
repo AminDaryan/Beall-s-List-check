@@ -1,0 +1,22 @@
+# Excel lock files (the vendored snapshot + any tracked .xlsx are kept)
+~$*.xlsx
+~$*.xls
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python virtual environments
+.venv/
+venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Generated output workbooks (the vendored bealls_snapshot.json IS tracked)
+src/bealls_list_check/results/
+
+# Input corpus: Semantic Scholar dump JSON files (large; not committed)
+docs/

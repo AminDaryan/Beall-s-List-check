@@ -1,0 +1,9 @@
+# Beall's List check — dependencies
+litellm>=1.52.0,<1.75.0      # LLM access (only used by the "thorough" check)
+openai>=1.40.0               # litellm backend for OpenAI / Azure
+python-dotenv>=1.0.1         # read settings from .env
+requests>=2.32.0             # scrape Beall's List + optional Crossref lookups
+openpyxl>=3.1.2              # write the Excel report
+
+# Web UI (ui/app.py) — optional; only needed to run the Streamlit interface
+streamlit>=1.30.0
