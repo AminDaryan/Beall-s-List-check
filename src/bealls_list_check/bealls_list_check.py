@@ -30,6 +30,7 @@ from pathlib import Path
 import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.cell_range import CellRange
 
 _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE))
@@ -130,15 +131,18 @@ def load_corpus():
 # EXCEL OUTPUT
 # =============================================================================
 
-# Per-paper layout: each paper occupies a BLOCK of ROWS_PER_PAPER rows.  The #
-# and Status cells are merged down the block; the Paper / Semantic Scholar venue
-# / Mentioned in / Match columns each show one labelled field per row (built by
-# the _*_subrows helpers below), so every field is its own selectable row instead
-# of text crammed into one cell.  Only the DOI row (-> article) and the 'Listed
-# as' row (-> Beall entry) are hyperlinks.  Paper / Semantic Scholar venue /
-# Mentioned in all describe the same paper, so they share a merged "Paper
-# specifications" header band (see _write_results_header).  Data quality is no
-# longer a column — it gets its own sheet.
+# Per-paper layout: each paper occupies a BLOCK whose height is the larger of
+# ROWS_PER_PAPER and the number of 'Mentioned in' venues.  Within a block every
+# column's logical cells (built by the _*_subrows helpers below) are spread
+# evenly and MERGED to fill the block, so there are no blank padding cells: a
+# column holding a single value becomes one cell spanning the whole block (e.g. a
+# lone linked venue), while 'Mentioned in' grows a taller block to fit every
+# linked venue and the other columns keep their 4 / 4 / 3 fields merged to fit.
+# The DOI row (-> article), each 'Mentioned in' venue (-> the venue's own site)
+# and the 'Listed as' row (-> Beall entry) are hyperlinks.  Paper / Semantic
+# Scholar venue / Mentioned in all describe the same paper, so they share a
+# merged "Paper specifications" header band (see _write_results_header).  Data
+# quality is no longer a column — it gets its own sheet.
 COLUMNS = [
     ("#",                      6),
     ("Status",                 12),
@@ -327,19 +331,21 @@ def _match_subrows(r):
             (f"Beall list: {_list_plain(r.get('list_source'))}", None),
             (f"Why flagged: {why}", None),
         ]
-    return [(note, None), ("", None), ("", None)]
+    return [(note, None)]
 
 
 def _mentions_subrows(r):
-    """One row per journal / publisher / venue NAME the paper is recorded under.
+    """One row per LINKED venue tied to the paper (see match._collect_mentions).
 
-    Names only (no links).  Returns ALL of them — this is the one column whose
-    paper block grows to fit, so nothing is hidden however many names there are.
+    Each entry is "<Type>: <name>" hyperlinked to the venue's own site; venues
+    with no link are omitted, so this can be empty -> a single "—".  Returns ALL
+    of them — this is the one column whose block grows to fit, so nothing is
+    hidden however many linked venues there are.
     """
     mentions = r.get("mentions") or []
     if not mentions:
         return [("—", None)]
-    return [(m, None) for m in mentions]
+    return [(text, url) for text, url in mentions]
 
 
 def _data_quality_subrows(r):
@@ -363,11 +369,33 @@ def _estimate_row_height(text, width):
     return min(140, max(16, lines * 15))
 
 
-def _padded_subrows(subrows, n):
-    """Pad (or truncate) a sub-row list to exactly *n* ``(text, url)`` tuples."""
-    subrows = list(subrows)[:n]
-    subrows += [("", None)] * (n - len(subrows))
-    return subrows
+def _row_spans(n_cells, block_rows):
+    """Split *block_rows* physical rows among *n_cells* logical cells as evenly
+    as possible: ``[(start_offset, span), ...]`` with the spans summing to
+    *block_rows*.  One cell yields a single span over the whole block — the
+    merged-cell behaviour 'Mentioned in' needs so a lone value fills the block
+    instead of leaving blank padding rows beneath it.
+    """
+    return [(i * block_rows // n_cells,
+             (i + 1) * block_rows // n_cells - i * block_rows // n_cells)
+            for i in range(n_cells)]
+
+
+def _fast_merge(ws, min_row, min_col, max_row, max_col):
+    """Register a merged range WITHOUT openpyxl's O(n) membership scan.
+
+    ``ws.merge_cells()`` -> ``MultiCellRange.add()`` runs ``if cr not in self``
+    on every call, and ``MultiCellRange.__contains__`` scans all existing ranges
+    — so merging N ranges is O(N²).  On a 22k-paper workbook that is ~110k merges
+    and dominates the write (~93% of save time, pushing it past 15 min).  Our
+    ranges are disjoint by construction, so we add the ``CellRange`` straight to
+    the underlying ``set`` (O(1)) and skip the scan.  We also skip
+    ``_clean_merge_range`` — the covered cells carry no value (only borders /
+    shading, set deliberately so the grid renders across the merge), so there is
+    nothing to clean.
+    """
+    ws.merged_cells.ranges.add(
+        CellRange(min_col=min_col, min_row=min_row, max_col=max_col, max_row=max_row))
 
 
 def _write_results_header(ws, columns, border):
@@ -409,11 +437,14 @@ def _write_results_header(ws, columns, border):
 def _write_results_sheet(ws, results, extra_columns=None, status_key="status"):
     """Write the Results sheet: one multi-row block per paper.
 
-    Each paper spans at least ROWS_PER_PAPER rows (more only when 'Mentioned in'
-    has more names than that).  The # and Status cells are merged down the block;
-    the Paper / Semantic Scholar venue / Mentioned in / Match columns (and any
-    *extra_columns*) show one labelled field per row.  Cells are styled *before*
-    the merge so borders render across the merged ranges.
+    Each paper's block is the taller of ROWS_PER_PAPER and its number of
+    'Mentioned in' venues.  Within the block every column's logical cells (from
+    the _*_subrows helpers) are spread evenly and MERGED to fill the block, so
+    there are never blank padding cells: a column holding a single value becomes
+    one cell spanning the whole block (a lone linked venue, or the # / Status
+    cells), while 'Mentioned in' grows the block to list every linked venue and
+    the other columns keep their fields merged to fit.  Cells are bordered before
+    merging so the grid renders across every merged range.
 
     extra_columns: optional list of ``(header, width, subrows_fn)`` appended
     after the core columns.  ``subrows_fn(result)`` returns
@@ -437,62 +468,71 @@ def _write_results_sheet(ws, results, extra_columns=None, status_key="status"):
                               top=Side(style="medium", color="7F9BC4"))
 
     n_core = len(COLUMNS)
+    n_cols = len(columns)
     row = HEADER_ROWS + 1                                # data starts below the 2-row header
     for i, r in enumerate(results):
-        # Build each column's sub-rows first, then size the block to the tallest
-        # one — so 'Mentioned in' can list EVERY name (the block grows to fit),
-        # while Paper / venue / Match keep their fixed fields and pad with blanks.
+        # Build each column's logical cells, then size the block to the tallest
+        # column (only 'Mentioned in' ever exceeds ROWS_PER_PAPER).
         raw_cols = [
             (_PAPER_COL, _paper_subrows(r)),
             (_VENUE_COL, _venue_subrows(r)),
-            (_MATCH_COL, _match_subrows(r)),
             (_MENTIONS_COL, _mentions_subrows(r)),
+            (_MATCH_COL, _match_subrows(r)),
         ]
         for k, (_h, _w, fn) in enumerate(extra_columns):
             raw_cols.append((n_core + 1 + k, fn(r)))
         block_rows = max(ROWS_PER_PAPER, max(len(sr) for _, sr in raw_cols))
-        col_subrows = [(col, _padded_subrows(sr, block_rows)) for col, sr in raw_cols]
 
         top = row
         bottom = top + block_rows - 1
         shade_fill = PatternFill("solid", fgColor=_BLOCK_SHADE) if i % 2 else None
         status = r.get(status_key) or r.get("status", "")
-        status_fill = PatternFill(
-            "solid", fgColor=STATUS_FILL_COLORS.get(status, "FFFFFF")
-        )
+        status_fill = PatternFill("solid", fgColor=STATUS_FILL_COLORS.get(status, "FFFFFF"))
+        heights = [16] * block_rows
 
+        # 1) Lay a bordered (and shaded) cell into every physical position first,
+        #    so the grid lines render across the merged ranges built in step 3.
         for sub in range(block_rows):
             rr = top + sub
             cell_border = block_top_border if sub == 0 else border   # divider on row 1
-            # # and Status: value only on the block's first row; merged later.
-            num = ws.cell(row=rr, column=_NUM_COL, value=(i + 1) if sub == 0 else None)
-            num.font, num.border, num.alignment = _DATA_FONT, cell_border, _CENTER
-            if shade_fill:
-                num.fill = shade_fill
-            st = ws.cell(row=rr, column=_STATUS_COL, value=status if sub == 0 else None)
-            st.font, st.border, st.alignment, st.fill = (
-                status_font, cell_border, _CENTER, status_fill
-            )
-
-            height = 16
-            for col, subrows in col_subrows:
-                text, url = subrows[sub]
-                cell = ws.cell(row=rr, column=col, value=text)
+            for col in range(1, n_cols + 1):
+                cell = ws.cell(row=rr, column=col)
                 cell.font, cell.border, cell.alignment = _DATA_FONT, cell_border, _LEFT
                 if shade_fill:
                     cell.fill = shade_fill
+            ws.cell(row=rr, column=_NUM_COL).alignment = _CENTER
+            st = ws.cell(row=rr, column=_STATUS_COL)
+            st.font, st.alignment, st.fill = status_font, _CENTER, status_fill
+
+        # 2) # and Status values on the first row, then merge down the block.
+        ws.cell(row=top, column=_NUM_COL, value=i + 1)
+        ws.cell(row=top, column=_STATUS_COL, value=status)
+        if block_rows > 1:
+            _fast_merge(ws, top, _NUM_COL, bottom, _NUM_COL)
+            _fast_merge(ws, top, _STATUS_COL, bottom, _STATUS_COL)
+
+        # 3) Each content column: place its logical cells, evenly distributed and
+        #    merged to fill the block (N values -> N cells, never blank pads).
+        for col, subrows in raw_cols:
+            width = columns[col - 1][1]
+            for (text, url), (start, span) in zip(subrows, _row_spans(len(subrows), block_rows)):
+                rr = top + start
+                cell = ws.cell(row=rr, column=col, value=text)
+                cell.alignment = _LEFT
+                cell.border = block_top_border if start == 0 else border
+                if shade_fill:
+                    cell.fill = shade_fill
+                cell.font = link_font if url else _DATA_FONT
                 if url:
                     cell.hyperlink = url
-                    cell.font = link_font
-                height = max(height, _estimate_row_height(text, columns[col - 1][1]))
-            ws.row_dimensions[rr].height = height
+                if span > 1:
+                    _fast_merge(ws, rr, col, rr + span - 1, col)
+                per_row = _estimate_row_height(text, width) / span
+                for s in range(span):
+                    heights[start + s] = max(heights[start + s], per_row)
 
-        # Merge # and Status down the block (after styling, so borders draw).
-        if block_rows > 1:
-            ws.merge_cells(start_row=top, start_column=_NUM_COL,
-                           end_row=bottom, end_column=_NUM_COL)
-            ws.merge_cells(start_row=top, start_column=_STATUS_COL,
-                           end_row=bottom, end_column=_STATUS_COL)
+        for sub in range(block_rows):
+            ws.row_dimensions[top + sub].height = heights[sub]
 
         row = bottom + 1
 
@@ -683,9 +723,11 @@ _LEGEND_SECTIONS = [
         "rows": [
             ("(blocks)", "4 rows per paper", "Each paper occupies a block that "
              "is 4 rows tall for every column EXCEPT 'Mentioned in', which grows "
-             "to fit all its names (so a paper with 10 names is 10 rows tall, and "
-             "the other columns simply leave the extra rows blank). Alternating "
-             "blocks are lightly shaded so they are easy to tell apart."),
+             "to fit all its linked venues (so a paper with 10 linked venues is "
+             "10 rows tall). Within a block each column's values are merged to "
+             "fill it — a column with one value is a single cell spanning the "
+             "whole block, never blank padding rows. Alternating blocks are "
+             "lightly shaded so they are easy to tell apart."),
             ("#", "(merged)", "Sequential paper number; the cell spans the "
              "paper's whole block."),
             ("Status", "(merged)", "Classification of the paper (see the Status "
@@ -704,12 +746,15 @@ _LEGEND_SECTIONS = [
              "of scope); 'Domain' is the venue website host — the main match "
              "key. (Named 'Semantic Scholar venue' to distinguish it from the "
              "'Mentioned in' names beside it.)"),
-            ("Mentioned in", "one row per name",
-             "All the journal / publisher / venue NAMES Semantic Scholar ties to "
-             "the paper (canonical name + any alternate names). Names only — no "
-             "web links. Useful for auditing a flag or untangling a merged-venue "
-             "record. Every name is listed — this is the one column whose block "
-             "grows to fit them all."),
+            ("Mentioned in", "one row per linked venue",
+             "Each journal / publisher / venue tied to the paper THAT HAS A WEB "
+             "LINK, labelled by its Semantic Scholar type (e.g. 'Journal: …') and "
+             "linking to the venue's own site. Venues with no link are omitted, "
+             "and there is one entry per distinct venue URL (canonical + "
+             "alternates), so a merged-venue record shows every site it points "
+             "at. This is the one column whose block grows to fit them all (6 "
+             "linked venues -> a 6-row block; the other columns keep their "
+             "fields, merged to fit)."),
             ("Match", "Listed as / Beall list / Why flagged",
              "Why the paper was flagged, one field per row. 'Listed as' is the "
              "Beall's List entry that matched (a link to it); 'Beall list' is "

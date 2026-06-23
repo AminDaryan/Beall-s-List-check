@@ -47,7 +47,9 @@ from normalize import normalize_name, significant_tokens, similarity
 from user_lists import load_user_entries, WhitelistMatcher
 
 from common.llm_helpers import TokenUsageTracker, llm_call_parse_retry, print_token_usage_report
-from openai_client import client as default_client, AZURE_OPENAI_DEPLOYMENT
+from openai_client import (
+    client as default_client, AZURE_OPENAI_DEPLOYMENT, validate_provider_config,
+)
 
 
 # Condensed Beall "how to recognize predatory journals" criteria (2015), used to
@@ -279,6 +281,10 @@ def main(argv=None):
     print("=" * 70)
     print("Beall's List check — LLM second pass")
     print("=" * 70)
+
+    # Fail fast on a missing key/endpoint BEFORE the long deterministic pass,
+    # rather than crashing on the first LLM call ~minutes later.
+    validate_provider_config()
 
     index, snapshot, n_black = det.build_index(args.blacklist)
     if n_black:

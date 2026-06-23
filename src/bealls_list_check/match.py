@@ -21,7 +21,6 @@ Design choices that keep results *truthful*:
     yields ``review``.
 """
 
-import re
 import sys
 from pathlib import Path
 
@@ -148,35 +147,44 @@ def _paper_url(paper, ext):
     return oa.get("url") or paper.get("url") or ""
 
 
-# A mention should be a human-readable venue NAME, never a web address.  This
-# catches "http(s)://…", "www.…", and bare host strings like "scirp.org" or
-# "link.springer.com" (no spaces, dotted) so URLs never leak into the column.
-_URLISH_RE = re.compile(r"^(https?://|www\.)|^[\w-]+(\.[\w-]+)+(/|$)", re.IGNORECASE)
-
-
-def _looks_like_url(s):
-    return bool(_URLISH_RE.match(s.strip()))
-
-
 def _collect_mentions(paper, pv):
-    """Every journal / publisher / venue NAME this paper is recorded under.
+    """Every NAMED venue tied to this paper that ALSO has a web link.
 
-    Names only — the canonical venue name, the publication-venue name, and any
-    alternate names Semantic Scholar lists — deduped in order.  Web addresses are
-    deliberately excluded (a reviewer wants readable venue names here, not URLs),
-    and any URL-looking string is skipped.  Surfaced as its own column so a
-    reviewer can see all the venue names S2 ties to the paper, which helps when
-    auditing a flag or untangling a merged-venue record.
+    The 'Mentioned in' column lists only venues a reviewer can click through to
+    verify, so an entry is kept only when the record gives it a URL; bare names
+    with no link (an abbreviation, an alternate name) are omitted.  Each entry is
+    labelled with the Semantic Scholar venue type ("Journal: …", "Conference: …")
+    and links to the venue's OWN site.  We emit one entry per distinct venue host
+    — the canonical ``publicationVenue.url`` plus any ``alternate_urls`` — so a
+    merged-venue record (Semantic Scholar fusing two same-named journals) shows
+    every publisher site it points at.
+
+    Returns a list of ``(display_text, url)`` tuples (possibly empty).
     """
-    candidates = [paper.get("venue"), pv.get("name")] + list(pv.get("alternate_names") or [])
-    mentions, seen = [], set()
-    for c in candidates:
-        c = (c or "").strip()
-        if not c or _looks_like_url(c):
+    name = (pv.get("name") or paper.get("venue") or "").strip()
+    label = (pv.get("type") or "").strip().capitalize()       # "journal" -> "Journal"
+
+    urls = ([pv["url"]] if pv.get("url") else []) + [
+        u for u in (pv.get("alternate_urls") or []) if u
+    ]
+    entries, seen = [], set()
+    for u in urls:
+        host = normalize_host(u)
+        if not host or host in seen:
             continue
-        if c.lower() not in seen:
-            seen.add(c.lower())
-            mentions.append(c)
+        seen.add(host)
+        entries.append((u, host))
+    if not entries:
+        return []
+
+    multi = len(entries) > 1
+    mentions = []
+    for u, host in entries:
+        shown = name or host
+        text = f"{label}: {shown}" if label else shown
+        if multi:                       # disambiguate same-named alternates by host
+            text = f"{text}  ({host})"
+        mentions.append((text, u))
     return mentions
 
 
@@ -223,9 +231,25 @@ def _review_reason(r: dict) -> str:
         return ("Only the open-access PDF is hosted on a listed domain; the "
                 "venue itself was not identified as listed.")
     if r["list_source"] == "hijacked" and mo.startswith("name"):
-        return ("Name matches a HIJACKED-journal entry, but hijacked clones "
-                "reuse the authentic journal's name, so this may be the "
-                "legitimate journal rather than the predatory clone. Verify.")
+        reason = ("Name matches a HIJACKED-journal entry, but hijacked clones "
+                  "reuse the authentic journal's name, so this may be the "
+                  "legitimate journal rather than the predatory clone. Verify.")
+        # If the paper carries its OWN venue website and/or ISSN, neither could
+        # have matched the clone (a clone-domain/ISSN hit would have asserted
+        # on_list earlier), so they point at the legitimate journal — surface
+        # that mismatch so the reviewer (or the LLM pass) can resolve it fast.
+        clone_host = normalize_host(r.get("matched_url") or "")
+        own = []
+        if r.get("venue_domain"):
+            own.append(f"its own website ({r['venue_domain']})")
+        if r.get("issn"):
+            own.append(f"ISSN {r['issn']}")
+        if own:
+            reason += f" Note: this paper's venue lists {' and '.join(own)}"
+            if clone_host:
+                reason += f", which differ from the listed clone's site ({clone_host})"
+            reason += " — suggesting it is the legitimate journal."
+        return reason
     if mo == "name_fuzzy":
         return ("Venue name is only similar (>= 93%), not an exact match, to a "
                 "listed name.")

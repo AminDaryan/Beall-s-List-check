@@ -57,11 +57,49 @@ def _prefixed_model(name: str) -> str:
     return name  # openai and others: bare name is fine
 
 
+# Minimal per-provider credential requirements, checked by
+# validate_provider_config() so a missing key/endpoint fails with a clear,
+# actionable message instead of a cryptic litellm error deep in the stack
+# (Azure with an unset endpoint raises the infamous "argument of type 'NoneType'
+# is not iterable").  Each tuple is (env var litellm reads, .env name the user
+# edits) — they differ for Azure, where openai_client maps the legacy names.
+_PROVIDER_REQUIREMENTS = {
+    "azure": [("AZURE_API_KEY", "OPENAI_KEY"),
+              ("AZURE_API_BASE", "AZURE_OPENAI_ENDPOINT"),
+              ("AZURE_API_VERSION", "AZURE_OPENAI_API_VERSION")],
+    "openai": [("OPENAI_API_KEY", "OPENAI_API_KEY")],
+    "anthropic": [("ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY")],
+    "mistral": [("MISTRAL_API_KEY", "MISTRAL_API_KEY")],
+    "gemini": [("GEMINI_API_KEY", "GEMINI_API_KEY")],
+    "ollama": [],   # local server — no key required
+}
+
+
+def validate_provider_config():
+    """Raise a clear error if the active provider's credentials are missing.
+
+    Call this early — before any slow work — so a misconfigured ``.env`` fails
+    fast with a message naming the exact ``.env`` line(s) to fill, rather than
+    crashing deep inside litellm on the first request (and only after the long
+    deterministic pass has already run).  The fast, no-LLM check is unaffected.
+    """
+    missing = [hint for env, hint in _PROVIDER_REQUIREMENTS.get(LLM_PROVIDER, [])
+               if not (os.environ.get(env) or "").strip()]
+    if missing:
+        raise RuntimeError(
+            f"LLM is not configured: LLM_PROVIDER={LLM_PROVIDER!r} but these .env "
+            f"value(s) are empty: {', '.join(missing)}. Fill them in your .env "
+            "(see .env.example) and re-run. (The fast check, bealls_list_check.py, "
+            "needs no LLM and is unaffected.)"
+        )
+
+
 # ── Thin wrapper that preserves client.chat.completions.create() interface ─────
 
 class _Completions:
     def create(self, *, model, messages, max_completion_tokens=None,
                response_format=None, **kwargs):
+        validate_provider_config()      # clear error if the key/endpoint is unset
         call_kwargs = dict(
             model=_prefixed_model(model),
             messages=messages,

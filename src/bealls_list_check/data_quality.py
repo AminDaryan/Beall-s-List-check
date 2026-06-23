@@ -34,6 +34,24 @@ _UA = "bealls-data-quality/1.0 (research tooling)"
 
 _crossref_cache = {}        # doi -> Crossref "message" dict, or None
 
+# Registrable domains that are NOT publishers but archive / preservation /
+# resolver / catalog services.  Semantic Scholar routinely stores a journal's
+# national-library archive copy or a persistent-identifier resolver alongside
+# the real publisher URL (e.g. MDPI's *Cancers* carries e-helvetica.nb.admin.ch
+# + nbn-resolving.de next to mdpi.com).  Counting those as separate "publishers"
+# produced false "merged venue" warnings on ~17% of all such flags, so they are
+# excluded from the publisher tally in offline_flags().
+_ARCHIVE_RESOLVER_DOMAINS = {
+    "admin.ch",                                 # e-helvetica — Swiss National Library e-archive
+    "nbn-resolving.de", "nbn-resolving.org",    # German NL URN/NBN resolver
+    "d-nb.info",                                # Deutsche Nationalbibliothek
+    "jstor.org",                                # JSTOR archive
+    "portico.org",                              # Portico digital preservation
+    "handle.net",                               # Handle persistent-identifier resolver
+    "doi.org",                                  # DOI resolver
+    "worldcat.org",                             # OCLC union catalog
+}
+
 
 def _registrable(host):
     """Crude eTLD+1 (last two labels) — enough to tell publishers apart."""
@@ -66,12 +84,15 @@ def offline_flags(paper):
     hosts = [normalize_host(pv["url"])] if pv.get("url") else []
     hosts += [normalize_host(u) for u in (pv.get("alternate_urls") or []) if u]
     regs = {_registrable(h) for h in hosts if h}
-    if len(regs) >= 2:
+    # Archive / preservation / resolver domains are not publishers — drop them so
+    # a journal stored next to its national-library copy isn't called "merged".
+    publisher_regs = regs - _ARCHIVE_RESOLVER_DOMAINS
+    if len(publisher_regs) >= 2:
         flags.append(
-            f"Semantic Scholar lists web addresses from {len(regs)} different publishers "
-            f"for this one journal ({', '.join(sorted(regs))}). That usually means it has "
-            "merged two different journals that share a name, so the venue shown for this "
-            "paper may be the wrong one — worth checking by hand.")
+            f"Semantic Scholar lists web addresses from {len(publisher_regs)} different "
+            f"publishers for this one journal ({', '.join(sorted(publisher_regs))}). That "
+            "usually means it has merged two different journals that share a name, so the "
+            "venue shown for this paper may be the wrong one — worth checking by hand.")
     return flags
 
 
