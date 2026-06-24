@@ -244,11 +244,15 @@ treating them as confident hits would be misleading:
   the **real** journal's name to impersonate it. So an exact-*name* match to a
   hijacked entry might actually be the **legitimate** journal — it is downgraded
   to `review`. Only a *website* or *ISSN* match (the clone's own identity) is
-  asserted as `on_list`. Such a `review` is then **cleared to `clean`** when the
-  paper is *proven* not to be the counterfeit — either its venue is the authentic
-  journal's own site (from Beall's "authentic journal" column), or its DOI
-  resolves via Crossref to a real publisher that is neither the counterfeit nor
-  on the list. The clearance and its reason are kept on the Data-quality sheet.
+  asserted as `on_list`. Such a `review` is then **cleared to `clean`** only on
+  *positive proof that the paper is the genuine journal* — its venue is the
+  authentic journal's own site (from Beall's "authentic journal" column), or its
+  DOI resolves via Crossref to that **same authentic site**. It is **not** cleared
+  on the weaker "the DOI's publisher merely isn't the counterfeit and isn't
+  listed" signal: a clone that registered DOIs under an unrecorded domain, or a
+  *different* legitimate journal that happens to share the name, would slip
+  through that. Anything short of a match to the authentic site stays `review`.
+  The clearance and its reason are kept on the Data-quality sheet.
 - **Exact-name match the website doesn't back up.** A name alone is
   high-confidence only if the paper's own venue is hosted at the *same site* as
   the Beall entry. If the listed venue has a website but **none** of the paper's
@@ -267,6 +271,27 @@ carries a predatory clone's link. To stay truthful, the check trusts the
 **canonical** `publicationVenue.url` (asserts `on_list`) but treats an
 **alternate-only** match as `review`, so a human can confirm which journal it
 really belongs to.
+
+That `review` is then **resolved automatically when the paper has a DOI**, since
+the DOI is the authoritative record of which journal this *specific* paper was
+published in. The DOI is looked up in Crossref and compared with the flagged
+alternate by ISSN, publisher website, or exact journal name:
+
+- if it **matches** the listed alternate, the alternate really is this paper's
+  venue → promoted to `on_list` (still subject to the weak-list / hijacked-name
+  downgrades above);
+- if it **positively identifies the paper's own canonical venue** (by ISSN,
+  website, or exact name) and that venue is not on the list, the alternate was
+  merge noise belonging to a different same-named journal → **cleared to
+  `clean`**;
+- **anything else stays `review`** — no DOI, no Crossref record, or any result
+  that does *not* positively identify the canonical venue. In particular, the
+  check **never clears on the weak signal "the real publisher merely isn't
+  listed"**: a predatory publisher Beall recorded under a *different* domain
+  would slip through that test, so when in doubt the paper is left for a human. A
+  false clear is the one error this check must not make.
+
+The promotion or clearance and its reason are kept on the Data-quality sheet.
 
 ### Built-in safeguards against false positives
 
@@ -333,23 +358,28 @@ only* sheet.
 ### A worked example
 
 Take a plant-ecology paper whose venue Semantic Scholar reports as `Phyton`. The
-name `Phyton` matches a **hijacked / cloned journal** entry on Beall's List —
-a predatory site once impersonated a real journal called *Phyton* by copying its
-name. A name match alone can't tell the genuine journal from the counterfeit, so
-this starts as a doubtful `review`.
+name `Phyton` matches a **hijacked / cloned journal** entry on Beall's List — a
+predatory site (`engineeronline.net`) once impersonated a real journal called
+*Phyton: Annales Rei Botanicae* (the authentic one is at `verlag-berger.at`) by
+copying its name. A name match alone can't tell the genuine journal from the
+counterfeit, so this starts as a doubtful `review`.
 
-The check then **resolves that doubt automatically**: it reads the paper's DOI
-(`10.32604/phyton.2024.050556`) in Crossref, which shows the paper was actually
-published by **Tech Science Press** — *not* the counterfeit (`engineeronline.net`)
-and not on Beall's List. So the paper is **cleared to `clean`**, with a note
-explaining exactly that. (If instead the paper's own venue website were the
-authentic journal's site, it would clear the same way.) It leaves the *Flagged
-only* sheet but stays on the **Data quality** sheet so the check, and the reason
-for it, remain visible. Here `clean` means *"not on Beall's List"* — not *"proven
-reputable."*
+The check then reads the paper's DOI (`10.32604/phyton.2024.050556`) in Crossref,
+which shows it was published by **Tech Science Press**. That is *not* the
+counterfeit — but it is *not* the recorded authentic journal (`verlag-berger.at`)
+either: it is a **third, different journal that merely shares the name "Phyton."**
+Because the check cannot *prove* this is the genuine journal it was meant to be,
+it does **not** clear the paper — it **stays `review`** for a human (or the LLM
+pass) to judge. The tool clears a hijacked-by-name paper to `clean` **only** when
+its venue website, or its DOI, points to the **authentic journal's own site**
+(here, `verlag-berger.at`) — positive proof it is the genuine journal, not the
+clone or some other same-named one. This is deliberate: wrongly clearing a paper
+that might be predatory is the one mistake the check must never make, so when the
+evidence is anything less than positive, it keeps the paper flagged.
 
-A hijacked-by-name paper that *can't* be resolved this way (no DOI, or the DOI
-points at the counterfeit itself) stays `review` for a human or the LLM pass.
+When a paper *is* cleared this way it leaves the *Flagged only* sheet but stays on
+the **Data quality** sheet, so the check and its reason remain visible. There,
+`clean` means *"not on Beall's List"* — not *"proven reputable."*
 
 ---
 

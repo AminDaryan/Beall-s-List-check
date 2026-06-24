@@ -41,8 +41,8 @@ from config import (
     CORPUS_DIR, CORPUS_GLOB, SNAPSHOT_PATH, RESULTS_DIR, RESULTS_FILENAME,
     STATUS_FILL_COLORS,
 )
-from match import BeallIndex, match_paper, out_of_scope_result
-from normalize import normalize_host
+from match import BeallIndex, match_paper, out_of_scope_result, _hit, _review_reason
+from normalize import normalize_host, normalize_name, normalize_issn
 from user_lists import load_user_entries, WhitelistMatcher
 from common import input_quality          # the one shared input data-quality validator
 import data_quality                       # Crossref lookup for the hijacked-clearance check
@@ -104,6 +104,7 @@ def classify_corpus(index, whitelist=None, crossref="off"):
                                        and r["status"] in ("on_list", "review"))
         r["data_quality"] = input_quality.validate_input(paper, use_crossref=use_cr)
         _clear_hijacked_if_genuine(r, paper, index)
+        _resolve_alternate_url(r, paper, index)
         results.append(r)
     return results, sorted(corpus_files), n_scope
 
@@ -132,12 +133,16 @@ def _clear_hijacked_if_genuine(r, paper, index):
     the predatory clone.
 
     A hijacked listing flags a counterfeit that stole a real journal's NAME, so a
-    name match is ambiguous.  We clear the paper only on positive evidence that it
-    is NOT the counterfeit:
-      (A) its own venue website is the authentic journal's site (from Beall's
-          'authentic journal' column); or
-      (B) its DOI resolves (via Crossref) to a real publisher that is neither the
-          counterfeit nor itself on Beall's List.
+    name match is ambiguous.  We clear the paper only on POSITIVE evidence that it
+    is the genuine journal — that its venue is the authentic journal's OWN site:
+      (A) its Semantic Scholar venue website is the authentic journal's site (from
+          Beall's 'authentic journal' column); or
+      (B) its DOI resolves (via Crossref) to that same authentic site.
+    We deliberately do NOT clear on the weaker "the DOI's publisher is neither the
+    counterfeit nor itself listed" test: a clone that deposited DOIs under a domain
+    Beall never recorded would pass it, and a legitimate but DIFFERENT same-named
+    journal (e.g. a third 'Phyton') would clear without proof it is the one meant.
+    Anything short of a match to the authentic site stays 'review' for a human.
     Cleared papers become 'clean' but keep a plain explanation (in the Match
     column and on the Data-quality sheet) of the doubt and how it was resolved.
     """
@@ -155,25 +160,27 @@ def _clear_hijacked_if_genuine(r, paper, index):
                       f"({authentic})")
         return
 
-    # (B) DOI's real publisher is neither the counterfeit nor on Beall's List.
+    # (B) DOI resolves to the AUTHENTIC journal's OWN website -> it is the genuine
+    #     journal, not the clone. Positive identification only: without an authentic
+    #     site to match, or if the DOI resolves anywhere else, we leave it in review.
     doi = ((paper.get("externalIds") or {}).get("DOI") or "").strip()
-    if not doi:
-        return
+    if not (authentic and doi):
+        return                                          # no authentic site to match / no DOI -> stay review
     msg = data_quality._crossref_lookup(doi)
     if not msg:
         return
     real_domain = _crossref_publisher_domain(msg)
-    if not real_domain or _same_host(real_domain, counterfeit):
-        return                                          # unknown, or it IS the counterfeit
+    if not (real_domain and _same_host(real_domain, authentic)):
+        return                                          # not positively the authentic site -> stay review
     if index.domain_match(real_domain)[0] is not None:
-        return                                          # the real publisher is itself listed
+        return                                          # defensive: never clear to a listed host
     publisher = (msg.get("publisher") or "").strip()
     journal = ((msg.get("container-title") or [""])[0] or "").strip()
     who = publisher or journal or real_domain
     detail = journal or publisher or real_domain
     _mark_cleared(r, counterfeit,
-                  f"this paper's DOI shows it was published by {who} ({detail}; "
-                  f"{real_domain}), which is not the counterfeit and is not on Beall's List")
+                  f"this paper's DOI shows it was published at the authentic journal's "
+                  f"own website ({real_domain}; {who}, {detail}), not the counterfeit")
 
 
 def _mark_cleared(r, counterfeit, why):
@@ -184,6 +191,161 @@ def _mark_cleared(r, counterfeit, why):
             "here means 'not on Beall's List', not 'proven reputable'.)")
     r["status"] = "clean"
     r["cleared_reason"] = expl
+    r.setdefault("data_quality", []).append(expl)   # keep it visible on the Data-quality sheet
+
+
+def _alt_listed_entries(paper, index):
+    """The listed Beall entries reached via this paper's ALTERNATE venue URLs.
+
+    Mirrors the alternate-URL tier in match._classify (same hosts, same
+    dedupe-by-name) so the resolver below reasons about exactly the entries that
+    produced the ``domain_alternate_url`` flag.
+    """
+    pv = paper.get("publicationVenue") or {}
+    entries, seen = [], set()
+    for u in (pv.get("alternate_urls") or []):
+        dom = normalize_host(u) if u else ""
+        if not dom:
+            continue
+        entry, _ = index.domain_match(dom)
+        if entry and entry["name"] not in seen:
+            seen.add(entry["name"])
+            entries.append(entry)
+    return entries
+
+
+def _crossref_matches(msg, target, real_domain):
+    """How a paper's Crossref-registered venue matches *target*, or ``None``.
+
+    ``target`` is a venue descriptor — ``{"domain", "issns", "normalized_name"}``
+    — and may be either a listed Beall entry (to CONFIRM a predatory match) or the
+    paper's own canonical venue (to CLEAR a false alarm).  The DOI's registration
+    is the authoritative identity of the paper's venue; we accept a match on any
+    unambiguous field — ISSN, publisher website, or exact journal name — and name
+    which one for the audit trail.  Empty target fields never match.
+    """
+    cr_issns = {normalize_issn(i) for i in (msg.get("ISSN") or []) if normalize_issn(i)}
+    tgt_issns = {normalize_issn(i) for i in (target.get("issns") or []) if normalize_issn(i)}
+    if cr_issns and tgt_issns and (cr_issns & tgt_issns):
+        return "ISSN"
+    if real_domain and target.get("domain") and _same_host(real_domain, target["domain"]):
+        return "publisher website"
+    cr_title = ((msg.get("container-title") or [""])[0] or "")
+    if cr_title and target.get("normalized_name") and \
+            normalize_name(cr_title) == target["normalized_name"]:
+        return "journal name"
+    return None
+
+
+def _canonical_venue_descriptor(paper):
+    """A descriptor (domain / issns / normalized_name) for the paper's OWN
+    canonical venue, shaped like a snapshot entry so :func:`_crossref_matches`
+    can test it.
+
+    Used to clear an alternate-URL review ONLY on positive evidence that the DOI
+    belongs to this paper's canonical venue — never on the weaker "the real
+    publisher merely isn't listed" signal, which a predatory publisher recorded
+    under a different domain would slip through.
+    """
+    pv = paper.get("publicationVenue") or {}
+    name = pv.get("name") or paper.get("venue") or ""
+    return {
+        "domain": normalize_host(pv["url"]) if pv.get("url") else "",
+        "issns": [pv["issn"]] if pv.get("issn") else [],
+        "normalized_name": normalize_name(name),
+    }
+
+
+def _resolve_alternate_url(r, paper, index):
+    """Resolve an alternate-URL 'review' using the paper's DOI (Crossref).
+
+    A ``domain_alternate_url`` review means a NON-canonical venue URL pointed at
+    a listed site — but Semantic Scholar sometimes merges two same-named journals
+    into one record, so that alternate may belong to a different journal than
+    this paper's.  The paper's DOI is the authoritative tiebreaker: Crossref names
+    the journal this specific paper was really published in.  Three outcomes:
+
+      * Crossref's venue IS one of the listed alternates  -> promote to on_list
+        (the alternate really is this paper's venue).
+      * Crossref POSITIVELY identifies the paper's own canonical venue (by ISSN,
+        website, or exact name) and that venue is not listed -> the alternate was
+        merge noise; clear to clean.
+      * anything else — no DOI, no Crossref record, or a result that does NOT
+        positively identify the canonical venue (including a real publisher whose
+        domain merely isn't on the list) -> leave it as review.
+
+    The clear branch deliberately demands POSITIVE evidence rather than the weaker
+    "real publisher isn't listed": a predatory publisher Beall recorded under a
+    different domain would otherwise be wrongly cleared.  When in doubt we keep the
+    paper in review — a false clear is the one error this check must not make.
+
+    Makes one (cached) Crossref lookup, exactly like the hijacked clearer above.
+    """
+    if not (r["status"] == "review" and r.get("matched_on") == "domain_alternate_url"):
+        return
+    doi = ((paper.get("externalIds") or {}).get("DOI") or "").strip()
+    if not doi:
+        return                                          # coverage gap: no DOI -> stay review
+    msg = data_quality._crossref_lookup(doi)
+    if not msg:
+        return                                          # not in Crossref / lookup failed -> stay review
+    real_domain = _crossref_publisher_domain(msg)
+
+    # (1) Confirm predatory: the DOI's registered venue IS one of the flagged
+    #     listed alternates.  Predatory wins ties — confirm runs before clear.
+    for entry in _alt_listed_entries(paper, index):
+        how = _crossref_matches(msg, entry, real_domain)
+        if how:
+            _confirm_alternate(r, entry, how, doi)
+            return
+
+    # (2) Clear — ONLY on positive evidence the DOI belongs to this paper's own
+    #     canonical venue, AND that venue is on no Beall list.  We do NOT clear on
+    #     "the real publisher isn't listed" alone; anything short of a positive
+    #     canonical match stays 'review' for a human.
+    how = _crossref_matches(msg, _canonical_venue_descriptor(paper), real_domain)
+    if how and real_domain and index.domain_match(real_domain)[0] is None:
+        publisher = (msg.get("publisher") or "").strip()
+        journal = ((msg.get("container-title") or [""])[0] or "").strip()
+        who = publisher or journal or real_domain
+        detail = journal or publisher or real_domain
+        _mark_alt_cleared(r, who, detail, real_domain, how)
+    # else: ambiguous -> leave as review
+
+
+def _confirm_alternate(r, entry, how, doi):
+    """Promote an alternate-URL review to on_list — the DOI proves the paper's
+    venue IS the listed entry.
+
+    Routes through match._hit so the standard downgrades still apply: a weak-list
+    entry (vanity press / fake-metrics) stays 'review', and the verdict is
+    re-derived for that case.  A transparent confirmation note is recorded.
+    """
+    _hit(r, entry, "on_list", "domain_alternate_url_doi")
+    r["review_reason"] = _review_reason(r)   # "" once on_list; real text if a weak-list downgrade kept it review
+    note = (f"Confirmed via DOI. Semantic Scholar listed an alternate web link for "
+            f"this venue pointing to the listed '{entry['name']}', and the paper's "
+            f"DOI ({doi}) registers it to that same venue (matched by {how}) — so "
+            f"this paper really is in the listed venue, not a different same-named "
+            f"journal.")
+    r.setdefault("data_quality", []).append(note)
+
+
+def _mark_alt_cleared(r, who, detail, real_domain, how):
+    """Flip an alternate-URL review to 'clean': the DOI POSITIVELY identifies the
+    paper's own (unlisted) canonical venue, so the listed alternate was Semantic
+    Scholar merge noise belonging to a different same-named journal."""
+    listed = r.get("matched_name") or "a listed site"
+    expl = (f"Cleared after a check. Semantic Scholar listed an alternate web link "
+            f"for this venue pointing to the listed '{listed}', which raised doubt — "
+            f"but the paper's DOI identifies its venue as {who} ({detail}; "
+            f"{real_domain}), matched by {how}: this is the paper's own canonical "
+            f"venue and is not on Beall's List. Semantic Scholar had merged two "
+            f"same-named journals; this paper belongs to the unlisted one. ('Clean' "
+            f"here means 'not on Beall's List', not 'proven reputable'.)")
+    r["status"] = "clean"
+    r["cleared_reason"] = expl
+    r["review_reason"] = ""
     r.setdefault("data_quality", []).append(expl)   # keep it visible on the Data-quality sheet
 
 
@@ -366,6 +528,16 @@ SIGNAL_INFO = {
         "share a name, so that link may belong to a different journal — a human "
         "should check.",
     ),
+    "domain_alternate_url_doi": (
+        "an alternate link matched and the DOI confirms it",
+        "on_list",
+        "An alternate web link for the venue pointed to a listed site, and the "
+        "paper's DOI (checked against Crossref, the publisher registry) shows it "
+        "was actually published there. The DOI resolves the 'merged journals' "
+        "doubt that would otherwise keep this as review, so it is asserted as "
+        "on_list. Example: a venue whose main site is fine but whose alternate "
+        "link is scirp.org, where the DOI registers the paper to SCIRP.",
+    ),
     "domain_open_access_pdf": (
         "the PDF is hosted on a listed site",
         "review",
@@ -430,6 +602,11 @@ def _on_list_why(r):
     if mo == "name_exact":
         return (f"the venue name '{r.get('venue') or '—'}' exactly matches the "
                 f"listed '{listed}' — a high-confidence match.")
+    if mo == "domain_alternate_url_doi":
+        return (f"an alternate web link for this venue pointed to the listed "
+                f"'{listed}', and the paper's DOI confirms (via Crossref, the "
+                f"publisher registry) it was published there — so the alternate is "
+                f"this paper's real venue, not a different same-named journal.")
     return (f"{_signal_plain(mo)} ('{listed}') — so it appears on Beall's List "
             "(high-confidence match).")
 
@@ -876,7 +1053,8 @@ _LEGEND_SECTIONS = [
         "rows": [
             (SIGNAL_INFO[k][0], SIGNAL_INFO[k][1], SIGNAL_INFO[k][2])
             for k in ("domain", "domain_subdomain", "issn", "name_exact",
-                      "name_fuzzy", "domain_alternate_url", "domain_open_access_pdf")
+                      "name_fuzzy", "domain_alternate_url", "domain_alternate_url_doi",
+                      "domain_open_access_pdf")
         ],
     },
     {
