@@ -31,6 +31,8 @@ import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.cell_range import CellRange
+from openpyxl.cell.rich_text import CellRichText, TextBlock
+from openpyxl.cell.text import InlineFont
 
 _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE))
@@ -170,6 +172,10 @@ ROWS_PER_PAPER = 4
 _HEADER_FILL = PatternFill("solid", fgColor="2F5496")
 _HEADER_FONT = Font(name="Arial", bold=True, size=10, color="FFFFFF")
 _DATA_FONT = Font(name="Arial", size=9)
+# Rich-text run fonts, so a cell can mix plain text with a linked part — used to
+# style only the host in the Domain cell as a link, leaving "Domain: " plain.
+_INLINE_PLAIN = InlineFont(rFont="Arial", sz=9, color="000000")
+_INLINE_LINK = InlineFont(rFont="Arial", sz=9, color="0563C1", u="single")
 _CENTER = Alignment(horizontal="center", vertical="center", wrap_text=True)
 _LEFT = Alignment(horizontal="left", vertical="top", wrap_text=True)
 # Subtle shade on alternating paper blocks so adjacent papers are easy to tell apart.
@@ -198,13 +204,24 @@ def _paper_subrows(r):
 def _venue_subrows(r):
     """Four labelled rows for the Venue column: Venue / Type / Domain / ISSN.
 
-    The Domain row links to the venue's website (the URL behind that host) when
-    one is known, so a reviewer can click straight through to the venue.
+    When the venue's website is known, the Domain row links to it — and only the
+    host text is styled as a link (the "Domain: " label stays plain), via a
+    rich-text cell.  (Excel keeps the whole cell clickable, but only the host
+    looks like a link.)
     """
+    domain = r.get("venue_domain") or "—"
+    url = r.get("venue_url") or None
+    if url:
+        domain_cell = CellRichText([
+            TextBlock(_INLINE_PLAIN, "Domain: "),
+            TextBlock(_INLINE_LINK, domain),
+        ])
+    else:
+        domain_cell = f"Domain: {domain}"
     return [
         (f"Venue: {r.get('venue') or '—'}", None),
         (f"Type: {r.get('venue_type') or '—'}", None),
-        (f"Domain: {r.get('venue_domain') or '—'}", r.get("venue_url") or None),
+        (domain_cell, url),
         (f"ISSN: {r.get('issn') or '—'}", None),
     ]
 
@@ -302,9 +319,10 @@ def _list_plain(list_source):
 
 # Short note shown on the first Match row for statuses that matched nothing.
 _NONMATCH_NOTES = {
-    "clean":        "Venue identified — not on the list",
-    "no_venue":     "No venue to classify (preprint / no info)",
-    "out_of_scope": "Not in the whitelist — skipped",
+    "clean":        "The venue was identified and is not on Beall's List.",
+    "no_venue":     "No journal venue to classify — this is a preprint, or the "
+                    "record has no venue information.",
+    "out_of_scope": "Skipped — the venue is not in the whitelist you supplied.",
 }
 
 
@@ -386,9 +404,9 @@ def _data_quality_subrows(r):
     """One row per data-quality warning (empty key -> 'not checked'; none -> OK)."""
     flags = r.get("data_quality")
     if flags is None:
-        return [("(not checked)", None)]
+        return [("Not checked — data-quality checks did not run for this record.", None)]
     if not flags:
-        return [("OK — no issues found", None)]
+        return [("OK — no data-quality problems were found in this record.", None)]
     return [(f, None) for f in flags]
 
 
@@ -556,7 +574,12 @@ def _write_results_sheet(ws, results, extra_columns=None, status_key="status"):
                 cell.border = block_top_border if start == 0 else border
                 if shade_fill:
                     cell.fill = shade_fill
-                cell.font = link_font if url else _DATA_FONT
+                # A rich-text cell carries its own per-run fonts (Domain row), so
+                # don't override it with the whole-cell link font.
+                if isinstance(text, CellRichText):
+                    cell.font = _DATA_FONT
+                else:
+                    cell.font = link_font if url else _DATA_FONT
                 if url:
                     cell.hyperlink = url
                 if span > 1:
@@ -700,10 +723,12 @@ _LEGEND_SECTIONS = [
             ("WHAT IT DOES: each paper's publication venue (its journal/publisher) "
              "is compared against Beall's List of allegedly predatory venues, and "
              "given a STATUS (see the next section).",),
-            ("INPUT: one Semantic Scholar (\"S2\") record per paper — the venue "
-             "name, website, ISSN and DOI that Semantic Scholar holds. The check "
-             "trusts these but flags records that look unreliable on the 'Data "
-             "quality' sheet.",),
+            ("INPUT: one Semantic Scholar (\"S2\") record per paper, giving the "
+             "venue's name, website, ISSN and DOI. The check classifies each "
+             "paper from this metadata as it is; when a record's metadata looks "
+             "incomplete or self-contradictory, that paper is also listed on the "
+             "'Data quality' sheet so you know to double-check it before trusting "
+             "its result.",),
             ("OUTPUT (the sheets in this file): Results = every paper; Flagged only "
              "= just the on_list + review papers to act on; Data quality = papers "
              "whose Semantic Scholar metadata looks suspect; Summary = counts + run "

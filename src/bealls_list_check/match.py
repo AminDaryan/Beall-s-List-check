@@ -275,16 +275,21 @@ def _review_reason(r: dict) -> str:
                 f"Scholar sometimes merges same-named journals, so that publisher may "
                 f"belong to a different journal than this paper's — verify they match.")
     if mo == "domain_open_access_pdf":
-        return ("Only the open-access PDF is hosted on a listed domain; the "
-                "venue itself was not identified as listed.")
+        return (f"The journal itself was not found on Beall's List, but the paper's "
+                f"free (open-access) PDF is hosted on the listed site '{r.get('matched_name')}'. "
+                "A PDF can be re-hosted by someone other than the publisher, so this "
+                "is flagged for a check rather than treated as proof — confirm where "
+                "the paper was actually published.")
     if r["list_source"] == "hijacked" and mo.startswith("name"):
-        reason = ("Name matches a HIJACKED-journal entry, but hijacked clones "
-                  "reuse the authentic journal's name, so this may be the "
-                  "legitimate journal rather than the predatory clone. Verify.")
+        reason = ("This paper's venue name matches an entry on Beall's 'hijacked "
+                  "journals' list. A hijacked journal is a counterfeit website that "
+                  "impersonates a real journal by copying its exact name, so a name "
+                  "match alone cannot tell the genuine journal from the counterfeit "
+                  "— this paper may well be in the genuine one.")
         # If the paper carries its OWN venue website and/or ISSN, neither could
-        # have matched the clone (a clone-domain/ISSN hit would have asserted
-        # on_list earlier), so they point at the legitimate journal — surface
-        # that mismatch so the reviewer (or the LLM pass) can resolve it fast.
+        # have matched the counterfeit (a domain/ISSN hit would have asserted
+        # on_list earlier), so they point at the genuine journal — surface that
+        # mismatch so the reviewer (or the LLM pass) can resolve it fast.
         clone_host = normalize_host(r.get("matched_url") or "")
         own = []
         if r.get("venue_domain"):
@@ -292,10 +297,12 @@ def _review_reason(r: dict) -> str:
         if r.get("issn"):
             own.append(f"ISSN {r['issn']}")
         if own:
-            reason += f" Note: this paper's venue lists {' and '.join(own)}"
+            reason += f" Here the paper's venue gives {' and '.join(own)}"
             if clone_host:
-                reason += f", which differ from the listed clone's site ({clone_host})"
-            reason += " — suggesting it is the legitimate journal."
+                reason += (f", which differ from the counterfeit's website "
+                           f"({clone_host}) on the list")
+            reason += ", which suggests it is the genuine journal."
+        reason += " Verify before excluding."
         return reason
     if mo == "name_exact":
         # Reached here only when the name matched but the paper's own URL did NOT
@@ -309,12 +316,16 @@ def _review_reason(r: dict) -> str:
                 "journals share a name, so this may be a different journal — verify "
                 "it is really the listed one before excluding.")
     if mo == "name_fuzzy":
-        return ("Venue name is only similar (>= 93%), not an exact match, to a "
-                "listed name.")
+        return (f"The venue's name is a very close but inexact match (at least 93% "
+                f"similar) to the listed '{r.get('matched_name')}' — for example a "
+                "typo or spelling variant. Because it is not an exact match, it is "
+                "flagged for a check rather than treated as confirmed.")
     if any(s in WEAK_LIST_SOURCES for s in r["list_source"].split("; ")):
-        return ("Matched a WEAK list (vanity-press book publisher or fake-metrics "
-                "company), which is not a predatory-journal signal.")
-    return "Soft match — verify by hand."
+        return (f"This matched '{r.get('matched_name')}' on one of Beall's WEAK "
+                "lists — a vanity/book publisher or a company selling fake metrics, "
+                "not a predatory journal as such. A match here is surfaced for a "
+                "human to weigh; it is not a predatory-journal finding on its own.")
+    return "This is a soft, lower-confidence match — verify it by hand before acting."
 
 
 def out_of_scope_result(paper, source_file):

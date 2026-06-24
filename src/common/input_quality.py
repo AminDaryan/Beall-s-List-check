@@ -81,7 +81,7 @@ def validate_input(paper, *, seen_repos=None, check_liveness=False, use_crossref
     """All data-quality warnings for one record, dispatched on the fields present."""
     flags = []
     if not (paper.get("title") or "").strip():
-        flags.append("Missing title.")
+        flags.append("This record has no title.")
     has_repo = "repo" in paper
     has_venue = _has_venue_fields(paper)
     if has_repo:
@@ -89,7 +89,8 @@ def validate_input(paper, *, seen_repos=None, check_liveness=False, use_crossref
     if has_venue:
         flags += _venue_flags(paper, use_crossref=use_crossref)
     if not has_repo and not has_venue:
-        flags.append("No repo link or venue metadata to validate.")
+        flags.append("This record has neither a code-repository link nor any "
+                     "journal/venue information, so there is nothing to validate.")
     return flags
 
 

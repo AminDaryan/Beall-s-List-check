@@ -102,24 +102,33 @@ def offline_flags(paper):
     doi = (ext.get("DOI") or "").strip()
 
     if not (venue or pv_name or pv.get("url") or issn_raw):
-        flags.append("No journal/venue information at all (so the venue can't be checked).")
+        flags.append("This record has no journal or venue information at all (no name, "
+                     "website or ISSN), so its venue cannot be checked against the list.")
     if doi and not _DOI_RE.match(doi):
-        flags.append(f"The DOI doesn't look like a valid DOI: {doi!r}.")
+        flags.append(f"The DOI is malformed — it is not in the standard 10.NNNN/... "
+                     f"form: {doi!r}.")
     if issn_raw and not normalize_issn(issn_raw):
-        flags.append(f"The ISSN isn't in the standard NNNN-NNNX form: {issn_raw!r}.")
+        flags.append(f"The ISSN is malformed — it is not in the standard NNNN-NNNX "
+                     f"form (eight digits, e.g. 0079-2047): {issn_raw!r}.")
     for label, val in (("venue name", venue), ("publication-venue name", pv_name)):
         if val and _ENTITY_RE.search(val):
-            flags.append(f"The {label} contains leftover HTML codes (e.g. &amp;): {val!r}.")
+            flags.append(f"The {label} contains leftover HTML character codes (e.g. "
+                         f"'&amp;' instead of '&'), a sign of an encoding error in "
+                         f"the source data: {val!r}.")
 
     # Merged-venue red flag: the one venue record points at >1 publisher's website,
     # which usually means Semantic Scholar fused two same-named journals into one.
     publisher_regs = publisher_domains(paper)
     if len(publisher_regs) >= 2:
+        n = len(publisher_regs)
         flags.append(
-            f"Semantic Scholar lists web addresses from {len(publisher_regs)} different "
-            f"publishers for this one journal ({', '.join(sorted(publisher_regs))}). That "
-            "usually means it has merged two different journals that share a name, so the "
-            "venue shown for this paper may be the wrong one — worth checking by hand.")
+            f"This paper's Semantic Scholar venue record points to {n} different "
+            f"publishers' websites ({', '.join(sorted(publisher_regs))}). A single "
+            f"journal has one publisher, so Semantic Scholar has probably combined "
+            f"{n} different journals that share the same name into one record. The "
+            "journal it reports for this paper may therefore be one of the others "
+            "rather than the correct one — open the paper's DOI to confirm which "
+            "journal it was actually published in.")
     return flags
 
 
@@ -145,7 +154,8 @@ def crossref_flags(paper, *, timeout=10):
         return []
     msg = _crossref_lookup(doi, timeout=timeout)
     if msg is None:
-        return [f"DOI not found in Crossref (or lookup failed): {doi}."]
+        return [f"This DOI was not found in Crossref, the publisher registry (or the "
+                f"lookup failed), so the venue could not be cross-checked: {doi}."]
 
     pv = paper.get("publicationVenue") or {}
     s2_names = [paper.get("venue"), pv.get("name")] + list(pv.get("alternate_names") or [])
@@ -160,14 +170,16 @@ def crossref_flags(paper, *, timeout=10):
     # abbreviations like "WSEAS Trans. Inf. Sci." vs the full Crossref title).
     if s2_tokens and cr_tokens and not (s2_tokens & cr_tokens):
         s2_show = next((n for n in s2_names if n), "?")
-        flags.append(f"Venue disagrees with Crossref — Semantic Scholar: {s2_show!r}; "
-                     f"Crossref: {cr_titles[0]!r}.")
+        flags.append(f"The venue name disagrees with Crossref's record for this DOI, so "
+                     f"Semantic Scholar may have the wrong venue — Semantic Scholar says "
+                     f"{s2_show!r}; Crossref says {cr_titles[0]!r}.")
 
     s2_issn = normalize_issn(pv.get("issn")) if pv.get("issn") else ""
     cr_issns = {normalize_issn(i) for i in (msg.get("ISSN") or []) if normalize_issn(i)}
     if s2_issn and cr_issns and s2_issn not in cr_issns:
-        flags.append(f"ISSN disagrees with Crossref — Semantic Scholar: {s2_issn}; "
-                     f"Crossref: {sorted(cr_issns)}.")
+        flags.append(f"The ISSN disagrees with Crossref's record for this DOI, so Semantic "
+                     f"Scholar may have the wrong venue — Semantic Scholar says {s2_issn}; "
+                     f"Crossref says {sorted(cr_issns)}.")
     return flags
 
 
