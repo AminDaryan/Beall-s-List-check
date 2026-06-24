@@ -170,17 +170,17 @@ def _collect_mentions(paper, pv):
 
     The 'Mentioned in' column lists only venues a reviewer can click through to
     verify, so an entry is kept only when the record gives it a URL; bare names
-    with no link (an abbreviation, an alternate name) are omitted.  Each entry is
-    labelled with the Semantic Scholar venue type ("Journal: …", "Conference: …")
-    and links to the venue's OWN site.  We emit one entry per distinct venue host
-    — the canonical ``publicationVenue.url`` plus any ``alternate_urls`` — so a
-    merged-venue record (Semantic Scholar fusing two same-named journals) shows
-    every publisher site it points at.
+    with no link (an abbreviation, an alternate name) are omitted.  Each entry
+    shows the venue name and links to the venue's OWN site.  We emit one entry
+    per distinct venue host — the canonical ``publicationVenue.url`` plus any
+    ``alternate_urls`` — so a merged-venue record (Semantic Scholar fusing two
+    same-named journals) shows every publisher site it points at.  The venue
+    *type* is not prefixed here — it is constant for the record and already shown
+    in the 'Semantic Scholar venue' column's "Type" field.
 
     Returns a list of ``(display_text, url)`` tuples (possibly empty).
     """
     name = (pv.get("name") or paper.get("venue") or "").strip()
-    label = (pv.get("type") or "").strip().capitalize()       # "journal" -> "Journal"
 
     urls = ([pv["url"]] if pv.get("url") else []) + [
         u for u in (pv.get("alternate_urls") or []) if u
@@ -199,9 +199,8 @@ def _collect_mentions(paper, pv):
     mentions = []
     for u, host in entries:
         shown = name or host
-        text = f"{label}: {shown}" if label else shown
-        if multi:                       # disambiguate same-named alternates by host
-            text = f"{text}  ({host})"
+        # When several hosts share one name, append the host to tell them apart.
+        text = f"{shown}  ({host})" if (multi and name) else shown
         mentions.append((text, u))
     return mentions
 

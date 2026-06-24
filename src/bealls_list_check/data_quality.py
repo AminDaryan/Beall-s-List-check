@@ -26,7 +26,7 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from normalize import normalize_name, normalize_host, normalize_issn, significant_tokens
-from config import ARCHIVE_RESOLVER_DOMAINS
+from config import ARCHIVE_RESOLVER_DOMAINS, AGGREGATOR_HOST_MARKERS
 
 _DOI_RE = re.compile(r"^10\.\d{4,9}/\S+$")
 _ENTITY_RE = re.compile(r"&[A-Za-z]+;|&#\d+;|�")        # &amp; &#39; or U+FFFD
@@ -36,10 +36,51 @@ _UA = "bealls-data-quality/1.0 (research tooling)"
 _crossref_cache = {}        # doi -> Crossref "message" dict, or None
 
 
+# Second-level labels that are themselves public suffixes under a country-code
+# TLD, so the registrable domain is the THIRD-from-last label (revistas.ucr.ac.cr
+# -> ucr.ac.cr, NOT ac.cr).  Covers the academic/government multi-level domains
+# common in scholarly venue URLs; not a full Public Suffix List, but enough to
+# stop public suffixes (ac.cr, edu.ar, gob.es) being mistaken for "publishers".
+_MULTI_LEVEL_SLD = {
+    "ac", "co", "com", "edu", "ed", "go", "gob", "gov", "net", "or", "org",
+    "mil", "ne", "res", "sa", "gr", "in",
+}
+
+
 def _registrable(host):
-    """Crude eTLD+1 (last two labels) — enough to tell publishers apart."""
+    """Best-effort eTLD+1, aware of multi-level country suffixes (ac.cr, edu.ar,
+    gob.es, co.uk, …) so an institutional host isn't collapsed onto a public
+    suffix and counted as a bogus 'publisher'."""
     parts = host.split(".")
-    return ".".join(parts[-2:]) if len(parts) >= 2 else host
+    if len(parts) <= 2:
+        return host
+    # Multi-level ccTLD: 2-letter country code + a known public second level
+    # (ac/edu/gob/…) -> the registrable domain is the last THREE labels.
+    if len(parts[-1]) == 2 and parts[-2] in _MULTI_LEVEL_SLD:
+        return ".".join(parts[-3:])
+    return ".".join(parts[-2:])
+
+
+def publisher_domains(paper):
+    """Distinct registrable *publisher* domains for a venue record.
+
+    Gathers the canonical + alternate venue hosts, then drops the ones that
+    aren't publishers — aggregators/indexes (Redalyc, SciELO, …) and archive /
+    preservation / resolver services — so what remains is the set of genuine
+    publishers Semantic Scholar associates with this one venue.  Two or more of
+    them is the "merged venue" red flag.
+    """
+    pv = paper.get("publicationVenue") or {}
+    hosts = [normalize_host(pv["url"])] if pv.get("url") else []
+    hosts += [normalize_host(u) for u in (pv.get("alternate_urls") or []) if u]
+    hosts = [h for h in hosts if h and not any(m in h for m in AGGREGATOR_HOST_MARKERS)]
+    return {_registrable(h) for h in hosts} - ARCHIVE_RESOLVER_DOMAINS
+
+
+def is_merged_venue(paper):
+    """True if S2's venue record points at >= 2 distinct publishers — the sign it
+    fused two same-named journals into one record."""
+    return len(publisher_domains(paper)) >= 2
 
 
 def offline_flags(paper):
@@ -64,12 +105,7 @@ def offline_flags(paper):
 
     # Merged-venue red flag: the one venue record points at >1 publisher's website,
     # which usually means Semantic Scholar fused two same-named journals into one.
-    hosts = [normalize_host(pv["url"])] if pv.get("url") else []
-    hosts += [normalize_host(u) for u in (pv.get("alternate_urls") or []) if u]
-    regs = {_registrable(h) for h in hosts if h}
-    # Archive / preservation / resolver domains are not publishers — drop them so
-    # a journal stored next to its national-library copy isn't called "merged".
-    publisher_regs = regs - ARCHIVE_RESOLVER_DOMAINS
+    publisher_regs = publisher_domains(paper)
     if len(publisher_regs) >= 2:
         flags.append(
             f"Semantic Scholar lists web addresses from {len(publisher_regs)} different "

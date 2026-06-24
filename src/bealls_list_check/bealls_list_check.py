@@ -42,6 +42,7 @@ from config import (
 from match import BeallIndex, match_paper, out_of_scope_result
 from user_lists import load_user_entries, WhitelistMatcher
 from common import input_quality          # the one shared input data-quality validator
+import data_quality                       # merged-venue test for the name-match downgrade (no LLM)
 
 
 # =============================================================================
@@ -99,8 +100,30 @@ def classify_corpus(index, whitelist=None, crossref="off"):
         use_cr = crossref == "all" or (crossref == "flagged"
                                        and r["status"] in ("on_list", "review"))
         r["data_quality"] = input_quality.validate_input(paper, use_crossref=use_cr)
+        _downgrade_merged_name_match(r, paper)
         results.append(r)
     return results, sorted(corpus_files), n_scope
+
+
+def _downgrade_merged_name_match(r, paper):
+    """Soften a generic exact-NAME on_list hit to review when S2 merged venues.
+
+    An exact-name match is high confidence only if the name identifies one venue.
+    When Semantic Scholar has fused several different publishers into the record
+    (the "merged venue" red flag), a generic name can collide with a predatory
+    entry that is NOT this paper's venue — e.g. a Wiley article mislabeled under
+    the generic title 'Revista de educación' matching a listed predatory journal.
+    Domain/ISSN matches (the venue's own identity) are left untouched.
+    """
+    if (r["status"] == "on_list" and r["matched_on"] == "name_exact"
+            and data_quality.is_merged_venue(paper)):
+        r["status"] = "review"
+        r["review_reason"] = (
+            f"Exact-name match to the listed '{r['matched_name']}', BUT Semantic "
+            "Scholar merged several different publishers into this one venue record "
+            "(see the Data quality sheet), so the listed entry may be a different "
+            "journal that just shares this name — not this paper's venue. Verify "
+            "before trusting.")
 
 
 def load_corpus():
@@ -302,16 +325,43 @@ _NONMATCH_NOTES = {
 }
 
 
+def _on_list_why(r):
+    """Detailed plain-English 'why' for a high-confidence (on_list) match.
+
+    Names BOTH the paper's matching signal and the concrete listed entry it hit,
+    so the reader sees exactly what matched — e.g. an exact-name match on a
+    generic title is now visible as such and can be sanity-checked against the
+    Data-quality sheet's "merged venue" warning.
+    """
+    mo = r.get("matched_on")
+    listed = r.get("matched_name") or "a listed entry"
+    if mo == "domain":
+        return (f"the venue's own website ({r.get('venue_domain') or '—'}) is on "
+                f"Beall's List as '{listed}' — the most reliable signal.")
+    if mo == "domain_subdomain":
+        return (f"the venue's website ({r.get('venue_domain') or '—'}) sits under "
+                f"the listed site of '{listed}' — a high-confidence match.")
+    if mo == "issn":
+        return (f"the venue's ISSN ({r.get('issn') or '—'}) matches the listed "
+                f"'{listed}' — a high-confidence match.")
+    if mo == "name_exact":
+        return (f"the venue name '{r.get('venue') or '—'}' exactly matches the "
+                f"listed '{listed}' — a high-confidence match.")
+    return (f"{_signal_plain(mo)} ('{listed}') — so it appears on Beall's List "
+            "(high-confidence match).")
+
+
 def _match_subrows(r):
     """Three labelled rows for the Match column.
 
     For a flagged paper:
-      Listed as   — the Beall's List entry that matched (links to it)
+      Listed as   — the Beall's List entry that matched; the link opens that
+                    entry's OWN website (the listed/predatory venue), NOT the
+                    paper's venue
       Beall list  — which Beall list it came from, in plain language
-      Why flagged — one plain-English line saying both HOW it matched and why
-                    that means what it does (high-confidence for on_list, or the
-                    verify-by-hand reason for review).  ('Matched by' and 'Why
-                    flagged' used to be separate rows saying the same thing.)
+      Why flagged — one plain-English line naming HOW it matched and the concrete
+                    listed entry (high-confidence for on_list, or the
+                    verify-by-hand reason for review).
     For clean / no_venue / error rows the first row carries a short note and the
     rest are blank.
     """
@@ -321,13 +371,14 @@ def _match_subrows(r):
     elif status == "error":
         note = f"Error: {r.get('matched_on') or 'could not process record'}"
     else:
-        if status == "on_list":
-            why = (f"{_signal_plain(r.get('matched_on'))} — so it appears on "
-                   "Beall's List (high-confidence match).")
-        else:
-            why = r.get("review_reason") or "Soft match — verify by hand."
+        why = _on_list_why(r) if status == "on_list" else (
+            r.get("review_reason") or "Soft match — verify by hand.")
+        listed = r.get("matched_name") or "(matched)"
+        listed_url = r.get("matched_url") or None
+        listed_text = (f"Listed as: {listed}  (link → this listed venue's own site)"
+                       if listed_url else f"Listed as: {listed}")
         return [
-            (f"Listed as: {r.get('matched_name') or '(matched)'}", r.get("matched_url") or None),
+            (listed_text, listed_url),
             (f"Beall list: {_list_plain(r.get('list_source'))}", None),
             (f"Why flagged: {why}", None),
         ]
@@ -748,21 +799,23 @@ _LEGEND_SECTIONS = [
              "'Mentioned in' names beside it.)"),
             ("Mentioned in", "one row per linked venue",
              "Each journal / publisher / venue tied to the paper THAT HAS A WEB "
-             "LINK, labelled by its Semantic Scholar type (e.g. 'Journal: …') and "
-             "linking to the venue's own site. Venues with no link are omitted, "
-             "and there is one entry per distinct venue URL (canonical + "
-             "alternates), so a merged-venue record shows every site it points "
-             "at. This is the one column whose block grows to fit them all (6 "
-             "linked venues -> a 6-row block; the other columns keep their "
-             "fields, merged to fit)."),
+             "LINK, showing the venue name and linking to the venue's own site. "
+             "(The venue type — journal/conference — is not repeated here; it is "
+             "in the 'Type' field of the Semantic Scholar venue column.) Venues "
+             "with no link are omitted, and there is one entry per distinct venue "
+             "URL (canonical + alternates), so a merged-venue record shows every "
+             "site it points at, each disambiguated by its host. This is the one "
+             "column whose block grows to fit them all (6 linked venues -> a "
+             "6-row block; the other columns keep their fields, merged to fit)."),
             ("Match", "Listed as / Beall list / Why flagged",
              "Why the paper was flagged, one field per row. 'Listed as' is the "
-             "Beall's List entry that matched (a link to it); 'Beall list' is "
-             "which list it came from (see the 'Beall list' section); 'Why "
-             "flagged' is a single plain-English line saying both HOW it matched "
-             "(see the 'How the venue matched' section) and what that means. For "
-             "clean / no_venue / error rows the first row shows a short note and "
-             "the rest are blank."),
+             "Beall's List entry that matched — its link opens THAT entry's own "
+             "website (the listed/predatory venue), NOT this paper's venue; "
+             "'Beall list' is which list it came from (see the 'Beall list' "
+             "section); 'Why flagged' is a single plain-English line naming HOW "
+             "it matched (see the 'How the venue matched' section) and the "
+             "concrete listed entry. For clean / no_venue / error rows the first "
+             "row shows a short note and the rest are blank."),
             ("LLM review", "(Flagged-only, LLM workbook)",
              "Present only on the Flagged-only sheet of bealls_llm_results.xlsx, "
              "and only for 'review' papers: the LLM's recommendation — Predatory "

@@ -231,9 +231,9 @@ nothing in Step C matched:
 **Step E — Nothing matched → `clean`.** The venue was identified and is not on
 the list.
 
-### Two deliberate downgrades from `on_list` to `review`
+### Three deliberate downgrades from `on_list` to `review`
 
-Even a Step-C "strong" match is downgraded to `review` in two cases, because
+Even a Step-C "strong" match is downgraded to `review` in three cases, because
 treating them as confident hits would be misleading:
 
 - **Weak lists.** A match against the *vanity-press* list (book/monograph
@@ -245,6 +245,12 @@ treating them as confident hits would be misleading:
   hijacked entry might actually be the **legitimate** journal — it is downgraded
   to `review`. Only a *website* or *ISSN* match (the clone's own identity) is
   asserted as `on_list`.
+- **Exact-name match on a *merged* venue.** When Semantic Scholar has fused
+  several publishers into one venue record (the "merged venue" data-quality
+  flag), a generic name can collide with a predatory entry that isn't this
+  paper's venue (e.g. a Wiley article mislabeled under the generic title
+  *Revista de educación*). An exact-*name* `on_list` hit on such a record is
+  downgraded to `review`; *website* and *ISSN* matches are left untouched.
 
 ### Why the canonical website is trusted but alternate URLs are not
 
@@ -308,7 +314,7 @@ Each paper is shown as a **block of rows** so every detail gets its own line:
 | **Paper specifications** | A header grouping the next three columns — everything describing the paper itself: |
 | &nbsp;&nbsp;• Paper | Title / Year / Source file / DOI (the DOI is a clickable link to the article). |
 | &nbsp;&nbsp;• Semantic Scholar venue | The venue exactly as Semantic Scholar reports it: name / type / website / ISSN. |
-| &nbsp;&nbsp;• Mentioned in | Each venue tied to the paper **that has a web link**, shown as `Type: Name` (type from Semantic Scholar, e.g. `Journal:`) and hyperlinked to the **venue's own site**. Venues with no link are omitted (so this can be `—`); there's one entry per distinct venue URL, so a merged-venue record shows every site it points at. This is the only column that can grow: a paper with 6 linked venues makes a 6-row block, while the other columns keep their fields (merged to fill). |
+| &nbsp;&nbsp;• Mentioned in | Each venue tied to the paper **that has a web link**, showing the venue **name** and hyperlinked to the **venue's own site** (the type — journal/conference — isn't repeated here; it's in the venue column's `Type` field). Venues with no link are omitted (so this can be `—`); there's one entry per distinct venue URL (each disambiguated by its host), so a merged-venue record shows every site it points at. This is the only column that can grow: a paper with 6 linked venues makes a 6-row block, while the other columns keep their fields (merged to fill). |
 | **Match** | *Why* it was flagged: **Listed as** (the matching Beall entry, a link), **Beall list** (which of the five lists it came from), and **Why flagged** (one plain sentence: how it matched and what that means). |
 
 Other sheets: **Data quality** (only papers whose Semantic Scholar record looks
@@ -323,7 +329,7 @@ only* sheet.
 Say a plant-ecology paper comes back as `review`:
 
 - **Semantic Scholar venue → Venue:** `Phyton`
-- **Mentioned in:** `Journal: Phyton` (linked to the journal's own site)
+- **Mentioned in:** `Phyton` (linked to the journal's own site)
 - **Match → Listed as:** `Phyton` (a *hijacked / cloned journal* entry)
 - **Match → Why flagged:** *"the name matches a hijacked-journal entry — but
   hijacked clones reuse the real journal's name, so this may be the legitimate

@@ -109,6 +109,14 @@ REPOSITORY_HOST_MARKERS = (
     "epub", "eprints", "repository", "repositorio", "dspace", "openrepository",
 )
 
+# Substrings naming large open-access AGGREGATORS / indexes that host thousands
+# of distinct journals (mostly Latin-American).  Like the archive domains, they
+# are not a single "publisher", so the data-quality "merged venue" check ignores
+# them when counting how many publishers a venue record points at.
+AGGREGATOR_HOST_MARKERS = (
+    "redalyc", "scielo", "latindex", "redib", "dialnet", "doaj",
+)
+
 # Preprint-server hosts: a paper whose venue is one of these has no journal
 # publisher and therefore cannot be "on Beall's List" — it is classified
 # "no_venue" rather than clean/predatory.
