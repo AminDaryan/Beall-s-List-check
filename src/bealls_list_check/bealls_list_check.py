@@ -885,8 +885,10 @@ _LEGEND_SECTIONS = [
              "DOI/ISSN, leftover HTML codes in the name, a 'merged venue' (one "
              "record pointing at several publishers' sites), and — when the "
              "Crossref cross-check is enabled — a venue/ISSN that disagrees with "
-             "the publisher-deposited record. Appearing here is a 'check this by "
-             "hand' flag, not proof the verdict is wrong."),
+             "the publisher-deposited record. For a 'merged venue' the check also "
+             "looks up the paper's DOI in Crossref and names the journal it was "
+             "actually published in, so you don't have to. Appearing here is a "
+             "'check this by hand' flag, not proof the verdict is wrong."),
         ],
     },
     {

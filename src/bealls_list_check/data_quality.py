@@ -4,10 +4,12 @@ S2 metadata is sometimes wrong, and a wrong verdict is worse than a flagged one.
 These checks surface *suspect* records so they aren't trusted blindly.  Two
 layers, combined by :func:`validate`:
 
-  * :func:`offline_flags` — structural + internal-consistency checks (no network):
-    missing venue metadata, malformed DOI/ISSN, encoding artifacts, and the
-    "merged venues" red flag (S2 sometimes fuses two same-named journals, so its
-    venue URLs span multiple publishers).
+  * :func:`offline_flags` — structural + internal-consistency checks, offline
+    except for one Crossref lookup on a "merged venue": missing venue metadata,
+    malformed DOI/ISSN, encoding artifacts, and the "merged venues" red flag (S2
+    sometimes fuses two same-named journals, so its venue URLs span multiple
+    publishers).  When that flag fires, the paper's DOI is resolved via Crossref
+    to name the journal it was really published in (see _resolve_real_journal).
 
   * :func:`crossref_flags` — cross-check the DOI against Crossref, the
     publisher-deposited registration metadata, to catch genuinely wrong venue /
@@ -91,8 +93,42 @@ def publisher_domains(paper):
     return pubs
 
 
+def _resolve_real_journal(paper):
+    """Name the journal a paper was really published in, from Crossref via its DOI.
+
+    Used only for a merged-venue paper, to answer "which of the merged journals is
+    this paper's?" automatically instead of asking the reader to check the DOI by
+    hand.  Returns a finished sentence, or "" when there is no usable DOI or
+    Crossref record (the caller then falls back to the check-by-hand wording).
+    Makes one (cached) Crossref lookup.
+    """
+    doi = ((paper.get("externalIds") or {}).get("DOI") or "").strip()
+    if not doi or not _DOI_RE.match(doi):
+        return ""
+    msg = _crossref_lookup(doi)
+    if not msg:
+        return ""
+    titles = msg.get("container-title") or []
+    journal = titles[0] if titles else ""
+    if not journal:
+        return ""
+    issns = sorted({normalize_issn(i) for i in (msg.get("ISSN") or []) if normalize_issn(i)})
+    publisher = (msg.get("publisher") or "").strip()
+    detail = ([f"ISSN {', '.join(issns)}"] if issns else []) + ([publisher] if publisher else [])
+    named = f"{journal} ({'; '.join(detail)})" if detail else journal
+    return (f"According to Crossref (the publisher registry), this paper was actually "
+            f"published in {named} — treat that as the venue rather than the merged "
+            "record above.")
+
+
 def offline_flags(paper):
-    """Structural + consistency warnings for one S2 record (no network)."""
+    """Structural + consistency warnings for one S2 record.
+
+    Offline, with ONE exception: when the "merged venue" red flag fires, this
+    makes a single (cached) Crossref lookup to name the paper's real journal (see
+    _resolve_real_journal), because that question is far more useful answered than
+    left to the reader.  Every other check here is purely offline.
+    """
     flags = []
     pv = paper.get("publicationVenue") or {}
     ext = paper.get("externalIds") or {}
@@ -121,15 +157,22 @@ def offline_flags(paper):
     publisher_regs = publisher_domains(paper)
     if len(publisher_regs) >= 2:
         n = len(publisher_regs)
-        flags.append(
-            f"This paper's Semantic Scholar venue record points to {n} different "
-            f"publishers' websites ({', '.join(sorted(publisher_regs))}). A single "
-            f"journal has one publisher, so Semantic Scholar has probably combined "
-            f"{n} different journals that share the same name into one record. The "
-            "journal it reports for this paper may therefore be one of the others "
-            "rather than the correct one — open the paper's DOI to confirm which "
-            "journal it was actually published in.")
+        msg = (f"This paper's Semantic Scholar venue record points to {n} different "
+               f"publishers' websites ({', '.join(sorted(publisher_regs))}). A single "
+               f"journal has one publisher, so Semantic Scholar has probably combined "
+               f"{n} different journals that share the same name into one record. ")
+        msg += _resolve_real_journal(paper) or (
+            "The journal it reports for this paper may therefore be one of the others "
+            "rather than the correct one — open the paper's DOI to confirm which journal "
+            "it was actually published in.")
+        flags.append(msg)
     return flags
+
+
+# One reused HTTP session so the many sequential Crossref lookups (one per
+# merged-venue paper) share a keep-alive connection instead of reconnecting each time.
+_session = requests.Session()
+_session.headers.update({"User-Agent": _UA})
 
 
 def _crossref_lookup(doi, *, timeout=10):
@@ -137,8 +180,8 @@ def _crossref_lookup(doi, *, timeout=10):
         return _crossref_cache[doi]
     message = None
     try:
-        resp = requests.get(_CROSSREF_URL + requests.utils.quote(doi, safe=""),
-                            headers={"User-Agent": _UA}, timeout=timeout)
+        resp = _session.get(_CROSSREF_URL + requests.utils.quote(doi, safe=""),
+                            timeout=timeout)
         if resp.status_code == 200:
             message = resp.json().get("message")
     except (requests.RequestException, ValueError):

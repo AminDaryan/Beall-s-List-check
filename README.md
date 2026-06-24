@@ -446,7 +446,11 @@ looks suspect, each with the specific issue:
 - leftover HTML codes (e.g. `&amp;`) in the venue name;
 - a **"merged venue"** — one record pointing at *two different publishers'*
   websites (the classic sign that Semantic Scholar fused two same-named
-  journals).
+  journals). For these, the check **looks the paper's DOI up in Crossref
+  automatically** and names the journal it was *actually* published in (e.g.
+  *"…actually published in Review of Education (ISSN 2049-6613; Wiley)…"*), so you
+  don't have to resolve it by hand. (This is the one online step in the otherwise
+  offline fast check; it runs only for merged-venue papers that have a DOI.)
 
 Optionally, cross-check against **Crossref** (the official registry publishers
 submit their articles to): when enabled, the journal name and ISSN Semantic
