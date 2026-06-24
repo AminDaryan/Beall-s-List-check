@@ -99,6 +99,11 @@ ARCHIVE_RESOLVER_DOMAINS = {
     "handle.net",                               # Handle persistent-identifier resolver
     "doi.org",                                  # DOI resolver
     "worldcat.org",                             # OCLC union catalog
+    "nih.gov",                                  # PubMed / PMC (NCBI) — index, not a publisher
+    "gale.com",                                 # Gale (Cengage) database
+    "crossref.org",                             # Crossref registry
+    "openalex.org",                             # OpenAlex index
+    "base-search.net",                          # BASE search index
 }
 
 # Substrings that mark a host as an institutional repository / archive rather
@@ -109,13 +114,28 @@ REPOSITORY_HOST_MARKERS = (
     "epub", "eprints", "repository", "repositorio", "dspace", "openrepository",
 )
 
-# Substrings naming large open-access AGGREGATORS / indexes that host thousands
-# of distinct journals (mostly Latin-American).  Like the archive domains, they
-# are not a single "publisher", so the data-quality "merged venue" check ignores
-# them when counting how many publishers a venue record points at.
+# Substrings naming AGGREGATORS / indexes / databases / reference sites that list
+# journals but don't PUBLISH them.  Like the archive domains, they are not a
+# publisher, so the data-quality "merged venue" check ignores them when counting
+# how many publishers a venue record points at (e.g. a journal listed on Gale's
+# InfoTrac database next to its real publisher isn't a "merge").
 AGGREGATOR_HOST_MARKERS = (
-    "redalyc", "scielo", "latindex", "redib", "dialnet", "doaj",
+    "redalyc", "scielo", "latindex", "redib", "dialnet", "doaj",   # OA journal aggregators
+    "galegroup", "proquest", "ebscohost",                          # commercial databases
+    "wikipedia", "wikidata", "wikicfp",                            # reference / CFP listings
+    "fatcat", "dblp", "semanticscholar", "researchgate", "academia.edu",
 )
+
+# Different web domains owned by the SAME publisher.  Collapsed to one before the
+# "merged venue" check tallies publishers, so a journal listed under, e.g., both
+# elsevier.com and sciencedirect.com isn't miscounted as "2 different publishers".
+SAME_PUBLISHER_DOMAINS = {
+    "sciencedirect.com": "elsevier.com",     # ScienceDirect is Elsevier
+    "computer.org":       "ieee.org",        # IEEE Computer Society is IEEE
+    "biomedcentral.com":  "springer.com",    # BMC is Springer Nature
+    "springeropen.com":   "springer.com",    # SpringerOpen is Springer Nature
+    "plosone.org":        "plos.org",        # PLOS ONE is PLOS
+}
 
 # Preprint-server hosts: a paper whose venue is one of these has no journal
 # publisher and therefore cannot be "on Beall's List" — it is classified

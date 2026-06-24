@@ -26,7 +26,10 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from normalize import normalize_name, normalize_host, normalize_issn, significant_tokens
-from config import ARCHIVE_RESOLVER_DOMAINS, AGGREGATOR_HOST_MARKERS
+from config import (
+    ARCHIVE_RESOLVER_DOMAINS, AGGREGATOR_HOST_MARKERS, SAME_PUBLISHER_DOMAINS,
+    PREPRINT_DOMAINS,
+)
 
 _DOI_RE = re.compile(r"^10\.\d{4,9}/\S+$")
 _ENTITY_RE = re.compile(r"&[A-Za-z]+;|&#\d+;|�")        # &amp; &#39; or U+FFFD
@@ -62,25 +65,30 @@ def _registrable(host):
 
 
 def publisher_domains(paper):
-    """Distinct registrable *publisher* domains for a venue record.
+    """Distinct *publisher* domains for a venue record.
 
-    Gathers the canonical + alternate venue hosts, then drops the ones that
-    aren't publishers — aggregators/indexes (Redalyc, SciELO, …) and archive /
-    preservation / resolver services — so what remains is the set of genuine
-    publishers Semantic Scholar associates with this one venue.  Two or more of
-    them is the "merged venue" red flag.
+    Gathers the canonical + alternate venue hosts, then keeps only genuine
+    publishers by:
+      * dropping aggregators / indexes / databases / reference sites that list
+        journals but don't publish them (Gale, Wikipedia, PubMed, SciELO, …);
+      * dropping archive / preservation / resolver services and preprint servers;
+      * collapsing a publisher's several brand domains to one (ScienceDirect ->
+        Elsevier, BMC/SpringerOpen -> Springer, …) so one company isn't counted
+        as several publishers.
+    Two or more remaining is the "merged venue" red flag.
     """
     pv = paper.get("publicationVenue") or {}
     hosts = [normalize_host(pv["url"])] if pv.get("url") else []
     hosts += [normalize_host(u) for u in (pv.get("alternate_urls") or []) if u]
-    hosts = [h for h in hosts if h and not any(m in h for m in AGGREGATOR_HOST_MARKERS)]
-    return {_registrable(h) for h in hosts} - ARCHIVE_RESOLVER_DOMAINS
-
-
-def is_merged_venue(paper):
-    """True if S2's venue record points at >= 2 distinct publishers — the sign it
-    fused two same-named journals into one record."""
-    return len(publisher_domains(paper)) >= 2
+    pubs = set()
+    for h in hosts:
+        if not h or any(m in h for m in AGGREGATOR_HOST_MARKERS):
+            continue
+        reg = _registrable(h)
+        if reg in ARCHIVE_RESOLVER_DOMAINS or reg in PREPRINT_DOMAINS:
+            continue
+        pubs.add(SAME_PUBLISHER_DOMAINS.get(reg, reg))   # collapse same-publisher brands
+    return pubs
 
 
 def offline_flags(paper):

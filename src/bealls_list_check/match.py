@@ -235,6 +235,7 @@ def _blank_result(paper, source_file):
         "venue": paper.get("venue", "") or "",
         "venue_type": pv.get("type", "") or "",
         "venue_domain": "",
+        "venue_url": "",            # full URL behind venue_domain (so it can be a link)
         "canonical_domain": "",     # the paper's own publicationVenue.url host ("" if none)
         "issn": normalize_issn(pv.get("issn")) if pv.get("issn") else "",
         "mentions": _collect_mentions(paper, pv),
@@ -358,6 +359,12 @@ def _classify(r: dict, index: BeallIndex, paper: dict) -> dict:
     all_domains = ([canonical_domain] if canonical_domain else []) + alt_domains
     r["venue_domain"] = canonical_domain or (alt_domains[0] if alt_domains else "")
     r["canonical_domain"] = canonical_domain
+    # Full URL behind venue_domain, so the Domain cell can link to the venue site.
+    if canonical_domain:
+        r["venue_url"] = pv.get("url") or ""
+    elif alt_domains:
+        r["venue_url"] = next((u for u in (pv.get("alternate_urls") or [])
+                               if normalize_host(u) == alt_domains[0]), "")
 
     oa = paper.get("openAccessPdf") or {}
     oa_domain = normalize_host(oa.get("url")) if oa.get("url") else ""

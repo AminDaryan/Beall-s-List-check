@@ -196,11 +196,15 @@ def _paper_subrows(r):
 
 
 def _venue_subrows(r):
-    """Four labelled rows for the Venue column: Venue / Type / Domain / ISSN."""
+    """Four labelled rows for the Venue column: Venue / Type / Domain / ISSN.
+
+    The Domain row links to the venue's website (the URL behind that host) when
+    one is known, so a reviewer can click straight through to the venue.
+    """
     return [
         (f"Venue: {r.get('venue') or '—'}", None),
         (f"Type: {r.get('venue_type') or '—'}", None),
-        (f"Domain: {r.get('venue_domain') or '—'}", None),
+        (f"Domain: {r.get('venue_domain') or '—'}", r.get("venue_url") or None),
         (f"ISSN: {r.get('issn') or '—'}", None),
     ]
 
@@ -773,9 +777,9 @@ _LEGEND_SECTIONS = [
             ("Semantic Scholar venue", "Venue / Type / Domain / ISSN",
              "The publication venue exactly as Semantic Scholar reports it, one "
              "field per row. 'Type' is journal/conference (conferences are out "
-             "of scope); 'Domain' is the venue website host — the main match "
-             "key. (Named 'Semantic Scholar venue' to distinguish it from the "
-             "'Mentioned in' names beside it.)"),
+             "of scope); 'Domain' is the venue website host — the main match key "
+             "— and links to the venue's site. (Named 'Semantic Scholar venue' to "
+             "distinguish it from the 'Mentioned in' names beside it.)"),
             ("Mentioned in", "one row per linked venue",
              "Each journal / publisher / venue tied to the paper THAT HAS A WEB "
              "LINK, showing the venue name and linking to the venue's own site. "
