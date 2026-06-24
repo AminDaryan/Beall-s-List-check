@@ -244,7 +244,11 @@ treating them as confident hits would be misleading:
   the **real** journal's name to impersonate it. So an exact-*name* match to a
   hijacked entry might actually be the **legitimate** journal — it is downgraded
   to `review`. Only a *website* or *ISSN* match (the clone's own identity) is
-  asserted as `on_list`.
+  asserted as `on_list`. Such a `review` is then **cleared to `clean`** when the
+  paper is *proven* not to be the counterfeit — either its venue is the authentic
+  journal's own site (from Beall's "authentic journal" column), or its DOI
+  resolves via Crossref to a real publisher that is neither the counterfeit nor
+  on the list. The clearance and its reason are kept on the Data-quality sheet.
 - **Exact-name match the website doesn't back up.** A name alone is
   high-confidence only if the paper's own venue is hosted at the *same site* as
   the Beall entry. If the listed venue has a website but **none** of the paper's
@@ -328,20 +332,24 @@ only* sheet.
 
 ### A worked example
 
-Say a plant-ecology paper comes back as `review`:
+Take a plant-ecology paper whose venue Semantic Scholar reports as `Phyton`. The
+name `Phyton` matches a **hijacked / cloned journal** entry on Beall's List —
+a predatory site once impersonated a real journal called *Phyton* by copying its
+name. A name match alone can't tell the genuine journal from the counterfeit, so
+this starts as a doubtful `review`.
 
-- **Semantic Scholar venue → Venue:** `Phyton`
-- **Mentioned in:** `Phyton` (linked to the journal's own site)
-- **Match → Listed as:** `Phyton` (a *hijacked / cloned journal* entry)
-- **Match → Why flagged:** *"the name matches a hijacked-journal entry — but
-  hijacked clones reuse the real journal's name, so this may be the legitimate
-  journal; verify."*
+The check then **resolves that doubt automatically**: it reads the paper's DOI
+(`10.32604/phyton.2024.050556`) in Crossref, which shows the paper was actually
+published by **Tech Science Press** — *not* the counterfeit (`engineeronline.net`)
+and not on Beall's List. So the paper is **cleared to `clean`**, with a note
+explaining exactly that. (If instead the paper's own venue website were the
+authentic journal's site, it would clear the same way.) It leaves the *Flagged
+only* sheet but stays on the **Data quality** sheet so the check, and the reason
+for it, remain visible. Here `clean` means *"not on Beall's List"* — not *"proven
+reputable."*
 
-So a predatory site once impersonated the real journal *Phyton*, which is why the
-**name** is on the list — but your paper is very likely the genuine *Phyton* (a
-long-standing Austrian botany journal). That's exactly why it's `review`, not
-`on_list`: it needs a human's eyes, not an automatic verdict. The **thorough**
-check's *LLM review* column would make that call for you ("Legitimate — keep").
+A hijacked-by-name paper that *can't* be resolved this way (no DOI, or the DOI
+points at the counterfeit itself) stays `review` for a human or the LLM pass.
 
 ---
 

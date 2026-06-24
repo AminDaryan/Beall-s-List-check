@@ -891,7 +891,11 @@ _LEGEND_SECTIONS = [
              "A fake journal impersonating a legitimate one by reusing its name "
              "and look (only the fake side is listed). A name-only match is "
              "downgraded to review, since the clone reuses the real journal's "
-             "name; only a website match is asserted as on_list."),
+             "name; only a website match is asserted as on_list. Such a review is "
+             "cleared to clean when the paper is proven not to be the counterfeit "
+             "— its venue is the authentic journal's own site, or its DOI resolves "
+             "(Crossref) to a real publisher that is neither the counterfeit nor "
+             "on the list — with the reason kept on the Data-quality sheet."),
             ("vanity press (book publisher)", "weak — review only",
              "A book/monograph publisher (e.g. IGI Global). Not a journal-quality "
              "signal, so a match here is downgraded to review."),
