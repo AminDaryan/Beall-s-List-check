@@ -66,31 +66,52 @@ def _registrable(host):
     return ".".join(parts[-2:])
 
 
-def publisher_domains(paper):
-    """Distinct *publisher* domains for a venue record.
+def _classify_venue_hosts(paper):
+    """Split a venue record's websites into genuine publishers vs the non-publisher
+    hosts set aside before the merged-venue tally.
 
-    Gathers the canonical + alternate venue hosts, then keeps only genuine
-    publishers by:
-      * dropping aggregators / indexes / databases / reference sites that list
-        journals but don't publish them (Gale, Wikipedia, PubMed, SciELO, …);
-      * dropping archive / preservation / resolver services and preprint servers;
-      * collapsing a publisher's several brand domains to one (ScienceDirect ->
+    Gathers the canonical + alternate venue hosts (deduped), then for each decides:
+      * dropped — aggregators / indexes / databases / reference sites that list
+        journals but don't publish them (Gale, Wikipedia, PubMed, SciELO, …),
+        archive / preservation / resolver services, or preprint servers;
+      * kept — a genuine publisher, reduced to its registrable domain and with a
+        publisher's several brand domains collapsed to one (ScienceDirect ->
         Elsevier, BMC/SpringerOpen -> Springer, …) so one company isn't counted
         as several publishers.
-    Two or more remaining is the "merged venue" red flag.
+
+    Returns ``(publishers, dropped)``: *publishers* is the set of kept domains
+    (two or more is the "merged venue" red flag); *dropped* is a list of
+    ``(host, reason)`` in input order, so a message can name exactly which links
+    were excluded and why — the reasons are plural-neutral phrases.
     """
     pv = paper.get("publicationVenue") or {}
     hosts = [normalize_host(pv["url"])] if pv.get("url") else []
     hosts += [normalize_host(u) for u in (pv.get("alternate_urls") or []) if u]
-    pubs = set()
+    publishers, dropped, seen = set(), [], set()
     for h in hosts:
-        if not h or any(m in h for m in AGGREGATOR_HOST_MARKERS):
+        if not h or h in seen:
+            continue
+        seen.add(h)
+        if any(m in h for m in AGGREGATOR_HOST_MARKERS):
+            dropped.append((h, "indexes or aggregators, not publishers"))
             continue
         reg = _registrable(h)
-        if reg in ARCHIVE_RESOLVER_DOMAINS or reg in PREPRINT_DOMAINS:
+        if reg in ARCHIVE_RESOLVER_DOMAINS:
+            dropped.append((h, "library archives or identifier resolvers, not publishers"))
             continue
-        pubs.add(SAME_PUBLISHER_DOMAINS.get(reg, reg))   # collapse same-publisher brands
-    return pubs
+        if reg in PREPRINT_DOMAINS:
+            dropped.append((h, "preprint servers, not publishers"))
+            continue
+        publishers.add(SAME_PUBLISHER_DOMAINS.get(reg, reg))   # collapse same-publisher brands
+    return publishers, dropped
+
+
+def publisher_domains(paper):
+    """Distinct *publisher* domains for a venue record (see _classify_venue_hosts).
+
+    Two or more is the "merged venue" red flag.
+    """
+    return _classify_venue_hosts(paper)[0]
 
 
 def _resolve_real_journal(paper, publisher_regs):
@@ -181,13 +202,26 @@ def offline_flags(paper):
 
     # Merged-venue red flag: the one venue record points at >1 publisher's website,
     # which usually means Semantic Scholar fused two same-named journals into one.
-    publisher_regs = publisher_domains(paper)
+    publisher_regs, dropped = _classify_venue_hosts(paper)
     if len(publisher_regs) >= 2:
         n = len(publisher_regs)
         msg = (f"This paper's Semantic Scholar venue record points to {n} different "
                f"publishers' websites ({', '.join(sorted(publisher_regs))}). A single "
                f"journal has one publisher, so Semantic Scholar has probably combined "
                f"{n} different journals that share the same name into one record. ")
+        # Name any other linked sites that were set aside, so this never looks
+        # inconsistent with the (more inclusive) 'Mentioned in' column.
+        if dropped:
+            groups = {}
+            for h, why in dropped:
+                groups.setdefault(why, []).append(h)
+            parts = "; ".join(f"{', '.join(hs)} — {why}" for why, hs in groups.items())
+            if len(dropped) == 1:
+                msg += (f"(One other linked site does not count as a separate journal: "
+                        f"{parts}.) ")
+            else:
+                msg += (f"({len(dropped)} other linked sites do not count as separate "
+                        f"journals: {parts}.) ")
         msg += _resolve_real_journal(paper, publisher_regs) or (
             "The journal it reports for this paper may therefore be one of the others "
             "rather than the correct one — open the paper's DOI to confirm which journal "
