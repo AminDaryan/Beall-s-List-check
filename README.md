@@ -224,7 +224,8 @@ nothing in Step C matched:
 4. One of the **alternate websites** matches a listed site (the report lists
    *all* such candidates, not just the first).
 5. The **free PDF** is hosted on a listed site, even though the venue itself was
-   not identified as listed.
+   not identified as listed. (Like the alternate-URL case, this is then resolved
+   by the paper's DOI when it has one — see below.)
 6. A venue name is **≥ 93% similar** (but not identical) to a listed name — a
    spelling variant or typo.
 
@@ -290,6 +291,14 @@ alternate by ISSN, publisher website, or exact journal name:
   listed"**: a predatory publisher Beall recorded under a *different* domain
   would slip through that test, so when in doubt the paper is left for a human. A
   false clear is the one error this check must not make.
+
+The **free-PDF** review (signal 5 above) is resolved the same way. A PDF hosted
+on a listed site is only suggestive — it can be re-hosted by someone other than
+the publisher — so the DOI decides: if Crossref says the paper was **published**
+by that listed site, it is promoted to `on_list`; if the DOI **positively
+identifies the paper's own, unlisted venue**, the PDF was merely re-hosted and it
+is **cleared to `clean`**; anything less stays `review`. The same positive-proof
+rule applies — it is never cleared just because the real publisher isn't listed.
 
 The promotion or clearance and its reason are kept on the Data-quality sheet.
 

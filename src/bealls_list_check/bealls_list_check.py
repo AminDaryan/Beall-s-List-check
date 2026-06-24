@@ -105,6 +105,7 @@ def classify_corpus(index, whitelist=None, crossref="off"):
         r["data_quality"] = input_quality.validate_input(paper, use_crossref=use_cr)
         _clear_hijacked_if_genuine(r, paper, index)
         _resolve_alternate_url(r, paper, index)
+        _resolve_open_access_pdf(r, paper, index)
         results.append(r)
     return results, sorted(corpus_files), n_scope
 
@@ -349,6 +350,81 @@ def _mark_alt_cleared(r, who, detail, real_domain, how):
     r.setdefault("data_quality", []).append(expl)   # keep it visible on the Data-quality sheet
 
 
+def _resolve_open_access_pdf(r, paper, index):
+    """Resolve an open-access-PDF 'review' using the paper's DOI (Crossref).
+
+    A ``domain_open_access_pdf`` review means the venue itself was NOT on the list,
+    but the paper's free PDF is hosted on a listed site — and a PDF can be
+    re-hosted by someone other than the publisher, so it is only a soft signal.
+    The DOI is the authoritative tiebreaker: Crossref records who actually
+    published the paper.  Three outcomes:
+
+      * Crossref says the listed PDF host IS this paper's publisher -> on_list
+        (it really was published there, not merely re-hosted).
+      * Crossref POSITIVELY identifies the paper's own canonical venue and that
+        venue is not listed -> the PDF was a re-host; clear to clean.
+      * anything else — no DOI, no record, or no positive identification -> review.
+
+    Same positive-proof rule as the alternate-URL resolver: never clear on the
+    weak "the real publisher isn't listed" signal alone.  One (cached) lookup.
+    """
+    if not (r["status"] == "review" and r.get("matched_on") == "domain_open_access_pdf"):
+        return
+    doi = ((paper.get("externalIds") or {}).get("DOI") or "").strip()
+    if not doi:
+        return                                          # coverage gap: no DOI -> stay review
+    msg = data_quality._crossref_lookup(doi)
+    if not msg:
+        return                                          # not in Crossref / lookup failed -> stay review
+    real_domain = _crossref_publisher_domain(msg)
+
+    # (1) Confirm: the DOI's publisher IS the listed site the free PDF sits on ->
+    #     the paper was genuinely published there, not merely re-hosted.
+    oa = paper.get("openAccessPdf") or {}
+    oa_domain = normalize_host(oa.get("url")) if oa.get("url") else ""
+    entry = index.domain_match(oa_domain)[0] if oa_domain else None
+    if entry:
+        how = _crossref_matches(msg, entry, real_domain)
+        if how:
+            _hit(r, entry, "on_list", "domain_open_access_pdf_doi")
+            r["review_reason"] = _review_reason(r)   # "" once on_list; real text if a weak-list downgrade kept it review
+            r.setdefault("data_quality", []).append(
+                f"Confirmed via DOI. The paper's free PDF is hosted on the listed "
+                f"'{entry['name']}', and the paper's DOI ({doi}) registers it as "
+                f"published there too (matched by {how}) — so it was genuinely "
+                f"published by the listed venue, not merely re-hosted on it.")
+            return
+
+    # (2) Clear — ONLY on positive evidence the DOI belongs to this paper's own
+    #     canonical venue, AND that venue is on no Beall list.  Anything short of a
+    #     positive canonical match stays 'review' for a human.
+    how = _crossref_matches(msg, _canonical_venue_descriptor(paper), real_domain)
+    if how and real_domain and index.domain_match(real_domain)[0] is None:
+        publisher = (msg.get("publisher") or "").strip()
+        journal = ((msg.get("container-title") or [""])[0] or "").strip()
+        who = publisher or journal or real_domain
+        detail = journal or publisher or real_domain
+        _mark_oa_cleared(r, who, detail, real_domain, how)
+    # else: ambiguous -> leave as review
+
+
+def _mark_oa_cleared(r, who, detail, real_domain, how):
+    """Flip an open-access-PDF review to 'clean': the DOI POSITIVELY identifies the
+    paper's own (unlisted) canonical venue, so the listed site merely RE-HOSTED the
+    free PDF and did not publish the paper."""
+    listed = r.get("matched_name") or "a listed site"
+    expl = (f"Cleared after a check. The paper's free PDF is hosted on the listed "
+            f"'{listed}', which raised doubt — but the paper's DOI identifies its "
+            f"venue as {who} ({detail}; {real_domain}), matched by {how}: this is the "
+            f"paper's own canonical venue and is not on Beall's List, so the listed "
+            f"site merely re-hosted the PDF and did not publish the paper. ('Clean' "
+            f"here means 'not on Beall's List', not 'proven reputable'.)")
+    r["status"] = "clean"
+    r["cleared_reason"] = expl
+    r["review_reason"] = ""
+    r.setdefault("data_quality", []).append(expl)   # keep it visible on the Data-quality sheet
+
+
 def load_corpus():
     """Yield (source_file, paper) for every record across all corpus files.
 
@@ -545,6 +621,15 @@ SIGNAL_INFO = {
         "paper is hosted on a listed site (e.g. scirp.org). Suggestive but not "
         "conclusive, so it is flagged for review.",
     ),
+    "domain_open_access_pdf_doi": (
+        "the PDF is on a listed site and the DOI confirms it",
+        "on_list",
+        "The paper's free PDF sits on a listed site, and the paper's DOI (checked "
+        "against Crossref, the publisher registry) shows it was actually published "
+        "there — not merely re-hosted. The DOI resolves the re-hosting doubt, so "
+        "this is asserted as on_list. Example: a paper whose only listed signal is "
+        "a frontiersin.org PDF, where the DOI registers the paper to Frontiers.",
+    ),
 }
 
 # Plain-language name + weight for each Beall list.
@@ -607,6 +692,10 @@ def _on_list_why(r):
                 f"'{listed}', and the paper's DOI confirms (via Crossref, the "
                 f"publisher registry) it was published there — so the alternate is "
                 f"this paper's real venue, not a different same-named journal.")
+    if mo == "domain_open_access_pdf_doi":
+        return (f"the paper's free PDF is hosted on the listed '{listed}', and the "
+                f"paper's DOI confirms (via Crossref, the publisher registry) it was "
+                f"published there — not merely re-hosted, so this is a real match.")
     return (f"{_signal_plain(mo)} ('{listed}') — so it appears on Beall's List "
             "(high-confidence match).")
 
@@ -1054,7 +1143,7 @@ _LEGEND_SECTIONS = [
             (SIGNAL_INFO[k][0], SIGNAL_INFO[k][1], SIGNAL_INFO[k][2])
             for k in ("domain", "domain_subdomain", "issn", "name_exact",
                       "name_fuzzy", "domain_alternate_url", "domain_alternate_url_doi",
-                      "domain_open_access_pdf")
+                      "domain_open_access_pdf", "domain_open_access_pdf_doi")
         ],
     },
     {
