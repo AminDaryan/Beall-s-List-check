@@ -66,6 +66,22 @@ def _is_non_publisher_host(host):
     return any(marker in host for marker in REPOSITORY_HOST_MARKERS)
 
 
+def _domain_corroborates(entry_domain, paper_domains):
+    """True if any of the paper's venue hosts IS the listed entry's website.
+
+    A name match is only high-confidence when the paper's own venue is hosted at
+    the same site as the Beall entry.  Matches exactly, or as a subdomain in
+    either direction (ojs.x.com vs x.com).
+    """
+    for d in paper_domains:
+        if not d:
+            continue
+        if (d == entry_domain or d.endswith("." + entry_domain)
+                or entry_domain.endswith("." + d)):
+            return True
+    return False
+
+
 def venue_signals(paper):
     """Return ``(venue_domains, normalized_names)`` for whitelist scoping.
 
@@ -280,6 +296,17 @@ def _review_reason(r: dict) -> str:
                 reason += f", which differ from the listed clone's site ({clone_host})"
             reason += " — suggesting it is the legitimate journal."
         return reason
+    if mo == "name_exact":
+        # Reached here only when the name matched but the paper's own URL did NOT
+        # back it up (see _classify) — so it may be a different, same-named venue.
+        listed_site = normalize_host(r.get("matched_url") or "")
+        own = r.get("venue_domain") or ""
+        where = f"this paper's journal is at {own}" if own else "this paper's venue has no such website"
+        site = f" ({listed_site})" if listed_site else ""
+        return (f"The venue NAME matches the listed '{r.get('matched_name')}', but "
+                f"that listed venue's own website{site} is not where {where}. Many "
+                "journals share a name, so this may be a different journal — verify "
+                "it is really the listed one before excluding.")
     if mo == "name_fuzzy":
         return ("Venue name is only similar (>= 93%), not an exact match, to a "
                 "listed name.")
@@ -374,7 +401,15 @@ def _classify(r: dict, index: BeallIndex, paper: dict) -> dict:
         # Require >= 2 words: single generic words ("Research", "Heliyon")
         # collide with legitimate journals and cause false positives.
         if len(nm) >= MIN_NAME_LEN and len(nm.split()) >= 2 and nm in index.by_name:
-            return _hit(r, _best(index.by_name[nm]), "on_list", "name_exact")
+            entry = _best(index.by_name[nm])
+            # A name alone is high-confidence only if the paper's OWN venue URL
+            # backs it up.  If the listed entry has a website and NONE of the
+            # paper's URLs are that site, the name may just be a coincidence
+            # (many journals share a name) -> downgrade to review, not on_list.
+            status = "on_list"
+            if entry.get("domain") and not _domain_corroborates(entry["domain"], all_domains):
+                status = "review"
+            return _hit(r, entry, status, "name_exact")
 
     # ── softer signals (flagged for review only) ─────────────────────────
     # One or more ALTERNATE venue URLs point at listed domains.  Because S2

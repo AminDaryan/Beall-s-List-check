@@ -42,7 +42,6 @@ from config import (
 from match import BeallIndex, match_paper, out_of_scope_result
 from user_lists import load_user_entries, WhitelistMatcher
 from common import input_quality          # the one shared input data-quality validator
-import data_quality                       # merged-venue test for the name-match downgrade (no LLM)
 
 
 # =============================================================================
@@ -100,30 +99,8 @@ def classify_corpus(index, whitelist=None, crossref="off"):
         use_cr = crossref == "all" or (crossref == "flagged"
                                        and r["status"] in ("on_list", "review"))
         r["data_quality"] = input_quality.validate_input(paper, use_crossref=use_cr)
-        _downgrade_merged_name_match(r, paper)
         results.append(r)
     return results, sorted(corpus_files), n_scope
-
-
-def _downgrade_merged_name_match(r, paper):
-    """Soften a generic exact-NAME on_list hit to review when S2 merged venues.
-
-    An exact-name match is high confidence only if the name identifies one venue.
-    When Semantic Scholar has fused several different publishers into the record
-    (the "merged venue" red flag), a generic name can collide with a predatory
-    entry that is NOT this paper's venue — e.g. a Wiley article mislabeled under
-    the generic title 'Revista de educación' matching a listed predatory journal.
-    Domain/ISSN matches (the venue's own identity) are left untouched.
-    """
-    if (r["status"] == "on_list" and r["matched_on"] == "name_exact"
-            and data_quality.is_merged_venue(paper)):
-        r["status"] = "review"
-        r["review_reason"] = (
-            f"Exact-name match to the listed '{r['matched_name']}', BUT Semantic "
-            "Scholar merged several different publishers into this one venue record "
-            "(see the Data quality sheet), so the listed entry may be a different "
-            "journal that just shares this name — not this paper's venue. Verify "
-            "before trusting.")
 
 
 def load_corpus():
@@ -264,7 +241,9 @@ SIGNAL_INFO = {
         "The journal or publisher name is exactly the same as a name on the "
         "list (capitalisation, accents and punctuation are ignored). Example: a "
         "venue named 'OMICS Publishing Group' matches the listed 'OMICS "
-        "Publishing Group'.",
+        "Publishing Group'. Asserted as on_list only when the paper's OWN venue "
+        "website is the listed site too; if the name matches but the website is "
+        "different (many journals share a name), it is downgraded to review.",
     ),
     "name_fuzzy": (
         "the journal name is very similar to a listed name",

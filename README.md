@@ -245,12 +245,14 @@ treating them as confident hits would be misleading:
   hijacked entry might actually be the **legitimate** journal — it is downgraded
   to `review`. Only a *website* or *ISSN* match (the clone's own identity) is
   asserted as `on_list`.
-- **Exact-name match on a *merged* venue.** When Semantic Scholar has fused
-  several publishers into one venue record (the "merged venue" data-quality
-  flag), a generic name can collide with a predatory entry that isn't this
-  paper's venue (e.g. a Wiley article mislabeled under the generic title
-  *Revista de educación*). An exact-*name* `on_list` hit on such a record is
-  downgraded to `review`; *website* and *ISSN* matches are left untouched.
+- **Exact-name match the website doesn't back up.** A name alone is
+  high-confidence only if the paper's own venue is hosted at the *same site* as
+  the Beall entry. If the listed venue has a website but **none** of the paper's
+  URLs are that site, the name may just be a coincidence — many journals share a
+  name (e.g. a paper at `virginiaresearchinstitute.com` whose title matches the
+  listed *International Journal for Multidisciplinary Research* at `ijfmr.com`,
+  or a Wiley article mislabeled as *Revista de educación*). The exact-*name* hit
+  is downgraded to `review`; *website* and *ISSN* matches are left untouched.
 
 ### Why the canonical website is trusted but alternate URLs are not
 
