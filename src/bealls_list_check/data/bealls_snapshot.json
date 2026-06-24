@@ -22714,7 +22714,10 @@
    "domain": "ardsj.com",
    "normalized_name": "academie royale des sciences d outre mer bulletin des seances",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Bulletin des séances- Académie royale des sciences d’outre-mer",
+   "authentic_url": "http://www.kaowarsom.be/fr/bulletins",
+   "authentic_domain": "kaowarsom.be"
   },
   {
    "name": "Acoreana Journal (Journal of Acoreana)",
@@ -22722,7 +22725,10 @@
    "domain": "chm.tomaspubs.com",
    "normalized_name": "acoreana journal journal of acoreana",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Açoreana: revista de estudos açoreanos",
+   "authentic_url": "http://www.worldcat.org/oclc/183195915",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Acta Bioethica",
@@ -22730,7 +22736,10 @@
    "domain": "actabioethica.org",
    "normalized_name": "acta bioethica",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Acta Bioethica",
+   "authentic_url": "http://www.actabioethica.uchile.cl/index.php/AB/index",
+   "authentic_domain": "actabioethica.uchile.cl"
   },
   {
    "name": "ACTA CIRURGICA BRASILEIRA",
@@ -22738,7 +22747,10 @@
    "domain": "actacirurgica.org",
    "normalized_name": "acta cirurgica brasileira",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Acta cirúrgica Brasileira",
+   "authentic_url": "http://www.scielo.br/scielo.php?script=sci_serial&amp;pid=0102-8650&amp;lng=en&amp;nrm=i",
+   "authentic_domain": "scielo.br"
   },
   {
    "name": "Afinidad",
@@ -22746,7 +22758,10 @@
    "domain": "afinidad.org",
    "normalized_name": "afinidad",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Afinidad",
+   "authentic_url": "http://www.aiqs.es/catala/afinidad.asp",
+   "authentic_domain": "aiqs.es"
   },
   {
    "name": "AGROCHIMICA",
@@ -22754,7 +22769,10 @@
    "domain": "agcjournal.org",
    "normalized_name": "agrochimica",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Agrochimica",
+   "authentic_url": "http://www.pisauniversitypress.it/landing_page-le-riviste-agrochimica-1497.html",
+   "authentic_domain": "pisauniversitypress.it"
   },
   {
    "name": "AIMS Report Journal",
@@ -22762,7 +22780,10 @@
    "domain": "aimsreport.org",
    "normalized_name": "aims report journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "AIMS report",
+   "authentic_url": "http://www.worldcat.org/oclc/220602820",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "The Journal of Albertiana",
@@ -22770,7 +22791,10 @@
    "domain": "albertiana.com",
    "normalized_name": "journal of albertiana",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Albertiana",
+   "authentic_url": "http://paleo.cortland.edu/albertiana/",
+   "authentic_domain": "paleo.cortland.edu"
   },
   {
    "name": "Amoeba Journal",
@@ -22778,7 +22802,10 @@
    "domain": "amoeba-journal.com",
    "normalized_name": "amoeba journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Amoeba: NJN-mededelingenblad",
+   "authentic_url": "http://www.worldcat.org/oclc/72979995",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Anais da Academia Brasileira de Ciências",
@@ -22786,7 +22813,10 @@
    "domain": "aabc-scielo.com.br",
    "normalized_name": "anais da academia brasileira de ciencias",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Anais da Academia Brasileira de Ciências",
+   "authentic_url": "http://www.scielo.br/revistas/aabc/iaboutj.htm",
+   "authentic_domain": "scielo.br"
   },
   {
    "name": "Anare Research Notes",
@@ -22794,7 +22824,10 @@
    "domain": "arnjournal.com",
    "normalized_name": "anare research notes",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "ANARE Research Notes",
+   "authentic_url": "https://www1.data.antarctica.gov.au/aadc/pubs/pubs_list.cfm?pub_list=ARN",
+   "authentic_domain": "www1.data.antarctica.gov.au"
   },
   {
    "name": "Journal Andamios",
@@ -22802,7 +22835,10 @@
    "domain": "andamios.org",
    "normalized_name": "journal andamios",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Andamios, Revista de Investigación Social",
+   "authentic_url": "http://www.redalyc.org/revista.oa?id=628",
+   "authentic_domain": "redalyc.org"
   },
   {
    "name": "ANDRIAS JOURNAL",
@@ -22810,7 +22846,10 @@
    "domain": "beallslist.weebly.com",
    "normalized_name": "andrias journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Andrias",
+   "authentic_url": "http://aurarialibrary.worldcat.org/oclc/10342270",
+   "authentic_domain": "aurarialibrary.worldcat.org"
   },
   {
    "name": "Archives des Sciences or here",
@@ -22818,7 +22857,10 @@
    "domain": "archiveofscience.com",
    "normalized_name": "archives des sciences or here",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Archives des Sciences",
+   "authentic_url": "http://www.unige.ch/sphn/",
+   "authentic_domain": "unige.ch"
   },
   {
    "name": "Aula Orientalis",
@@ -22826,7 +22868,10 @@
    "domain": "editorialusa.com",
    "normalized_name": "aula orientalis",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Aula Orientalis",
+   "authentic_url": "http://www.editorialausa.com/cola12.asp",
+   "authentic_domain": "editorialausa.com"
   },
   {
    "name": "Ayer Also here",
@@ -22834,7 +22879,10 @@
    "domain": "ayeronline.com",
    "normalized_name": "ayer also here",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Ayer: Revista de Historia Contemporánea",
+   "authentic_url": "http://www.ahistcon.org/revistaayer.html",
+   "authentic_domain": "ahistcon.org"
   },
   {
    "name": "Baltica Journal",
@@ -22842,7 +22890,10 @@
    "domain": "balticajournal.com",
    "normalized_name": "baltica journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Baltica",
+   "authentic_url": "http://www.geo.lt/geo/?id=710",
+   "authentic_domain": "geo.lt"
   },
   {
    "name": "BEITRAEGE ZUM NATURSCHUTZ IN DER SCHWEIZ(Switzerland Nature)",
@@ -22850,7 +22901,10 @@
    "domain": "naukpublication.org",
    "normalized_name": "beitraege zum naturschutz in der schweiz switzerland nature",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Beiträge zum Naturschutz in der Schweiz",
+   "authentic_url": "http://aurarialibrary.worldcat.org/oclc/885256642",
+   "authentic_domain": "aurarialibrary.worldcat.org"
   },
   {
    "name": "Blue Jay Journal",
@@ -22858,7 +22912,10 @@
    "domain": "canuorgme.org",
    "normalized_name": "blue jay journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Blue jay",
+   "authentic_url": "http://www.worldcat.org/oclc/1536609",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Bothalia Journal",
@@ -22866,7 +22923,10 @@
    "domain": "bthla-journal.org",
    "normalized_name": "bothalia journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Bothalia – African Biodiversity & Conservation",
+   "authentic_url": "http://www.abcjournal.org/",
+   "authentic_domain": "abcjournal.org"
   },
   {
    "name": "Bradleya",
@@ -22874,7 +22934,10 @@
    "domain": "britishedu.org.uk",
    "normalized_name": "bradleya",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Bradleya",
+   "authentic_url": "http://www.bcss.org.uk/brad.php",
+   "authentic_domain": "bcss.org.uk"
   },
   {
    "name": "Buletin Teknologi Tanaman also here",
@@ -22882,7 +22945,10 @@
    "domain": "tektanaman.com",
    "normalized_name": "buletin teknologi tanaman also here",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Buletin Teknologi Tanaman",
+   "authentic_url": "http://www.worldcat.org/oclc/847900648",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Bulletin of the Georgian National Academy of Sciences",
@@ -22890,7 +22956,10 @@
    "domain": "bnas.org",
    "normalized_name": "bulletin of the georgian national academy of sciences",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Bulletin of the Georgian National Academy of Sciences",
+   "authentic_url": "http://www.science.org.ge/moambe/moambe.html",
+   "authentic_domain": "science.org.ge"
   },
   {
    "name": "Busqueret",
@@ -22898,7 +22967,10 @@
    "domain": "isfr.net",
    "normalized_name": "busqueret",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Es Busqueret",
+   "authentic_url": "http://www.gobmallorca.com/esbusqueret/",
+   "authentic_domain": "gobmallorca.com"
   },
   {
    "name": "CADMO JOURNAL",
@@ -22906,7 +22978,10 @@
    "domain": "cadmo.org",
    "normalized_name": "cadmo journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "CADMO",
+   "authentic_url": "http://www.francoangeli.it/riviste/sommario.asp?idRivista=117&amp;lingua=en",
+   "authentic_domain": "francoangeli.it"
   },
   {
    "name": "Cahiers des sciences naturelles",
@@ -22914,7 +22989,10 @@
    "domain": "revistas-academicas.com",
    "normalized_name": "cahiers des sciences naturelles",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Les cahiers des sciences naturelles",
+   "authentic_url": "http://www.worldcat.org/oclc/609916855",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "CAHIERS DE PAIOLIVE",
@@ -22922,7 +23000,10 @@
    "domain": "ijiq.com",
    "normalized_name": "cahiers de paiolive",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Les Cahiers de Païolive",
+   "authentic_url": "http://www.worldcat.org/oclc/473132567",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "CEPAL Review",
@@ -22930,7 +23011,10 @@
    "domain": "cepalreview.org",
    "normalized_name": "cepal review",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "CEPAL Review",
+   "authentic_url": "http://www.cepal.org/en/publications/type/cepal-review",
+   "authentic_domain": "cepal.org"
   },
   {
    "name": "Chemical and Process Engineering",
@@ -22938,7 +23022,10 @@
    "domain": "processengineering.net",
    "normalized_name": "chemical and process engineering",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Chemical and Process Engineering",
+   "authentic_url": "http://www.degruyter.com/view/j/cpe",
+   "authentic_domain": "degruyter.com"
   },
   {
    "name": "Chemical Modelling Journal",
@@ -22946,7 +23033,10 @@
    "domain": "acoreanajr.com",
    "normalized_name": "chemical modelling journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Chemical Modelling: Applications and Theory",
+   "authentic_url": "http://www.rsc.org/shop/books/2010/9781847550750.asp",
+   "authentic_domain": "rsc.org"
   },
   {
    "name": "Ciência e técnica",
@@ -22954,7 +23044,10 @@
    "domain": "ciencia-e-tecnica.org",
    "normalized_name": "ciencia e tecnica",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Ciência e técnica vitivinícola",
+   "authentic_url": "http://www.ctv-jve-journal.org/",
+   "authentic_domain": "ctv-jve-journal.org"
   },
   {
    "name": "Comptes rendus de l’Académie bulgare des Sciences",
@@ -22962,7 +23055,10 @@
    "domain": "science-bas.org",
    "normalized_name": "comptes rendus de l academie bulgare des sciences",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Comptes rendus de l’Académie bulgare des Sciences",
+   "authentic_url": "http://www.proceedings.bas.bg/",
+   "authentic_domain": "proceedings.bas.bg"
   },
   {
    "name": "COMUNICACOES INSTITUTO DE INVESTIGACAO CIENTIFICA TROPICAL SERIE CIENCIAS BIOLOGICAS",
@@ -22970,7 +23066,10 @@
    "domain": "eartz.net",
    "normalized_name": "comunicacoes instituto de investigacao cientifica tropical serie ciencias biologicas",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Comunicações. Série de ciéncias biológicas",
+   "authentic_url": "http://www.worldcat.org/oclc/25217860",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Contributions in Science",
@@ -22978,7 +23077,10 @@
    "domain": "ijescs.org",
    "normalized_name": "contributions in science",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Contributions in Science",
+   "authentic_url": "http://www.nhm.org/site/research-collections/research-tools/publications",
+   "authentic_domain": "nhm.org"
   },
   {
    "name": "Doriana",
@@ -22986,7 +23088,10 @@
    "domain": "revistas-academicas.com",
    "normalized_name": "doriana",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Doriana : supplemento agli Annali del Museo civico di storia naturale “G. Doria.”",
+   "authentic_url": "http://www.worldcat.org/oclc/859649543",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "DU Journal Published By Verlad Niggli AG (VNA)",
@@ -22994,7 +23099,10 @@
    "domain": "dujournal.eu.pn",
    "normalized_name": "du journal published by verlad niggli ag vna",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Du",
+   "authentic_url": "http://www.du-magazin.com/",
+   "authentic_domain": "du-magazin.com"
   },
   {
    "name": "ECOLOGIE",
@@ -23002,7 +23110,10 @@
    "domain": "ecologyarticles.com",
    "normalized_name": "ecologie",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Ecologie",
+   "authentic_url": "http://www.worldcat.org/oclc/472845294",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Education Journal",
@@ -23010,7 +23121,10 @@
    "domain": "tomaspubs.com",
    "normalized_name": "education journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Education",
+   "authentic_url": "http://www.worldcat.org/oclc/656939336",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Electronics Information & Planning",
@@ -23018,7 +23132,10 @@
    "domain": "ccscomputeronline.com",
    "normalized_name": "electronics information and planning",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Electronics information & planning",
+   "authentic_url": "http://www.worldcat.org/oclc/2381439",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Emergencias",
@@ -23026,7 +23143,10 @@
    "domain": "sanidadediciones.com",
    "normalized_name": "emergencias",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Emergencias",
+   "authentic_url": "http://www.semes.org/revista_EMERGENCIAS/",
+   "authentic_domain": "semes.org"
   },
   {
    "name": "Ephemera Also here.",
@@ -23034,7 +23154,10 @@
    "domain": "ephemera.eu.pn",
    "normalized_name": "ephemera also here",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Ephemera: revue d’éphéméroptérologie",
+   "authentic_url": "http://catalogue.bnf.fr/ark:/12148/cb37014280j/PUBLIC",
+   "authentic_domain": "catalogue.bnf.fr"
   },
   {
    "name": "Epistemologia",
@@ -23042,7 +23165,10 @@
    "domain": "epistemologia-journal.com",
    "normalized_name": "epistemologia",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Epistemologia",
+   "authentic_url": "",
+   "authentic_domain": ""
   },
   {
    "name": "EUROPE – REVUE LITTERAIRE MENSUELLE",
@@ -23050,7 +23176,10 @@
    "domain": "rrbitz.com",
    "normalized_name": "europe revue litteraire mensuelle",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Europe : revue mensuelle",
+   "authentic_url": "http://www.worldcat.org/oclc/859685791",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "FABRERIES JOURNAL",
@@ -23058,7 +23187,10 @@
    "domain": "businessvia.com",
    "normalized_name": "fabreries journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Fabreries",
+   "authentic_url": "http://worldcat.org/oclc/2442117",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "FAUNA ROSSII I SOPREDEL NYKH STRAN",
@@ -23066,7 +23198,10 @@
    "domain": "bpxo.com",
    "normalized_name": "fauna rossii i sopredel nykh stran",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Fauna Rossii i sopredelʹnykh stran",
+   "authentic_url": "http://worldcat.org/oclc/30329299",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "FOURRAGES (and here)",
@@ -23074,7 +23209,10 @@
    "domain": "agriturismosi.com",
    "normalized_name": "fourrages and here",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Fourrages (updated URL)",
+   "authentic_url": "http://www.afpf-asso.fr/index/action/page/id/29/title/la-revue---fourrages--",
+   "authentic_domain": "afpf-asso.fr"
   },
   {
    "name": "GAIA-ATHENS Journal",
@@ -23082,7 +23220,10 @@
    "domain": "gix.info",
    "normalized_name": "gaia athens journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Gaia",
+   "authentic_url": "https://www.worldcat.org/title/gaia/oclc/45801714&amp;referer=brief_results",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "GAZI UNIVERTESI GAZI EGITIM FAKULTESI (GUGEF) journal",
@@ -23090,7 +23231,10 @@
    "domain": "gugef.com",
    "normalized_name": "gazi univertesi gazi egitim fakultesi gugef journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Gazi University Journal of Gazi Educational Faculty (Gazi Üniversitesi Gazi Eğitim Fakültesi Dergisi, GEFAD)",
+   "authentic_url": "http://www.gefad.gazi.edu.tr/",
+   "authentic_domain": "gefad.gazi.edu.tr"
   },
   {
    "name": "GMP Review",
@@ -23098,7 +23242,10 @@
    "domain": "euromed.uk.com",
    "normalized_name": "gmp review",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "GMP Review",
+   "authentic_url": "http://www.industrialpharmacy.eu/publications/journals/197-gmp-review",
+   "authentic_domain": "industrialpharmacy.eu"
   },
   {
    "name": "Hermes Journal France",
@@ -23106,7 +23253,10 @@
    "domain": "newjuris.com",
    "normalized_name": "hermes journal france",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Hermès",
+   "authentic_url": "http://documents.irevues.inist.fr/handle/2042/8538",
+   "authentic_domain": "documents.irevues.inist.fr"
   },
   {
    "name": "Hospital Materials Management",
@@ -23114,7 +23264,10 @@
    "domain": "medmanagement.org",
    "normalized_name": "hospital materials management",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Hospital material$ management",
+   "authentic_url": "http://www.worldcat.org/oclc/233138486",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "HFSP JOURNAL",
@@ -23122,7 +23275,10 @@
    "domain": "hfsp-journal.org",
    "normalized_name": "hfsp journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "HFSP journal: frontiers of interdisciplinary research in the life sciences",
+   "authentic_url": "http://www.ncbi.nlm.nih.gov/pmc/journals/811/",
+   "authentic_domain": "ncbi.nlm.nih.gov"
   },
   {
    "name": "Iheringia Série Botânica",
@@ -23130,7 +23286,10 @@
    "domain": "iheringiaserie.bdssmgdl.org",
    "normalized_name": "iheringia serie botanica",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Iheringia. Série botânica",
+   "authentic_url": "http://www.fzb.rs.gov.br/conteudo/2135/?Iheringia_S%C3%A9rie_Bot%C3%A2nica/",
+   "authentic_domain": "fzb.rs.gov.br"
   },
   {
    "name": "Journal of Information System Management",
@@ -23138,7 +23297,10 @@
    "domain": "aoejournal.com",
    "normalized_name": "journal of information system management",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Information Systems Management",
+   "authentic_url": "http://www.tandfonline.com/toc/uism20/current",
+   "authentic_domain": "tandfonline.com"
   },
   {
    "name": "Interciencia Association (also Interciencia Journal)",
@@ -23146,7 +23308,10 @@
    "domain": "ivic-gob.co.ve",
    "normalized_name": "interciencia association also interciencia journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Interciencia",
+   "authentic_url": "http://www.interciencia.org/",
+   "authentic_domain": "interciencia.org"
   },
   {
    "name": "International Journal of Academic Research (IJAR)",
@@ -23154,7 +23319,10 @@
    "domain": "ijarsite.com",
    "normalized_name": "international journal of academic research ijar",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "International Journal of Academic Research",
+   "authentic_url": "http://www.eu-print.org/orta.php?go=ijar",
+   "authentic_domain": "eu-print.org"
   },
   {
    "name": "International Journal of Game Theory",
@@ -23162,7 +23330,10 @@
    "domain": "ijgt-springer.org",
    "normalized_name": "international journal of game theory",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "International Journal of Game Theory",
+   "authentic_url": "http://www.springer.com/economics/economic+theory/journal/182",
+   "authentic_domain": "springer.com"
   },
   {
    "name": "International Review of Social Psychology",
@@ -23170,7 +23341,10 @@
    "domain": "psychologyterms.com",
    "normalized_name": "international review of social psychology",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "La Revue internationale de psychologie sociale",
+   "authentic_url": "http://www.pug.fr/theme_et_tag/18/Revues/70/Revue%20internationale%20de%20psychologie%20sociale",
+   "authentic_domain": "pug.fr"
   },
   {
    "name": "JNCC REPORT",
@@ -23178,7 +23352,10 @@
    "domain": "jncc.info",
    "normalized_name": "jncc report",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "JNCC report series",
+   "authentic_url": "http://jncc.defra.gov.uk/page-2132",
+   "authentic_domain": "jncc.defra.gov.uk"
   },
   {
    "name": "Journal of Engineering Technology (JoET)",
@@ -23186,7 +23363,10 @@
    "domain": "joetsite.com",
    "normalized_name": "journal of engineering technology joet",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Journal of Engineering Technology (JET)",
+   "authentic_url": "http://www.engtech.org/jet/",
+   "authentic_domain": "engtech.org"
   },
   {
    "name": "Journal of Information System[s] Management",
@@ -23194,7 +23374,10 @@
    "domain": "aoejournal.com",
    "normalized_name": "journal of information system s management",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Information Systems Management",
+   "authentic_url": "http://www.tandfonline.com/loi/uism20#.ViTgHyso1zQ",
+   "authentic_domain": "tandfonline.com"
   },
   {
    "name": "Journal of Psychology and Theology",
@@ -23202,7 +23385,10 @@
    "domain": "dinz.info",
    "normalized_name": "journal of psychology and theology",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Journal of Psychology & Theology",
+   "authentic_url": "http://journals.biola.edu/jpt",
+   "authentic_domain": "journals.biola.edu"
   },
   {
    "name": "JOURNAL OF RENEWABLE NATURAL RESOURCES BHUTAN",
@@ -23210,7 +23396,10 @@
    "domain": "acjournal.in",
    "normalized_name": "journal of renewable natural resources bhutan",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Journal of renewable natural resources, Bhutan",
+   "authentic_url": "http://www.moaf.gov.bt/rnr-journal/",
+   "authentic_domain": "moaf.gov.bt"
   },
   {
    "name": "Journal of Technology",
@@ -23218,7 +23407,10 @@
    "domain": "jotechno.com",
    "normalized_name": "journal of technology",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Journal of Technology",
+   "authentic_url": "http://jot.ntust.edu.tw/index.php/jot/index",
+   "authentic_domain": "jot.ntust.edu.tw"
   },
   {
    "name": "Jokull Journal",
@@ -23226,7 +23418,10 @@
    "domain": "jokulljournal.com",
    "normalized_name": "jokull journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Jökull",
+   "authentic_url": "http://jokulljournal.is/",
+   "authentic_domain": "jokulljournal.is"
   },
   {
    "name": "JNSS: Journal Namibia Scientific Society",
@@ -23234,7 +23429,10 @@
    "domain": "jnss.zz.mu",
    "normalized_name": "jnss journal namibia scientific society",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Journal / Namibia Scientific Society",
+   "authentic_url": "http://www.worldcat.org/oclc/24516160",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Jurnal akademik: Indonesia Academic Journal",
@@ -23242,7 +23440,10 @@
    "domain": "juak.besaba.com",
    "normalized_name": "jurnal akademik indonesia academic journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Jurnal akademik",
+   "authentic_url": "http://www.worldcat.org/oclc/762041659",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Kasmera Journal (Revista Kasmera)",
@@ -23250,7 +23451,10 @@
    "domain": "kasmerajournal.com",
    "normalized_name": "kasmera journal revista kasmera",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Kasmera",
+   "authentic_url": "http://www.scielo.org.ve/scielo.php?script=sci_serial&amp;pid=0075-5222",
+   "authentic_domain": "scielo.org.ve"
   },
   {
    "name": "KUROSHIO",
@@ -23258,7 +23462,10 @@
    "domain": "ultimate-e-book.com",
    "normalized_name": "kuroshio",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Kuroshio",
+   "authentic_url": "http://aurarialibrary.worldcat.org/oclc/28898096",
+   "authentic_domain": "aurarialibrary.worldcat.org"
   },
   {
    "name": "LUDUS VITALIS",
@@ -23266,7 +23473,10 @@
    "domain": "ludusvitalis.org.mx",
    "normalized_name": "ludus vitalis",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Ludus vitalis: revista de filosofía de las ciencias de la vida",
+   "authentic_url": "http://www.centrolombardo.edu.mx/ludus-vitalis/",
+   "authentic_domain": "centrolombardo.edu.mx"
   },
   {
    "name": "MAGNT Research Report",
@@ -23274,7 +23484,10 @@
    "domain": "brisjast.com",
    "normalized_name": "magnt research report",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "MAGNT Research Report",
+   "authentic_url": "http://www.worldcat.org/oclc/223764115",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Martinia",
@@ -23282,7 +23495,10 @@
    "domain": "martinia.com",
    "normalized_name": "martinia",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Martinia: bulletin de liaison des Odonatologues de France",
+   "authentic_url": "http://www.worldcat.org/oclc/72735740",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Meanjin",
@@ -23290,7 +23506,10 @@
    "domain": "meanjin.xp3.biz",
    "normalized_name": "meanjin",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Meanjin",
+   "authentic_url": "http://meanjin.com.au/",
+   "authentic_domain": "meanjin.com.au"
   },
   {
    "name": "Mitteilungen Klosterneuburg",
@@ -23298,7 +23517,10 @@
    "domain": "mitt-klosterneuburg.com",
    "normalized_name": "mitteilungen klosterneuburg",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Mitteilungen Klosterneuburg",
+   "authentic_url": "http://bundesamt.weinobstklosterneuburg.at/seiten/index.php/view.408/",
+   "authentic_domain": "bundesamt.weinobstklosterneuburg.at"
   },
   {
    "name": "MULTITEMAS",
@@ -23306,7 +23528,10 @@
    "domain": "multitemas.com",
    "normalized_name": "multitemas",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Multitemas",
+   "authentic_url": "http://site.ucdb.br/editora-ucdb/tematica/37/periodicos/multitemas-numero-2-dez-1996/rmt/",
+   "authentic_domain": "site.ucdb.br"
   },
   {
    "name": "Nationalpark Berchtesgaden Forschungsbericht",
@@ -23314,7 +23539,10 @@
    "domain": "nationalpark-berchtesgaden.com",
    "normalized_name": "nationalpark berchtesgaden forschungsbericht",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Nationalpark Berchtesgaden: Forschungsberichte",
+   "authentic_url": "http://www.nationalpark-berchtesgaden.bayern.de/08_publikationen/01_forschungsberichte/index.htm",
+   "authentic_domain": "nationalpark-berchtesgaden.bayern.de"
   },
   {
    "name": "Nationalpark-Forschung in der Schweiz",
@@ -23322,7 +23550,10 @@
    "domain": "naukpublication.org",
    "normalized_name": "nationalpark forschung in der schweiz",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Nationalpark-Forschung in der Schweiz",
+   "authentic_url": "",
+   "authentic_domain": ""
   },
   {
    "name": "The Naturalist Journal",
@@ -23330,7 +23561,10 @@
    "domain": "naturalistjournal.org",
    "normalized_name": "naturalist journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "The Naturalist",
+   "authentic_url": "http://www.worldcat.org/oclc/4286535",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Nautilus Journal",
@@ -23338,7 +23572,10 @@
    "domain": "nautilusjournal.net",
    "normalized_name": "nautilus journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "The Nautilus",
+   "authentic_url": "http://www.shellmuseum.org/nautilus/index.html",
+   "authentic_domain": "shellmuseum.org"
   },
   {
    "name": "Natura",
@@ -23346,7 +23583,10 @@
    "domain": "revistas-academicas.com",
    "normalized_name": "natura",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Natura: orgaan der Nederlandsche Natuurhistorische Vereeniging",
+   "authentic_url": "http://www.worldcat.org/oclc/781580944",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "ODJELJENJA PRIRODNIKH NAUKA CRNOGORSKA AKADEMIJA NAUKA I UMJETNOSTI GLASNIK",
@@ -23354,7 +23594,10 @@
    "domain": "opncme.com",
    "normalized_name": "odjeljenja prirodnikh nauka crnogorska akademija nauka i umjetnosti glasnik",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Odjeljenje prirodnih nauka",
+   "authentic_url": "https://beallslist.weebly.com/Odjeljenje%20prirodnih%20nauka",
+   "authentic_domain": "beallslist.weebly.com"
   },
   {
    "name": "Odonatological Abstract Service",
@@ -23362,7 +23605,10 @@
    "domain": "styleinternational.net",
    "normalized_name": "odonatological abstract service",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Odonatological abstract service",
+   "authentic_url": "http://www.worldcat.org/oclc/314821112",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "OTECHESTVENNAYA ISTORIYA Journal",
@@ -23370,7 +23616,10 @@
    "domain": "ylau.com",
    "normalized_name": "otechestvennaya istoriya journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Российская история = Rossiĭskai︠a︡ istorii︠a︡",
+   "authentic_url": "http://www.worldcat.org/oclc/310811765",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Pensee",
@@ -23378,7 +23627,10 @@
    "domain": "penseejournal.com",
    "normalized_name": "pensee",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "La Pensée",
+   "authentic_url": "http://www.gabrielperi.fr/spip.php?page=rubrique_base&amp;id_rubrique=321&amp;lang=fr",
+   "authentic_domain": "gabrielperi.fr"
   },
   {
    "name": "PHILIPPINE SCIENTIST",
@@ -23386,7 +23638,10 @@
    "domain": "psc.tomaspubs.com",
    "normalized_name": "philippine scientist",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Philippine scientist",
+   "authentic_url": "http://www.worldcat.org/oclc/488081397",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Ponte: International Scientific Researches Journal (also here)",
@@ -23394,7 +23649,10 @@
    "domain": "pontejournal.net",
    "normalized_name": "ponte international scientific researches journal also here",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Il ponte: rivista mensile",
+   "authentic_url": "http://www.worldcat.org/oclc/829718688",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "PraeParator",
@@ -23402,7 +23660,10 @@
    "domain": "pra.tomaspubs.com",
    "normalized_name": "praeparator",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Der Präparator",
+   "authentic_url": "http://www.worldcat.org/oclc/5843414",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "PHYTON Annales Rei Botanicae",
@@ -23410,7 +23671,10 @@
    "domain": "engineeronline.net",
    "normalized_name": "phyton annales rei botanicae",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Phyton: annales rei botanicae",
+   "authentic_url": "http://www.verlag-berger.at/en/e-books/phyton/",
+   "authentic_domain": "verlag-berger.at"
   },
   {
    "name": "Recht & Psychiatrie",
@@ -23418,7 +23682,10 @@
    "domain": "kclcs.com",
    "normalized_name": "recht and psychiatrie",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Recht & Psychiatrie",
+   "authentic_url": "https://www.psychiatrie-verlag.de/",
+   "authentic_domain": "psychiatrie-verlag.de"
   },
   {
    "name": "Reef Resources Assessment and Management Technical Paper",
@@ -23426,7 +23693,10 @@
    "domain": "behaviorsciences.com",
    "normalized_name": "reef resources assessment and management technical paper",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Reef resources assessment and management: technical paper",
+   "authentic_url": "http://www.worldcat.org/oclc/241475584",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Research-Technology Management (Res Tech Manag)",
@@ -23434,7 +23704,10 @@
    "domain": "lriinc.org",
    "normalized_name": "research technology management res tech manag",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Research-Technology Management (RTM)",
+   "authentic_url": "http://www.iriweb.org/Main/Library/RTM_Journal/Public_Site/Navigation/Publications/Research-Technology_Management/index.aspx",
+   "authentic_domain": "iriweb.org"
   },
   {
    "name": "The Revista Brasileira de Medicina do Esporte",
@@ -23442,7 +23715,10 @@
    "domain": "revistabme.org",
    "normalized_name": "revista brasileira de medicina do esporte",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Revista Brasileira de Medicina do Esporte",
+   "authentic_url": "http://rbme.org/",
+   "authentic_domain": "rbme.org"
   },
   {
    "name": "SALMAGUNDI",
@@ -23450,7 +23726,10 @@
    "domain": "jobn.org",
    "normalized_name": "salmagundi",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Salmagundi: a quarterly of the humanities & social sciences",
+   "authentic_url": "https://www.skidmore.edu/salmagundi/",
+   "authentic_domain": "skidmore.edu"
   },
   {
    "name": "Revista Técnica de la Facultad de Ingeniería Universidad del Zulia",
@@ -23458,7 +23737,10 @@
    "domain": "tjfeonline.com",
    "normalized_name": "revista tecnica de la facultad de ingenieria universidad del zulia",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Revista Técnica de la Facultad de Ingeniería. Universidad del Zulia",
+   "authentic_url": "http://produccioncientificaluz.org/index.php/tecnica",
+   "authentic_domain": "produccioncientificaluz.org"
   },
   {
    "name": "REVUE SCIENTIFIQUE ET TECHNIQUE-OFFICE INTERNATIONAL DES EPIZOOTIES",
@@ -23466,7 +23748,10 @@
    "domain": "rstoide.org",
    "normalized_name": "revue scientifique et technique office international des epizooties",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Revue scientifique et technique",
+   "authentic_url": "http://www.oie.int/fr/publications-et-documentation/revue-scientifique-et-technique-acces-libre/liste-des-numeros/",
+   "authentic_domain": "oie.int"
   },
   {
    "name": "Saussurea",
@@ -23474,7 +23759,10 @@
    "domain": "saussurea.org",
    "normalized_name": "saussurea",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Saussurea, journal de la Société botanique de Genève",
+   "authentic_url": "http://www.socbotge.ch/saussurea.htm",
+   "authentic_domain": "socbotge.ch"
   },
   {
    "name": "SCANDIA (also here)",
@@ -23482,7 +23770,10 @@
    "domain": "scandiajournal.com",
    "normalized_name": "scandia also here",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Scandia: Tidskrift för historisk forskning (also here)",
+   "authentic_url": "http://www.tidskriftenscandia.se/",
+   "authentic_domain": "tidskriftenscandia.se"
   },
   {
    "name": "Scientia Guaianae",
@@ -23490,7 +23781,10 @@
    "domain": "scientiaguaianae.org",
    "normalized_name": "scientia guaianae",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Scientia Guaianae : a series on natural sciences of the Guayana region",
+   "authentic_url": "http://www.worldcat.org/oclc/832526488",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Scientific Khyber",
@@ -23498,7 +23792,10 @@
    "domain": "skhyber.org",
    "normalized_name": "scientific khyber",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Scientific khyber",
+   "authentic_url": "http://www.worldcat.org/oclc/25838220",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Social Behavior and Personality: an international journal",
@@ -23506,7 +23803,10 @@
    "domain": "psycholjournal.co.nz",
    "normalized_name": "social behavior and personality an international journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Social Behavior and Personality: an international journal",
+   "authentic_url": "http://www.sbp-journal.com/index.php/sbp/index",
+   "authentic_domain": "sbp-journal.com"
   },
   {
    "name": "South African Journal of Business Management also here",
@@ -23514,7 +23814,10 @@
    "domain": "sajbm.com",
    "normalized_name": "south african journal of business management also here",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "South African Journal of Business Management",
+   "authentic_url": "http://reference.sabinet.co.za/sa_epublication/busman",
+   "authentic_domain": "reference.sabinet.co.za"
   },
   {
    "name": "Survey Methodology",
@@ -23522,7 +23825,10 @@
    "domain": "survmethodjournal.org",
    "normalized_name": "survey methodology",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Survey Methodology",
+   "authentic_url": "http://www5.statcan.gc.ca/olc-cel/olc.action?ObjId=12-001-X&amp;ObjType=2&amp;lang=en&amp;limit=0",
+   "authentic_domain": "www5.statcan.gc.ca"
   },
   {
    "name": "Sylwan (English ed.)",
@@ -23530,7 +23836,10 @@
    "domain": "sylwan.ibles.org",
    "normalized_name": "sylwan english ed",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Sylwan (new website here)",
+   "authentic_url": "http://sylwan.ibles.waw.pl/pls/apex/f?p=105:1:0",
+   "authentic_domain": "sylwan.ibles.waw.pl"
   },
   {
    "name": "Systems science journal",
@@ -23538,7 +23847,10 @@
    "domain": "ss.tomaspubs.com",
    "normalized_name": "systems science journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Systems science",
+   "authentic_url": "http://www.worldcat.org/oclc/2580682",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "TECH REV: Technology Review journal",
@@ -23546,7 +23858,10 @@
    "domain": "reviewtechnology.org",
    "normalized_name": "tech rev technology review journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "MIT Technology Review",
+   "authentic_url": "http://www.technologyreview.com/",
+   "authentic_domain": "technologyreview.com"
   },
   {
    "name": "TERAPEVTICHESKII ARKHIV",
@@ -23554,7 +23869,10 @@
    "domain": "terapevticheskiiarkhiv.org",
    "normalized_name": "terapevticheskii arkhiv",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Terapevticheskiĭ arkhiv",
+   "authentic_url": "http://www.mediasphera.ru/journals/terapevt/",
+   "authentic_domain": "mediasphera.ru"
   },
   {
    "name": "TEKSTIL JOURNAL CROATIA",
@@ -23562,7 +23880,10 @@
    "domain": "tekstiljournal.com",
    "normalized_name": "tekstil journal croatia",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Tekstil",
+   "authentic_url": "http://tekstil.hist.hr/en/",
+   "authentic_domain": "tekstil.hist.hr"
   },
   {
    "name": "Transactions of the Natural History Society of Northumbria",
@@ -23570,7 +23891,10 @@
    "domain": "nsdt.org",
    "normalized_name": "transactions of the natural history society of northumbria",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Transactions of the Natural History Society of Northumbria",
+   "authentic_url": "http://www.worldcat.org/oclc/61340106",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "Transylvanian Review (old url)",
@@ -23578,7 +23902,10 @@
    "domain": "transylvanianreviewjournal.org",
    "normalized_name": "transylvanian review old url",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Transylvanian Review",
+   "authentic_url": "http://www.centruldestudiitransilvane.ro/Detaliu.aspx?t=prezentare",
+   "authentic_domain": "centruldestudiitransilvane.ro"
   },
   {
    "name": "Veliger",
@@ -23586,7 +23913,10 @@
    "domain": "theveliger.info",
    "normalized_name": "veliger",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "The Veliger",
+   "authentic_url": "http://www.ucmp.berkeley.edu/people/barryr/veliger.html",
+   "authentic_domain": "ucmp.berkeley.edu"
   },
   {
    "name": "VERIFICHE",
@@ -23594,7 +23924,10 @@
    "domain": "newjuris.com",
    "normalized_name": "verifiche",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Verifiche: Rivista di scienze umane",
+   "authentic_url": "http://www.verificheonline.net/",
+   "authentic_domain": "verificheonline.net"
   },
   {
    "name": "VITAE-REVISTA DE LA FACULTAD DE QUIMICA FARMACEUTICA",
@@ -23602,7 +23935,10 @@
    "domain": "vitae-udea.org",
    "normalized_name": "vitae revista de la facultad de quimica farmaceutica",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Vitae, la revista de la Facultad de Química Farmacéutica",
+   "authentic_url": "http://aprendeenlinea.udea.edu.co/revistas/index.php/vitae/ind",
+   "authentic_domain": "aprendeenlinea.udea.edu.co"
   },
   {
    "name": "Walia Journal",
@@ -23610,7 +23946,10 @@
    "domain": "waliaj.com",
    "normalized_name": "walia journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Walia, journal of the Ethiopian Wildlife and Natural History Society",
+   "authentic_url": "http://www.worldcat.org/oclc/183351204",
+   "authentic_domain": "worldcat.org"
   },
   {
    "name": "WIWO Report",
@@ -23618,7 +23957,10 @@
    "domain": "web-journal.com",
    "normalized_name": "wiwo report",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "WIWO report",
+   "authentic_url": "http://www.wiwo.org/pane24.htm",
+   "authentic_domain": "wiwo.org"
   },
   {
    "name": "Wulfenia",
@@ -23626,7 +23968,10 @@
    "domain": "multidisciplinarywulfenia.org",
    "normalized_name": "wulfenia",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Wulfenia",
+   "authentic_url": "http://www.landesmuseum.ktn.gv.at/210226w_DE.htm?seite=15",
+   "authentic_domain": "landesmuseum.ktn.gv.at"
   },
   {
    "name": "Adalya Journal",
@@ -23634,7 +23979,10 @@
    "domain": "adalyajournal.com",
    "normalized_name": "adalya journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "ADALYA – The Annual of the Koç University AKMED",
+   "authentic_url": "https://akmed.ku.edu.tr/en/adalya/",
+   "authentic_domain": "akmed.ku.edu.tr"
   },
   {
    "name": "Aegaeum",
@@ -23642,7 +23990,10 @@
    "domain": "aegaeum.com",
    "normalized_name": "aegaeum",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Aegaeum: annales d’archeologie egeenne de l’Universite de Liege (inactive) and here (inactive)",
+   "authentic_url": "http://www.ulg.ac.be/archgrec/publications.html",
+   "authentic_domain": "ulg.ac.be"
   },
   {
    "name": "Agrociencia",
@@ -23650,7 +24001,10 @@
    "domain": "colopos.mx",
    "normalized_name": "agrociencia",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Agrociencia",
+   "authentic_url": "https://agrociencia-colpos.mx/index.php/agrociencia",
+   "authentic_domain": "agrociencia-colpos.mx"
   },
   {
    "name": "ARCTIC Journal",
@@ -23658,7 +24012,10 @@
    "domain": "arcticjournal.org",
    "normalized_name": "arctic journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "ARCTIC Journal",
+   "authentic_url": "http://arctic.ucalgary.ca/about-arctic-journal",
+   "authentic_domain": "arctic.ucalgary.ca"
   },
   {
    "name": "BOREAL ENVIRONMENT RESEARCH",
@@ -23666,7 +24023,10 @@
    "domain": "borenv.com",
    "normalized_name": "boreal environment research",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Boreal Environment Research",
+   "authentic_url": "http://www.borenv.net/",
+   "authentic_domain": "borenv.net"
   },
   {
    "name": "CCAMLR Science",
@@ -23674,7 +24034,10 @@
    "domain": "ccamlrscience.com",
    "normalized_name": "ccamlr science",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "CCAMLR Science",
+   "authentic_url": "https://www.ccamlr.org/en/publications/ccamlr-science",
+   "authentic_domain": "ccamlr.org"
   },
   {
    "name": "High Technology Letters",
@@ -23682,7 +24045,10 @@
    "domain": "gjstx-e.cn",
    "normalized_name": "high technology letters",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "High Technology Letters (English Edition)",
+   "authentic_url": "http://journals.istic.ac.cn/gjstxen/ch/index.aspx",
+   "authentic_domain": "journals.istic.ac.cn"
   },
   {
    "name": "International Medical Journal",
@@ -23690,7 +24056,10 @@
    "domain": "seronijihou.com",
    "normalized_name": "international medical journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "International Medical Journal",
+   "authentic_url": "https://www.imj-1994.com/",
+   "authentic_domain": "imj-1994.com"
   },
   {
    "name": "Journal of Southwest Jiaotong University",
@@ -23698,7 +24067,10 @@
    "domain": "jsju.org",
    "normalized_name": "journal of southwest jiaotong university",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Xinan Jiaotong Daxue Xuebao / Journal of Southwest Jiaotong University",
+   "authentic_url": "http://journal16.magtechjournal.com/Jweb_xnjd/CN/volumn/current.shtml",
+   "authentic_domain": "journal16.magtechjournal.com"
   },
   {
    "name": "Journal of Talent Development and Excellence (JTDE)",
@@ -23706,7 +24078,10 @@
    "domain": "iratde.com",
    "normalized_name": "journal of talent development and excellence jtde",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Talent Development and Excellence (old website here – not working)",
+   "authentic_url": "http://iratde.net/",
+   "authentic_domain": "iratde.net"
   },
   {
    "name": "Journal of University of Shanghai for Science and Technology (JUSST)",
@@ -23714,7 +24089,10 @@
    "domain": "jusst.org",
    "normalized_name": "journal of university of shanghai for science and technology jusst",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Journal of University of Shanghai for Science and Technology",
+   "authentic_url": "https://jns.usst.edu.cn/ch/index.aspx",
+   "authentic_domain": "jns.usst.edu.cn"
   },
   {
    "name": "Journal of Xi’an Shiyou University",
@@ -23722,7 +24100,10 @@
    "domain": "xisdxjxsu.asia",
    "normalized_name": "journal of xi an shiyou university",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Journal of Xi’an Shiyou University (Natural Science Edition) (defunct)",
+   "authentic_url": "http://xasyxyxb.periodicals.net.cn",
+   "authentic_domain": "xasyxyxb.periodicals.net.cn"
   },
   {
    "name": "Journal of Xi’an University of Architecture & Technology",
@@ -23730,7 +24111,10 @@
    "domain": "xajzkjdx.cn",
    "normalized_name": "journal of xi an university of architecture and technology",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Journal of Xi’an University of Architecture and Technology (Natural Science Edition)",
+   "authentic_url": "http://jdxbz.xauat.edu.cn/",
+   "authentic_domain": "jdxbz.xauat.edu.cn"
   },
   {
    "name": "Journal of Xidian University",
@@ -23738,7 +24122,10 @@
    "domain": "xadzkjdx.cn",
    "normalized_name": "journal of xidian university",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Journal of Xidian University",
+   "authentic_url": "http://journal.xidian.edu.cn/xdxb/EN/1001-2400/home.shtml",
+   "authentic_domain": "journal.xidian.edu.cn"
   },
   {
    "name": "Liverpool University Press (fake publisher)",
@@ -23746,7 +24133,10 @@
    "domain": "liverpool-unipress.uk",
    "normalized_name": "liverpool university press fake publisher",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Liverpool University Press (authentic publisher)",
+   "authentic_url": "http://online.liverpooluniversitypress.co.uk",
+   "authentic_domain": "online.liverpooluniversitypress.co.uk"
   },
   {
    "name": "Opción (unsafe URL)",
@@ -23754,7 +24144,10 @@
    "domain": "scieloopcion.com",
    "normalized_name": "opcion unsafe url",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Opción",
+   "authentic_url": "http://www.produccioncientificaluz.org/index.php/opcion/index",
+   "authentic_domain": "produccioncientificaluz.org"
   },
   {
    "name": "Paideuma Journal of Research (also here)",
@@ -23762,7 +24155,10 @@
    "domain": "paideumajournal.com",
    "normalized_name": "paideuma journal of research also here",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "PAIDEUMA",
+   "authentic_url": "https://paideuma.wordpress.com/",
+   "authentic_domain": "paideuma.wordpress.com"
   },
   {
    "name": "POLISH POLAR RESEARCH",
@@ -23770,7 +24166,10 @@
    "domain": "polishpolar.com",
    "normalized_name": "polish polar research",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Polish Polar Research",
+   "authentic_url": "http://journals.pan.pl/ppr/",
+   "authentic_domain": "journals.pan.pl"
   },
   {
    "name": "Preslia Journal",
@@ -23778,7 +24177,10 @@
    "domain": "presliajournal.com",
    "normalized_name": "preslia journal",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Preslia – The Journal of the Czech Botanical Society",
+   "authentic_url": "http://www.preslia.cz/",
+   "authentic_domain": "preslia.cz"
   },
   {
    "name": "REVISTA DE EDUCACION",
@@ -23786,7 +24188,10 @@
    "domain": "revistaeducacion.org",
    "normalized_name": "revista de educacion",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Revista de Educación",
+   "authentic_url": "http://www.educacionyfp.gob.es/revista-de-educacion/en/inicio.html",
+   "authentic_domain": "educacionyfp.gob.es"
   },
   {
    "name": "Revistas Electrónicas UACh (AUS Journal) and here",
@@ -23794,7 +24199,10 @@
    "domain": "ausrevista.info",
    "normalized_name": "revistas electronicas uach aus journal and here",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Revistas Electrónicas UACh (AUS Journal)",
+   "authentic_url": "http://revistas.uach.cl/index.php/AUS",
+   "authentic_domain": "revistas.uach.cl"
   },
   {
    "name": "Technology Reports of Kansai University",
@@ -23802,7 +24210,10 @@
    "domain": "kansaiuniversityreports.com",
    "normalized_name": "technology reports of kansai university",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Science and Technology Reports of Kansai University",
+   "authentic_url": "https://kansai-u.repo.nii.ac.jp/?action=repository_opensearch&amp;index_id=1628&amp;count=20&amp;order=17&amp;pn=1",
+   "authentic_domain": "kansai-u.repo.nii.ac.jp"
   },
   {
    "name": "TEST: Engineering & Management",
@@ -23810,7 +24221,10 @@
    "domain": "testmagzine.biz",
    "normalized_name": "test engineering and management",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Test Engineering and Management (inactive)",
+   "authentic_url": "http://www.testmagazine.biz/",
+   "authentic_domain": "testmagazine.biz"
   },
   {
    "name": "Turkish Journal of Physiotherapy and Rehabilitation",
@@ -23818,7 +24232,10 @@
    "domain": "turkjphysiotherrehabil.org",
    "normalized_name": "turkish journal of physiotherapy and rehabilitation",
    "issns": [],
-   "list_source": "hijacked"
+   "list_source": "hijacked",
+   "authentic_name": "Türk Fizyoterapi ve Rehabilitasyon Dergisi (Turkish Journal of Physiotherapy and Rehabilitation)",
+   "authentic_url": "https://dergipark.org.tr/en/pub/tjpr",
+   "authentic_domain": "dergipark.org.tr"
   },
   {
    "name": "AE Global Index",

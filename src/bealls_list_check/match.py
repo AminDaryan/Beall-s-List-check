@@ -246,6 +246,9 @@ def _blank_result(paper, source_file):
         "matched_url": "",
         "matched_on": "",
         "review_reason": "",
+        "authentic_url": "",        # for a hijacked match: the genuine journal's URL
+        "authentic_domain": "",     #   "        "      : the genuine journal's host
+        "cleared_reason": "",       # set if a hijacked-by-name flag was cleared to clean
     }
 
 
@@ -490,4 +493,6 @@ def _hit(r, entry, status, matched_on):
     r["matched_name"] = entry["name"]
     r["matched_url"] = entry["url"]
     r["matched_on"] = matched_on
+    r["authentic_url"] = entry.get("authentic_url", "")
+    r["authentic_domain"] = entry.get("authentic_domain", "")
     return r

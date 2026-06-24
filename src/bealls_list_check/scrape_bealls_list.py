@@ -204,12 +204,14 @@ def parse_links(html: str, list_source: str) -> list:
 
 
 def parse_hijacked_table(html: str, list_source: str) -> list:
-    """Parse the hijacked-journals table, taking only the predatory column.
+    """Parse the hijacked-journals table.
 
-    Row layout is ``[Hijacker/Predatory Journal, Authentic Journal]``.  We take
-    the first cell (the fake journal) plus any URL inside it; the authentic
-    journal column is deliberately ignored so legitimate journals are never
-    flagged.
+    Row layout is ``[Hijacker/Predatory Journal, Authentic Journal]``.  The first
+    cell (the fake journal) plus its URL becomes the listed entry — only the
+    counterfeit is ever flagged.  The second cell (the genuine journal the
+    counterfeit impersonates) is also captured, as ``authentic_name`` /
+    ``authentic_url`` on the entry, so a paper actually published at the authentic
+    journal can later be cleared instead of left as a doubtful name match.
     """
     entries = []
     for row in _TR_RE.findall(html):
@@ -224,23 +226,42 @@ def parse_hijacked_table(html: str, list_source: str) -> list:
             continue
         href_match = _HREF_RE.search(hijacker_html)
         url = href_match.group(1) if href_match else ""
+        # Authentic journal = the second column (the real journal being impersonated).
+        authentic_name = authentic_url = ""
+        if len(cells) > 1:
+            authentic_html = cells[1]
+            authentic_name = _text(authentic_html)
+            am = _HREF_RE.search(authentic_html)
+            authentic_url = am.group(1) if am else ""
         # ISSNs sometimes appear in the row text; capture from the whole row.
         issns = extract_issns(_text(row))
-        entries.append(_make_entry(name, url, list_source, issns=issns))
+        entries.append(_make_entry(name, url, list_source, issns=issns,
+                                   authentic_name=authentic_name,
+                                   authentic_url=authentic_url))
     return entries
 
 
-def _make_entry(name: str, url: str, list_source: str, issns=None) -> dict:
-    """Build a normalized snapshot entry."""
-    host = normalize_host(url)
-    return {
+def _make_entry(name: str, url: str, list_source: str, issns=None,
+                authentic_name: str = "", authentic_url: str = "") -> dict:
+    """Build a normalized snapshot entry.
+
+    Hijacked entries also carry the authentic (impersonated) journal's name, URL
+    and domain when the source table provides them, so a paper actually published
+    at the authentic journal can be distinguished from the predatory clone.
+    """
+    entry = {
         "name": name,
         "url": url,
-        "domain": host,
+        "domain": normalize_host(url),
         "normalized_name": normalize_name(name),
         "issns": issns or [],
         "list_source": list_source,
     }
+    if authentic_name or authentic_url:
+        entry["authentic_name"] = authentic_name
+        entry["authentic_url"] = authentic_url
+        entry["authentic_domain"] = normalize_host(authentic_url)
+    return entry
 
 
 def scrape() -> dict:

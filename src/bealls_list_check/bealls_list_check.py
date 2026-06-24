@@ -42,8 +42,10 @@ from config import (
     STATUS_FILL_COLORS,
 )
 from match import BeallIndex, match_paper, out_of_scope_result
+from normalize import normalize_host
 from user_lists import load_user_entries, WhitelistMatcher
 from common import input_quality          # the one shared input data-quality validator
+import data_quality                       # Crossref lookup for the hijacked-clearance check
 
 
 # =============================================================================
@@ -101,8 +103,88 @@ def classify_corpus(index, whitelist=None, crossref="off"):
         use_cr = crossref == "all" or (crossref == "flagged"
                                        and r["status"] in ("on_list", "review"))
         r["data_quality"] = input_quality.validate_input(paper, use_crossref=use_cr)
+        _clear_hijacked_if_genuine(r, paper, index)
         results.append(r)
     return results, sorted(corpus_files), n_scope
+
+
+def _domains_of(paper):
+    """All venue hosts the record gives — canonical publicationVenue.url + alternates."""
+    pv = paper.get("publicationVenue") or {}
+    hosts = [normalize_host(pv["url"])] if pv.get("url") else []
+    hosts += [normalize_host(u) for u in (pv.get("alternate_urls") or []) if u]
+    return [h for h in hosts if h]
+
+
+def _same_host(a, b):
+    """True if two hosts are equal or one is a subdomain of the other."""
+    return bool(a) and bool(b) and (a == b or a.endswith("." + b) or b.endswith("." + a))
+
+
+def _crossref_publisher_domain(msg):
+    """The real publisher's host from a Crossref record — its landing-page URL."""
+    url = (((msg.get("resource") or {}).get("primary") or {}).get("URL") or "")
+    return normalize_host(url)
+
+
+def _clear_hijacked_if_genuine(r, paper, index):
+    """Clear a hijacked-BY-NAME 'review' to 'clean' when the paper is provably not
+    the predatory clone.
+
+    A hijacked listing flags a counterfeit that stole a real journal's NAME, so a
+    name match is ambiguous.  We clear the paper only on positive evidence that it
+    is NOT the counterfeit:
+      (A) its own venue website is the authentic journal's site (from Beall's
+          'authentic journal' column); or
+      (B) its DOI resolves (via Crossref) to a real publisher that is neither the
+          counterfeit nor itself on Beall's List.
+    Cleared papers become 'clean' but keep a plain explanation (in the Match
+    column and on the Data-quality sheet) of the doubt and how it was resolved.
+    """
+    if not (r["status"] == "review" and r["list_source"] == "hijacked"
+            and (r.get("matched_on") or "").startswith("name")):
+        return
+    counterfeit = normalize_host(r.get("matched_url") or "")
+    paper_domains = _domains_of(paper)
+
+    # (A) Paper hosted at the authentic journal's own site.
+    authentic = r.get("authentic_domain") or ""
+    if authentic and any(_same_host(d, authentic) for d in paper_domains):
+        _mark_cleared(r, counterfeit,
+                      f"this paper's venue is the authentic journal's own website "
+                      f"({authentic})")
+        return
+
+    # (B) DOI's real publisher is neither the counterfeit nor on Beall's List.
+    doi = ((paper.get("externalIds") or {}).get("DOI") or "").strip()
+    if not doi:
+        return
+    msg = data_quality._crossref_lookup(doi)
+    if not msg:
+        return
+    real_domain = _crossref_publisher_domain(msg)
+    if not real_domain or _same_host(real_domain, counterfeit):
+        return                                          # unknown, or it IS the counterfeit
+    if index.domain_match(real_domain)[0] is not None:
+        return                                          # the real publisher is itself listed
+    publisher = (msg.get("publisher") or "").strip()
+    journal = ((msg.get("container-title") or [""])[0] or "").strip()
+    who = publisher or journal or real_domain
+    detail = journal or publisher or real_domain
+    _mark_cleared(r, counterfeit,
+                  f"this paper's DOI shows it was published by {who} ({detail}; "
+                  f"{real_domain}), which is not the counterfeit and is not on Beall's List")
+
+
+def _mark_cleared(r, counterfeit, why):
+    """Flip a cleared hijacked paper to 'clean' and record the transparent reason."""
+    expl = (f"Cleared after a check. The venue NAME matched a hijacked-journal entry "
+            f"on Beall's List (the counterfeit at {counterfeit or '—'}), which raised "
+            f"doubt — but {why}, so this paper is not in the predatory clone. ('Clean' "
+            "here means 'not on Beall's List', not 'proven reputable'.)")
+    r["status"] = "clean"
+    r["cleared_reason"] = expl
+    r.setdefault("data_quality", []).append(expl)   # keep it visible on the Data-quality sheet
 
 
 def load_corpus():
@@ -367,7 +449,9 @@ def _match_subrows(r):
     rest are blank.
     """
     status = r.get("status")
-    if status in _NONMATCH_NOTES:
+    if r.get("cleared_reason"):                 # a hijacked-by-name flag cleared to clean
+        note = r["cleared_reason"]
+    elif status in _NONMATCH_NOTES:
         note = _NONMATCH_NOTES[status]
     elif status == "error":
         note = f"Error: {r.get('matched_on') or 'could not process record'}"
