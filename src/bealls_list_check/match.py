@@ -32,6 +32,7 @@ from normalize import (
 from config import (
     FUZZY_CUTOFF, MIN_NAME_LEN, FUZZY_LIST_SOURCES, WEAK_LIST_SOURCES,
     PREPRINT_DOMAINS, PREPRINT_NAMES, GENERIC_HOSTS,
+    ARCHIVE_RESOLVER_DOMAINS, REPOSITORY_HOST_MARKERS,
 )
 
 # When several entries share a domain, prefer the more paper-relevant list.
@@ -46,6 +47,23 @@ _LIST_PRIORITY = {
 def _best(entries):
     """Pick the most paper-relevant entry from a list of candidates."""
     return min(entries, key=lambda e: _LIST_PRIORITY.get(e["list_source"], 9))
+
+
+def _is_non_publisher_host(host):
+    """True if *host* is an archive / repository / generic platform, not a publisher.
+
+    An empty host counts (the paper has no canonical venue of its own).  Used to
+    explain an alternate-URL match: when the canonical venue is one of these, the
+    alternate (the listed publisher) is most likely the paper's real venue rather
+    than "a different journal".
+    """
+    if not host:
+        return True
+    if host in GENERIC_HOSTS or any(host.endswith("." + g) for g in GENERIC_HOSTS):
+        return True
+    if ".".join(host.split(".")[-2:]) in ARCHIVE_RESOLVER_DOMAINS:
+        return True
+    return any(marker in host for marker in REPOSITORY_HOST_MARKERS)
 
 
 def venue_signals(paper):
@@ -202,6 +220,7 @@ def _blank_result(paper, source_file):
         "venue": paper.get("venue", "") or "",
         "venue_type": pv.get("type", "") or "",
         "venue_domain": "",
+        "canonical_domain": "",     # the paper's own publicationVenue.url host ("" if none)
         "issn": normalize_issn(pv.get("issn")) if pv.get("issn") else "",
         "mentions": _collect_mentions(paper, pv),
         # filled in by matching:
@@ -224,9 +243,21 @@ def _review_reason(r: dict) -> str:
         return ""
     mo = r["matched_on"]
     if mo == "domain_alternate_url":
-        return ("Matched only via an ALTERNATE venue URL, not the canonical one. "
-                "Semantic Scholar merges same-named journals, so the listed "
-                "publisher may belong to a different journal than this paper's.")
+        canon = r.get("canonical_domain") or ""
+        pub = r.get("matched_name") or "a listed publisher"
+        if _is_non_publisher_host(canon):
+            where = (f"its canonical venue ({canon})" if canon
+                     else "no canonical venue website of its own")
+            return (f"Matched via an ALTERNATE venue URL. The paper lists {where}, "
+                    f"which is an archive/repository or generic host rather than a "
+                    f"publisher — so the alternate URL pointing to the listed {pub} "
+                    f"is most likely this paper's actual venue. Still verify, but "
+                    f"this is a stronger signal than a typical alternate-only match.")
+        return (f"Matched only via an ALTERNATE venue URL, not the canonical one: the "
+                f"paper's venue is {canon}, but Semantic Scholar also lists an "
+                f"alternate URL for it that points to the listed {pub}. S2 sometimes "
+                f"merges same-named journals, so that publisher may belong to a "
+                f"different journal than this paper's — verify they are the same.")
     if mo == "domain_open_access_pdf":
         return ("Only the open-access PDF is hosted on a listed domain; the "
                 "venue itself was not identified as listed.")
@@ -300,6 +331,7 @@ def _classify(r: dict, index: BeallIndex, paper: dict) -> dict:
     alt_domains = [d for d in alt_domains if d]
     all_domains = ([canonical_domain] if canonical_domain else []) + alt_domains
     r["venue_domain"] = canonical_domain or (alt_domains[0] if alt_domains else "")
+    r["canonical_domain"] = canonical_domain
 
     oa = paper.get("openAccessPdf") or {}
     oa_domain = normalize_host(oa.get("url")) if oa.get("url") else ""

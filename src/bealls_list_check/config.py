@@ -82,6 +82,33 @@ GENERIC_HOSTS = {
     "scielo.br",                                # SciELO Brazil open-access platform
 }
 
+# Registrable domains that are archives / preservation / persistent-identifier
+# resolvers / catalogs — NOT publishers.  Semantic Scholar routinely stores a
+# journal's national-library archive copy or a resolver link alongside the real
+# publisher URL (e.g. MDPI's *Cancers* carries e-helvetica.nb.admin.ch +
+# nbn-resolving.de next to mdpi.com).  Used by the data-quality "merged venue"
+# check (to not count them as separate publishers) and by the matcher (to
+# recognise that an alternate-URL match is the real venue when the canonical is
+# one of these).
+ARCHIVE_RESOLVER_DOMAINS = {
+    "admin.ch",                                 # e-helvetica — Swiss National Library e-archive
+    "nbn-resolving.de", "nbn-resolving.org",    # German NL URN/NBN resolver
+    "d-nb.info",                                # Deutsche Nationalbibliothek
+    "jstor.org",                                # JSTOR archive
+    "portico.org",                              # Portico digital preservation
+    "handle.net",                               # Handle persistent-identifier resolver
+    "doi.org",                                  # DOI resolver
+    "worldcat.org",                             # OCLC union catalog
+}
+
+# Substrings that mark a host as an institutional repository / archive rather
+# than a publisher (e.g. epub.uni-regensburg.de).  Used only to phrase an
+# alternate-URL match: if the canonical venue is one of these, the alternate
+# (the listed publisher) is most likely the paper's real venue.
+REPOSITORY_HOST_MARKERS = (
+    "epub", "eprints", "repository", "repositorio", "dspace", "openrepository",
+)
+
 # Preprint-server hosts: a paper whose venue is one of these has no journal
 # publisher and therefore cannot be "on Beall's List" — it is classified
 # "no_venue" rather than clean/predatory.
