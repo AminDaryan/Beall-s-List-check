@@ -93,12 +93,17 @@ def publisher_domains(paper):
     return pubs
 
 
-def _resolve_real_journal(paper):
-    """Name the journal a paper was really published in, from Crossref via its DOI.
+def _resolve_real_journal(paper, publisher_regs):
+    """Name the journal a paper was really published in (from Crossref via its DOI),
+    AND say explicitly which of the merged publishers' sites is the correct one and
+    which are wrong.
 
     Used only for a merged-venue paper, to answer "which of the merged journals is
     this paper's?" automatically instead of asking the reader to check the DOI by
-    hand.  Returns a finished sentence, or "" when there is no usable DOI or
+    hand.  When Crossref's publisher website is one of the merged sites, the message
+    states that site as CORRECT and names the rest as WRONG, so the reader is never
+    left to work out the mapping themselves; when it is none of them, it says so
+    plainly.  Returns a finished sentence, or "" when there is no usable DOI or
     Crossref record (the caller then falls back to the check-by-hand wording).
     Makes one (cached) Crossref lookup.
     """
@@ -116,9 +121,31 @@ def _resolve_real_journal(paper):
     publisher = (msg.get("publisher") or "").strip()
     detail = ([f"ISSN {', '.join(issns)}"] if issns else []) + ([publisher] if publisher else [])
     named = f"{journal} ({'; '.join(detail)})" if detail else journal
-    return (f"According to Crossref (the publisher registry), this paper was actually "
-            f"published in {named} — treat that as the venue rather than the merged "
-            "record above.")
+    base = (f"According to Crossref (the publisher registry), this paper was actually "
+            f"published in {named}. ")
+
+    # Tie Crossref's real publisher site back to one of the merged sites (reducing it
+    # to the same registrable + same-publisher-collapsed form publisher_domains uses),
+    # so we can name which site is right and which were wrongly merged in.
+    cr_url = (((msg.get("resource") or {}).get("primary") or {}).get("URL") or "")
+    cr_host = normalize_host(cr_url)
+    cr_reg = SAME_PUBLISHER_DOMAINS.get(_registrable(cr_host), _registrable(cr_host)) if cr_host else ""
+
+    if cr_reg and cr_reg in publisher_regs:
+        wrong = sorted(d for d in publisher_regs if d != cr_reg)
+        wrong_txt = (f"'{wrong[0]}' is WRONG for this paper (it belongs to a different "
+                     f"journal that merely shares the name)"
+                     if len(wrong) == 1 else
+                     f"the others — {', '.join(wrong)} — are WRONG for this paper (they "
+                     f"belong to different journals that merely share the name)")
+        return (base + f"So of the {len(publisher_regs)} merged sites, '{cr_reg}' is the "
+                f"CORRECT venue for this paper and {wrong_txt}. Treat '{cr_reg}' as the "
+                f"venue and ignore the rest.")
+    # Crossref's publisher site is none of the merged ones.
+    where = f"'{cr_host}'" if cr_host else "a site Crossref does not name"
+    return (base + f"Its publisher website ({where}) is NONE of the merged sites "
+            f"({', '.join(sorted(publisher_regs))}), so none of those is this paper's "
+            f"venue — treat the Crossref journal named above as the venue.")
 
 
 def offline_flags(paper):
@@ -161,7 +188,7 @@ def offline_flags(paper):
                f"publishers' websites ({', '.join(sorted(publisher_regs))}). A single "
                f"journal has one publisher, so Semantic Scholar has probably combined "
                f"{n} different journals that share the same name into one record. ")
-        msg += _resolve_real_journal(paper) or (
+        msg += _resolve_real_journal(paper, publisher_regs) or (
             "The journal it reports for this paper may therefore be one of the others "
             "rather than the correct one — open the paper's DOI to confirm which journal "
             "it was actually published in.")
