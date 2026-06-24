@@ -160,13 +160,13 @@ def crossref_flags(paper, *, timeout=10):
     # abbreviations like "WSEAS Trans. Inf. Sci." vs the full Crossref title).
     if s2_tokens and cr_tokens and not (s2_tokens & cr_tokens):
         s2_show = next((n for n in s2_names if n), "?")
-        flags.append(f"Venue disagrees with Crossref — S2: {s2_show!r}; "
+        flags.append(f"Venue disagrees with Crossref — Semantic Scholar: {s2_show!r}; "
                      f"Crossref: {cr_titles[0]!r}.")
 
     s2_issn = normalize_issn(pv.get("issn")) if pv.get("issn") else ""
     cr_issns = {normalize_issn(i) for i in (msg.get("ISSN") or []) if normalize_issn(i)}
     if s2_issn and cr_issns and s2_issn not in cr_issns:
-        flags.append(f"ISSN disagrees with Crossref — S2: {s2_issn}; "
+        flags.append(f"ISSN disagrees with Crossref — Semantic Scholar: {s2_issn}; "
                      f"Crossref: {sorted(cr_issns)}.")
     return flags
 

@@ -694,6 +694,46 @@ def _write_flagged_sheet(ws, results, extra_columns=None):
 _LEGEND_TITLE = "Beall's List Check — Legend / Data Dictionary"
 _LEGEND_SECTIONS = [
     {
+        "title": "What this report is — input → output",
+        "headers": None,
+        "rows": [
+            ("WHAT IT DOES: each paper's publication venue (its journal/publisher) "
+             "is compared against Beall's List of allegedly predatory venues, and "
+             "given a STATUS (see the next section).",),
+            ("INPUT: one Semantic Scholar (\"S2\") record per paper — the venue "
+             "name, website, ISSN and DOI that Semantic Scholar holds. The check "
+             "trusts these but flags records that look unreliable on the 'Data "
+             "quality' sheet.",),
+            ("OUTPUT (the sheets in this file): Results = every paper; Flagged only "
+             "= just the on_list + review papers to act on; Data quality = papers "
+             "whose Semantic Scholar metadata looks suspect; Summary = counts + run "
+             "details; Legend = this page. The thorough check adds an 'LLM review' "
+             "column on Flagged only.",),
+            ("NOT proof: Beall's List is an unofficial, archived (~2021), CONTESTED "
+             "list, so read 'on_list' as \"appears on the list\", not \"is "
+             "predatory\". See the Caveats at the bottom.",),
+        ],
+    },
+    {
+        "title": "Glossary — terms used in this report",
+        "headers": None,
+        "rows": [
+            ("Semantic Scholar (\"S2\") — the scholarly search engine "
+             "(semanticscholar.org) whose per-paper metadata is the INPUT to this "
+             "check.",),
+            ("Beall's List — an unofficial, archived, contested catalogue of "
+             "alleged predatory publishers and journals (five lists; see below).",),
+            ("Venue — the journal or conference a paper was published in; this is "
+             "what the check classifies (not the paper's content).",),
+            ("DOI — a paper's permanent identifier / link (e.g. 10.1002/rev3.3433).",),
+            ("ISSN — the 8-digit number unique to a journal (e.g. 0079-2047).",),
+            ("Domain — the venue's website host (e.g. mdpi.com); the most reliable "
+             "match signal.",),
+            ("Crossref — the publisher-deposited registry used (optionally, via "
+             "--crossref) to double-check Semantic Scholar's venue/ISSN.",),
+        ],
+    },
+    {
         "title": "STATUS values (and the row color used in Results)",
         "headers": ("Status", "Confidence", "Meaning"),
         "swatch": True,

@@ -271,9 +271,9 @@ def _review_reason(r: dict) -> str:
                     f"this is a stronger signal than a typical alternate-only match.")
         return (f"Matched only via an ALTERNATE venue URL, not the canonical one: the "
                 f"paper's venue is {canon}, but Semantic Scholar also lists an "
-                f"alternate URL for it that points to the listed {pub}. S2 sometimes "
-                f"merges same-named journals, so that publisher may belong to a "
-                f"different journal than this paper's — verify they are the same.")
+                f"alternate URL for it that points to the listed {pub}. Semantic "
+                f"Scholar sometimes merges same-named journals, so that publisher may "
+                f"belong to a different journal than this paper's — verify they match.")
     if mo == "domain_open_access_pdf":
         return ("Only the open-access PDF is hosted on a listed domain; the "
                 "venue itself was not identified as listed.")
