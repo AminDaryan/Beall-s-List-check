@@ -726,8 +726,13 @@ def _match_subrows(r):
             r.get("review_reason") or "Soft match — verify by hand.")
         listed = r.get("matched_name") or "(matched)"
         listed_url = r.get("matched_url") or None
-        listed_text = (f"Listed as: {listed}  (link → this listed venue's own site)"
-                       if listed_url else f"Listed as: {listed}")
+        if listed_url:
+            where = ("this listed hijacked (counterfeit) journal's own site"
+                     if r.get("list_source") == "hijacked"
+                     else "this listed venue's own site")
+            listed_text = f"Listed as: {listed}  (link → {where})"
+        else:
+            listed_text = f"Listed as: {listed}"
         return [
             (listed_text, listed_url),
             (f"Beall list: {_list_plain(r.get('list_source'))}", None),

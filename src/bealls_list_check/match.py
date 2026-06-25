@@ -284,16 +284,23 @@ def _review_reason(r: dict) -> str:
                 "is flagged for a check rather than treated as proof — confirm where "
                 "the paper was actually published.")
     if r["list_source"] == "hijacked" and mo.startswith("name"):
-        reason = ("This paper's venue name matches an entry on Beall's 'hijacked "
-                  "journals' list. A hijacked journal is a counterfeit website that "
-                  "impersonates a real journal by copying its exact name, so a name "
-                  "match alone cannot tell the genuine journal from the counterfeit "
-                  "— this paper may well be in the genuine one.")
+        # Name BOTH sides of the match explicitly — the paper's venue name and the
+        # listed hijacked entry — and point to that entry's link (carried by the
+        # 'Listed as' row above), so the reader sees exactly which matched which.
+        clone_host = normalize_host(r.get("matched_url") or "")
+        venue_name = r.get("venue") or "this paper's venue"
+        listed_name = r.get("matched_name") or "a listed hijacked journal"
+        site = f", whose counterfeit website is {clone_host}," if clone_host else ""
+        reason = (f"This paper's venue name ('{venue_name}') matches the listed hijacked "
+                  f"journal '{listed_name}'{site} on Beall's List (that entry is the "
+                  f"link in the 'Listed as' row above). A hijacked journal is a "
+                  f"counterfeit website that impersonates a real journal by copying its "
+                  f"exact name, so a name match alone cannot tell the genuine journal "
+                  f"from the counterfeit — this paper may well be in the genuine one.")
         # If the paper carries its OWN venue website and/or ISSN, neither could
         # have matched the counterfeit (a domain/ISSN hit would have asserted
         # on_list earlier), so they point at the genuine journal — surface that
         # mismatch so the reviewer (or the LLM pass) can resolve it fast.
-        clone_host = normalize_host(r.get("matched_url") or "")
         own = []
         if r.get("venue_domain"):
             own.append(f"its own website ({r['venue_domain']})")
