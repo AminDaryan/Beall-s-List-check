@@ -21,6 +21,7 @@ The fuzzy tier is intentionally dependency-free (``difflib``) and uses token
 blocking so we never compare every paper against every Beall entry.
 """
 
+import html
 import re
 import unicodedata
 from difflib import SequenceMatcher
@@ -43,13 +44,19 @@ def strip_accents(text: str) -> str:
 def normalize_name(name) -> str:
     """Collapse a publisher/journal name to a comparison key.
 
-    Lower-cases, strips accents, turns ``&`` into ``and``, removes all
-    punctuation, collapses whitespace and drops a leading ``the``.  Returns an
-    empty string for falsy input.
+    Decodes HTML entities first (so ``&amp;`` becomes ``&`` and ``&#39;`` a
+    quote), then lower-cases, strips accents, turns ``&`` into ``and``, removes
+    all punctuation, collapses whitespace and drops a leading ``the``.  Returns
+    an empty string for falsy input.
+
+    Decoding entities matters: a Semantic Scholar record carrying ``&amp;``
+    would otherwise inject a spurious ``amp`` token and degrade what should be an
+    exact name match (e.g. "... Management &amp; Applied Science") into a fuzzy one.
     """
     if not name:
         return ""
-    text = strip_accents(str(name)).lower()
+    text = html.unescape(str(name))          # &amp; -> &, &#39; -> ', &quot; -> "
+    text = strip_accents(text).lower()
     text = text.replace("&", " and ")
     text = _NON_ALNUM_RE.sub(" ", text)
     text = _WHITESPACE_RE.sub(" ", text).strip()
