@@ -730,11 +730,19 @@ def _match_subrows(r):
             where = ("this hijacked (counterfeit) journal's own website"
                      if r.get("list_source") == "hijacked"
                      else "this Beall-listed venue's own website")
-            listed_text = f"Listed as: {listed}  (the link opens {where}, not the paper)"
+            # Style ONLY the entry name as the link; the "Listed as: " label and
+            # the explanation stay plain text (same rich-text approach as the
+            # Domain cell).  Excel keeps the whole cell clickable, but the
+            # explanation no longer looks like part of the link.
+            listed_cell = CellRichText([
+                TextBlock(_INLINE_PLAIN, "Listed as: "),
+                TextBlock(_INLINE_LINK, listed),
+                TextBlock(_INLINE_PLAIN, f"  (the link opens {where}, not the paper)"),
+            ])
         else:
-            listed_text = f"Listed as: {listed}"
+            listed_cell = f"Listed as: {listed}"
         return [
-            (listed_text, listed_url),
+            (listed_cell, listed_url),
             (f"Beall list: {_list_plain(r.get('list_source'))}", None),
             (f"Why flagged: {why}", None),
         ]
