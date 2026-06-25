@@ -727,10 +727,10 @@ def _match_subrows(r):
         listed = r.get("matched_name") or "(matched)"
         listed_url = r.get("matched_url") or None
         if listed_url:
-            where = ("this listed hijacked (counterfeit) journal's own site"
+            where = ("this hijacked (counterfeit) journal's own website"
                      if r.get("list_source") == "hijacked"
-                     else "this listed venue's own site")
-            listed_text = f"Listed as: {listed}  (link → {where})"
+                     else "this Beall-listed venue's own website")
+            listed_text = f"Listed as: {listed}  (the link opens {where}, not the paper)"
         else:
             listed_text = f"Listed as: {listed}"
         return [
