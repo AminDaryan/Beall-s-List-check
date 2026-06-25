@@ -41,7 +41,7 @@ from config import (
     CORPUS_DIR, CORPUS_GLOB, SNAPSHOT_PATH, RESULTS_DIR, RESULTS_FILENAME,
     STATUS_FILL_COLORS,
 )
-from match import BeallIndex, match_paper, out_of_scope_result, _hit, _review_reason
+from match import BeallIndex, match_paper, out_of_scope_result, _hit, _review_reason, _best
 from normalize import normalize_host, normalize_name, normalize_issn
 from user_lists import load_user_entries, WhitelistMatcher
 from common import input_quality          # the one shared input data-quality validator
@@ -115,6 +115,7 @@ def classify_corpus(index, whitelist=None, crossref="off"):
             _clear_hijacked_if_genuine(r, paper, index)
             _resolve_alternate_url(r, paper, index)
             _resolve_open_access_pdf(r, paper, index)
+            _resolve_name_exact(r, paper, index)
         results.append(r)
     return results, sorted(corpus_files), n_scope
 
@@ -224,7 +225,7 @@ def _alt_listed_entries(paper, index):
     return entries
 
 
-def _crossref_matches(msg, target, real_domain):
+def _crossref_matches(msg, target, real_domain, *, allow_name=True):
     """How a paper's Crossref-registered venue matches *target*, or ``None``.
 
     ``target`` is a venue descriptor — ``{"domain", "issns", "normalized_name"}``
@@ -233,6 +234,11 @@ def _crossref_matches(msg, target, real_domain):
     is the authoritative identity of the paper's venue; we accept a match on any
     unambiguous field — ISSN, publisher website, or exact journal name — and name
     which one for the audit trail.  Empty target fields never match.
+
+    ``allow_name=False`` disables the journal-name signal.  Use it whenever the
+    NAME is the very thing in doubt (a name_exact review, where the paper and the
+    listed entry already share a name): there, a name match proves nothing and
+    would mislabel a legitimate same-named journal — only domain/ISSN discriminate.
     """
     cr_issns = {normalize_issn(i) for i in (msg.get("ISSN") or []) if normalize_issn(i)}
     tgt_issns = {normalize_issn(i) for i in (target.get("issns") or []) if normalize_issn(i)}
@@ -240,10 +246,11 @@ def _crossref_matches(msg, target, real_domain):
         return "ISSN"
     if real_domain and target.get("domain") and _same_host(real_domain, target["domain"]):
         return "publisher website"
-    cr_title = ((msg.get("container-title") or [""])[0] or "")
-    if cr_title and target.get("normalized_name") and \
-            normalize_name(cr_title) == target["normalized_name"]:
-        return "journal name"
+    if allow_name:
+        cr_title = ((msg.get("container-title") or [""])[0] or "")
+        if cr_title and target.get("normalized_name") and \
+                normalize_name(cr_title) == target["normalized_name"]:
+            return "journal name"
     return None
 
 
@@ -434,6 +441,78 @@ def _mark_oa_cleared(r, who, detail, real_domain, how):
     r.setdefault("data_quality", []).append(expl)   # keep it visible on the Data-quality sheet
 
 
+def _resolve_name_exact(r, paper, index):
+    """Resolve a name_exact 'review' using the paper's DOI (Crossref).
+
+    A ``name_exact`` review means the venue NAME matches a listed journal, but the
+    paper's own website is NOT the listed one — so it may be a different journal
+    that merely shares the name.  The DOI settles which journal this paper is in:
+
+      * Crossref's registered venue IS the listed journal (by DOMAIN or ISSN) ->
+        the paper really is in it -> on_list.
+      * Crossref POSITIVELY identifies the paper's own venue (by DOMAIN or ISSN),
+        and that venue is not listed -> a different same-named journal -> clean.
+      * anything else -> stays review.
+
+    Crucially this matches on DOMAIN/ISSN only, NEVER on name: the name is the very
+    thing in doubt (both sides share it), so a name match would prove nothing and
+    could mislabel the legitimate journal.  Same positive-proof rule as the others.
+    """
+    if not (r["status"] == "review" and r.get("matched_on") == "name_exact"):
+        return
+    doi = ((paper.get("externalIds") or {}).get("DOI") or "").strip()
+    if not doi:
+        return                                          # coverage gap: no DOI -> stay review
+    msg = data_quality._crossref_lookup(doi)
+    if not msg:
+        return                                          # not in Crossref / lookup failed -> stay review
+    real_domain = _crossref_publisher_domain(msg)
+
+    # (1) Confirm: the DOI's registered venue IS the listed journal (domain/ISSN only).
+    nm = normalize_name(r.get("matched_name") or "")
+    entry = _best(index.by_name[nm]) if nm in index.by_name else None
+    if entry:
+        how = _crossref_matches(msg, entry, real_domain, allow_name=False)
+        if how:
+            _hit(r, entry, "on_list", "name_exact_doi")
+            r["review_reason"] = _review_reason(r)
+            r.setdefault("data_quality", []).append(
+                f"Confirmed via DOI. The venue name matches the listed '{entry['name']}', "
+                f"and the paper's DOI ({doi}) registers it to that same journal (matched "
+                f"by {how}, not the shared name) — so this paper really is in the listed "
+                f"journal, not a different same-named one.")
+            return
+
+    # (2) Clear — ONLY on positive DOMAIN/ISSN evidence the DOI belongs to this
+    #     paper's own venue, AND that venue is on no Beall list.
+    how = _crossref_matches(msg, _canonical_venue_descriptor(paper), real_domain,
+                            allow_name=False)
+    if how and real_domain and index.domain_match(real_domain)[0] is None:
+        publisher = (msg.get("publisher") or "").strip()
+        journal = ((msg.get("container-title") or [""])[0] or "").strip()
+        who = publisher or journal or real_domain
+        detail = journal or publisher or real_domain
+        _mark_name_exact_cleared(r, who, detail, real_domain, how)
+    # else: ambiguous -> leave as review
+
+
+def _mark_name_exact_cleared(r, who, detail, real_domain, how):
+    """Flip a name_exact review to 'clean': the DOI POSITIVELY identifies (by
+    domain/ISSN) the paper's own venue as a DIFFERENT, unlisted journal that
+    merely shares the listed journal's name."""
+    listed = r.get("matched_name") or "a listed journal"
+    expl = (f"Cleared after a check. The venue NAME matched the listed '{listed}', "
+            f"which raised doubt — but the paper's DOI identifies its venue as {who} "
+            f"({detail}; {real_domain}), matched by {how} (not the shared name): this "
+            f"is a different journal that merely shares the name, and it is not on "
+            f"Beall's List. ('Clean' here means 'not on Beall's List', not 'proven "
+            f"reputable'.)")
+    r["status"] = "clean"
+    r["cleared_reason"] = expl
+    r["review_reason"] = ""
+    r.setdefault("data_quality", []).append(expl)   # keep it visible on the Data-quality sheet
+
+
 def load_corpus():
     """Yield (source_file, paper) for every record across all corpus files.
 
@@ -613,6 +692,16 @@ SIGNAL_INFO = {
         "share a name, so that link may belong to a different journal — a human "
         "should check.",
     ),
+    "name_exact_doi": (
+        "the name matched and the DOI confirms the journal",
+        "on_list",
+        "The venue name matched a listed journal, and the paper's DOI (checked "
+        "against Crossref, the publisher registry) shows — by publisher website or "
+        "ISSN, not the shared name — that the paper really is in that listed "
+        "journal. This resolves the 'many journals share a name' doubt, so it is "
+        "asserted as on_list. Example: a venue named like a listed journal whose "
+        "DOI registers it to that journal's own ISSN.",
+    ),
     "domain_alternate_url_doi": (
         "an alternate link matched and the DOI confirms it",
         "on_list",
@@ -705,6 +794,10 @@ def _on_list_why(r):
         return (f"the paper's free PDF is hosted on the listed '{listed}', and the "
                 f"paper's DOI confirms (via Crossref, the publisher registry) it was "
                 f"published there — not merely re-hosted, so this is a real match.")
+    if mo == "name_exact_doi":
+        return (f"the venue name matches the listed '{listed}', and the paper's DOI "
+                f"confirms (via Crossref, by publisher website or ISSN — not the shared "
+                f"name) it really is that journal, not a different same-named one.")
     return (f"{_signal_plain(mo)} ('{listed}') — so it appears on Beall's List "
             "(high-confidence match).")
 
@@ -1164,8 +1257,9 @@ _LEGEND_SECTIONS = [
         "rows": [
             (SIGNAL_INFO[k][0], SIGNAL_INFO[k][1], SIGNAL_INFO[k][2])
             for k in ("domain", "domain_subdomain", "issn", "name_exact",
-                      "name_fuzzy", "domain_alternate_url", "domain_alternate_url_doi",
-                      "domain_open_access_pdf", "domain_open_access_pdf_doi")
+                      "name_exact_doi", "name_fuzzy", "domain_alternate_url",
+                      "domain_alternate_url_doi", "domain_open_access_pdf",
+                      "domain_open_access_pdf_doi")
         ],
     },
     {

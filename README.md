@@ -262,6 +262,11 @@ treating them as confident hits would be misleading:
   listed *International Journal for Multidisciplinary Research* at `ijfmr.com`,
   or a Wiley article mislabeled as *Revista de educación*). The exact-*name* hit
   is downgraded to `review`; *website* and *ISSN* matches are left untouched.
+  This `review` is then resolved by the paper's DOI (when `--crossref` is on):
+  Crossref tells which journal the DOI is actually registered to, matched **by
+  publisher website or ISSN only — never by the shared name**. If it's the listed
+  journal → `on_list`; if it's the paper's own, unlisted venue → `clean`;
+  otherwise it stays `review`.
 
 ### Why the canonical website is trusted but alternate URLs are not
 
