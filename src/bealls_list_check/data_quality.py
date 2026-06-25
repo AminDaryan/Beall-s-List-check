@@ -49,6 +49,13 @@ _UA = ("bealls-data-quality/1.0 (research tooling"
 _RETRY_STATUS = {429, 500, 502, 503, 504}
 _MAX_RETRIES = 4
 
+# Circuit breaker: after this many consecutive total failures we assume Crossref
+# is unreachable and stop calling it for the rest of the run, so a dead/slow
+# connection degrades to "left in review" instead of stalling on every paper.
+_CIRCUIT_TRIP = 3
+_consecutive_failures = 0
+_circuit_open = False
+
 _crossref_cache = {}        # doi -> Crossref "message" dict, or None
 
 
@@ -180,13 +187,15 @@ def _resolve_real_journal(paper, publisher_regs):
             f"venue — treat the Crossref journal named above as the venue.")
 
 
-def offline_flags(paper):
+def offline_flags(paper, *, use_crossref=False):
     """Structural + consistency warnings for one S2 record.
 
-    Offline, with ONE exception: when the "merged venue" red flag fires, this
-    makes a single (cached) Crossref lookup to name the paper's real journal (see
-    _resolve_real_journal), because that question is far more useful answered than
-    left to the reader.  Every other check here is purely offline.
+    Purely offline UNLESS ``use_crossref`` is set: when it is, and the "merged
+    venue" red flag fires, this makes a single (cached) Crossref lookup to name
+    the paper's real journal (see _resolve_real_journal).  With ``use_crossref``
+    False (the default) it never touches the network — the merged-venue note falls
+    back to the offline "check the DOI by hand" wording — so a default run stays
+    fully offline and can't stall on a slow connection.
     """
     flags = []
     pv = paper.get("publicationVenue") or {}
@@ -233,7 +242,8 @@ def offline_flags(paper):
             else:
                 msg += (f"({len(dropped)} other linked sites do not count as separate "
                         f"journals: {parts}.) ")
-        msg += _resolve_real_journal(paper, publisher_regs) or (
+        resolved = _resolve_real_journal(paper, publisher_regs) if use_crossref else ""
+        msg += resolved or (
             "The journal it reports for this paper may therefore be one of the others "
             "rather than the correct one — open the paper's DOI to confirm which journal "
             "it was actually published in.")
@@ -256,12 +266,15 @@ def _crossref_lookup(doi, *, timeout=10):
     unresolved.  A 404 (the DOI is genuinely not in Crossref) is cached as None
     immediately and not retried.
     """
+    global _consecutive_failures, _circuit_open
     if doi in _crossref_cache:
         return _crossref_cache[doi]
+    if _circuit_open:
+        return None                                     # Crossref deemed unreachable this run
     url = _CROSSREF_URL + requests.utils.quote(doi, safe="")
-    message = None
+    message, answered = None, False
     for attempt in range(_MAX_RETRIES):
-        wait = 0
+        wait = None                                     # None -> network error (retry now); int -> back off
         try:
             resp = _session.get(url, timeout=timeout)
             if resp.status_code == 200:
@@ -269,15 +282,27 @@ def _crossref_lookup(doi, *, timeout=10):
                     message = resp.json().get("message")
                 except ValueError:
                     message = None
-                break                                   # got an answer
+                answered = True
+                break
             if resp.status_code not in _RETRY_STATUS:
-                break                                   # 404 / other -> don't retry
+                answered = True                         # 404 / other -> a definitive answer
+                break
             ra = resp.headers.get("Retry-After", "")
-            wait = int(ra) if ra.isdigit() else 0       # honour Retry-After on 429
+            wait = int(ra) if ra.isdigit() else 2 ** attempt   # throttle/5xx: back off
         except requests.RequestException:
-            pass                                        # transient -> retry
-        if attempt < _MAX_RETRIES - 1:
-            time.sleep(min(wait or 2 ** attempt, 30))   # 1s, 2s, 4s … capped at 30s
+            wait = None                                 # network error: retry immediately
+        if attempt < _MAX_RETRIES - 1 and wait:
+            time.sleep(min(wait, 30))
+    # Circuit breaker: stop hammering a Crossref that isn't answering.
+    if answered:
+        _consecutive_failures = 0
+    else:
+        _consecutive_failures += 1
+        if _consecutive_failures >= _CIRCUIT_TRIP and not _circuit_open:
+            _circuit_open = True
+            print(f"[crossref] {_CIRCUIT_TRIP} consecutive lookups failed — assuming "
+                  f"Crossref is unreachable; skipping further DOI checks this run.",
+                  file=sys.stderr)
     _crossref_cache[doi] = message
     return message
 

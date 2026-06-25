@@ -66,7 +66,7 @@ def _venue_flags(paper, *, use_crossref=False):
         import data_quality
     except Exception:
         return []
-    flags = data_quality.offline_flags(paper)
+    flags = data_quality.offline_flags(paper, use_crossref=use_crossref)
     if use_crossref:
         flags += data_quality.crossref_flags(paper)
     return flags

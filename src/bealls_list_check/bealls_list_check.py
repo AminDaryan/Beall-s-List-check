@@ -89,6 +89,11 @@ def classify_corpus(index, whitelist=None, crossref="off"):
     plus a Crossref cross-check when *crossref* is ``"all"`` (every DOI) or
     ``"flagged"`` (only on_list/review rows — far cheaper on a big corpus).
 
+    The DOI-based review resolvers (hijacked clearance, alternate-URL and
+    open-access-PDF confirm/clear) and the merged-venue journal naming all use
+    Crossref, so they run ONLY when *crossref* is enabled.  With ``"off"`` (the
+    default) the whole pass is purely offline and never touches the network.
+
     Returns ``(results, sorted_corpus_files, n_out_of_scope)``.
     """
     results, corpus_files, n_scope = [], set(), 0
@@ -103,9 +108,13 @@ def classify_corpus(index, whitelist=None, crossref="off"):
         use_cr = crossref == "all" or (crossref == "flagged"
                                        and r["status"] in ("on_list", "review"))
         r["data_quality"] = input_quality.validate_input(paper, use_crossref=use_cr)
-        _clear_hijacked_if_genuine(r, paper, index)
-        _resolve_alternate_url(r, paper, index)
-        _resolve_open_access_pdf(r, paper, index)
+        # The DOI resolvers all hit the network (Crossref), so they only run when
+        # Crossref is enabled.  With --crossref off (the default) the whole pass is
+        # purely offline and cannot stall on a slow connection.
+        if use_cr:
+            _clear_hijacked_if_genuine(r, paper, index)
+            _resolve_alternate_url(r, paper, index)
+            _resolve_open_access_pdf(r, paper, index)
         results.append(r)
     return results, sorted(corpus_files), n_scope
 
@@ -1411,6 +1420,9 @@ def main(argv=None):
 
     if args.crossref != "off":
         print(f"Crossref cross-check: {args.crossref} (verifying S2 venue/ISSN against Crossref).")
+    else:
+        print("Crossref: off (fully offline). DOI-based review resolution is skipped — "
+              "add '--crossref flagged' to resolve 'review' papers via their DOI.")
 
     print(f"Loading corpus from {CORPUS_DIR} ...")
     started = time.time()
