@@ -244,6 +244,7 @@ def _blank_result(paper, source_file):
         "list_source": "",
         "matched_name": "",
         "matched_url": "",
+        "alt_source_urls": [],      # for an alternate-URL match: the paper's OWN alternate URL(s) that hit a listed site
         "matched_on": "",
         "review_reason": "",
         "authentic_url": "",        # for a hijacked match: the genuine journal's URL
@@ -264,17 +265,20 @@ def _review_reason(r: dict) -> str:
     if mo == "domain_alternate_url":
         canon = r.get("canonical_domain") or ""
         pub = r.get("matched_name") or "a listed publisher"
+        alts = r.get("alt_source_urls") or []
+        # Name the EXACT Semantic Scholar alternate URL(s) that matched a listed site.
+        alt_txt = f" — {'; '.join(alts)} — " if alts else " "
         if _is_non_publisher_host(canon):
             where = (f"its canonical venue ({canon})" if canon
                      else "no canonical venue website of its own")
             return (f"Matched via an ALTERNATE venue URL. The paper lists {where}, "
                     f"which is an archive/repository or generic host rather than a "
-                    f"publisher — so the alternate URL pointing to the listed {pub} "
-                    f"is most likely this paper's actual venue. Still verify, but "
+                    f"publisher — so the alternate URL{alt_txt}pointing to the listed "
+                    f"{pub} is most likely this paper's actual venue. Still verify, but "
                     f"this is a stronger signal than a typical alternate-only match.")
         return (f"Matched only via an ALTERNATE venue URL, not the canonical one: the "
                 f"paper's venue is {canon}, but Semantic Scholar also lists an "
-                f"alternate URL for it that points to the listed {pub}. Semantic "
+                f"alternate URL for it{alt_txt}that points to the listed {pub}. Semantic "
                 f"Scholar sometimes merges same-named journals, so that publisher may "
                 f"belong to a different journal than this paper's — verify they match.")
     if mo == "domain_open_access_pdf":
@@ -445,18 +449,25 @@ def _classify(r: dict, index: BeallIndex, paper: dict) -> dict:
     # the paper's, so this is review-only.  We collect EVERY listed publisher
     # among the alternates (not just the first) so a reviewer sees all the
     # flagged candidates at once.
-    alt_hits, seen = [], set()
-    for dom in alt_domains:
+    # Iterate the raw alternate URLs (not just their hosts) so we can show the
+    # reviewer the EXACT Semantic Scholar URL that triggered the flag.
+    alt_hits, alt_urls, seen = [], [], set()
+    for u in (pv.get("alternate_urls") or []):
+        dom = normalize_host(u) if u else ""
+        if not dom:
+            continue
         entry, _ = index.domain_match(dom)
         if entry and entry["name"] not in seen:
             seen.add(entry["name"])
             alt_hits.append(entry)
+            alt_urls.append(u)
     if alt_hits:
         r["status"] = "review"
         r["matched_on"] = "domain_alternate_url"
         r["list_source"] = "; ".join(dict.fromkeys(e["list_source"] for e in alt_hits))
         r["matched_name"] = "; ".join(e["name"] for e in alt_hits)
         r["matched_url"] = alt_hits[0]["url"]
+        r["alt_source_urls"] = alt_urls
         return r
 
     # The open-access PDF is hosted on a listed publisher domain, but the
