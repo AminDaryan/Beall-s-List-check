@@ -9,6 +9,9 @@ It is built for one job: screening a large reading list quickly. Checking 500
 journals by hand takes hours; this tool does it in seconds and hands you a
 colour-coded Excel report you can audit line by line.
 
+> **New to the codebase?** Read [ARCHITECTURE.md](ARCHITECTURE.md) first — it maps
+> every module, the pipeline, and the shared data structure in a few minutes.
+
 ---
 
 ## Table of contents
@@ -184,9 +187,11 @@ flowchart TD
     C -- no --> D{ISSN on the list?}
     D -- yes --> ON
     D -- no --> E{Exact name match<br/>≥ 2 words?}
-    E -- yes --> ON
+    E -- yes --> E2{Paper's own website or ISSN<br/>backs the name?<br/>or listed entry has no website}
+    E2 -- yes --> ON
+    E2 -- no --> RV([review])
     E -- no --> F{An *alternate* website<br/>on the list?}
-    F -- yes --> RV([review])
+    F -- yes --> RV
     F -- no --> G{Free-PDF hosted<br/>on a listed site?}
     G -- yes --> RV
     G -- no --> H{Name ≥ 93% similar<br/>to a listed name?}
@@ -213,20 +218,31 @@ order; the first hit wins:
 1. **Canonical website** equals a listed site, *or* is a sub-page of one
    (e.g. `ojs.bilpublishing.com` sits under the listed `bilpublishing.com`).
 2. **ISSN** exactly equals a listed journal's ISSN.
-3. **Exact name** — a venue name (at least **2 words** and **5 letters**)
-   exactly equals a listed name. Capitalisation, accents, and punctuation are
-   ignored, so `MDPI AG`, `mdpi`, and `https://www.mdpi.com/` all normalise to
-   the same key. (The ≥ 2-word rule stops generic single words like *"Research"*
-   from colliding with legitimate journals.)
+3. **Exact name *with* corroboration** — a venue name (at least **2 words** and
+   **5 letters**) exactly equals a listed name, **and** the paper's own website
+   (or ISSN) backs it up: one of the paper's own URLs is the listed site, *or*
+   the listed entry records no website at all (so the name is the only identity
+   Beall recorded). Capitalisation, accents, and punctuation are ignored, so
+   `MDPI AG`, `mdpi`, and `https://www.mdpi.com/` all normalise to the same key.
+   (The ≥ 2-word rule stops generic single words like *"Research"* from colliding
+   with legitimate journals.)
+
+   An exact name match **without** that corroboration does **not** assert
+   `on_list` — it is downgraded to `review` (see Step D), because distinct
+   journals frequently share a name.
 
 **Step D — Soft signals → `review` (a human should verify).** Only reached if
 nothing in Step C matched:
-4. One of the **alternate websites** matches a listed site (the report lists
+4. An **exact name match whose website is not corroborated** — the venue name
+   equals a listed name, but none of the paper's own URLs are the listed site
+   (and that listed entry does have a website). The name alone is treated as a
+   possible coincidence, so it is flagged for a human rather than asserted.
+5. One of the **alternate websites** matches a listed site (the report lists
    *all* such candidates, not just the first).
-5. The **free PDF** is hosted on a listed site, even though the venue itself was
+6. The **free PDF** is hosted on a listed site, even though the venue itself was
    not identified as listed. (Like the alternate-URL case, this is then resolved
    by the paper's DOI when it has one — see below.)
-6. A venue name is **≥ 93% similar** (but not identical) to a listed name — a
+7. A venue name is **≥ 93% similar** (but not identical) to a listed name — a
    spelling variant or typo.
 
 **Step E — Nothing matched → `clean`.** The venue was identified and is not on
@@ -600,10 +616,13 @@ The scraper takes only the **predatory** column of the hijacked-journals table
 │   │   └── llm_helpers.py              # LLM call + JSON parsing + token counter
 │   └── bealls_list_check/
 │       ├── scrape_bealls_list.py       # Step 1: vendor data/bealls_snapshot.json
-│       ├── bealls_list_check.py        # Step 2: match the corpus → Excel (no LLM)
+│       ├── bealls_list_check.py        # Step 2: the conductor — load → match → resolve → Excel
 │       ├── bealls_llm_check.py         # Optional LLM pass over the 'review' papers
-│       ├── match.py                    # The matching logic (domain / ISSN / name / fuzzy)
-│       ├── data_quality.py             # The Semantic-Scholar data-quality checks
+│       ├── match.py                    # Decide each paper's verdict (domain / ISSN / name / fuzzy)
+│       ├── resolve.py                  # Upgrade/clear 'review' verdicts via the DOI (Crossref)
+│       ├── data_quality.py             # S2 data-quality checks + the cached Crossref client
+│       ├── descriptions.py             # All plain-English text shown in the workbook
+│       ├── report.py                   # Render the Excel workbook (openpyxl)
 │       ├── normalize.py                # Name / host / ISSN normalisation
 │       ├── config.py                   # Paths + matching tunables
 │       ├── user_lists.py               # whitelist / blacklist handling
