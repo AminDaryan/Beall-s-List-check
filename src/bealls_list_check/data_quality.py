@@ -20,8 +20,10 @@ An empty result means "nothing suspicious found" — NOT a guarantee of
 correctness (S2 can be wrong in ways no automated check can see).
 """
 
+import os
 import re
 import sys
+import time
 from pathlib import Path
 
 import requests
@@ -36,7 +38,16 @@ from config import (
 _DOI_RE = re.compile(r"^10\.\d{4,9}/\S+$")
 _ENTITY_RE = re.compile(r"&[A-Za-z]+;|&#\d+;|�")        # &amp; &#39; or U+FFFD
 _CROSSREF_URL = "https://api.crossref.org/works/"
-_UA = "bealls-data-quality/1.0 (research tooling)"
+# Including a mailto puts us in Crossref's faster, more reliable "polite pool".
+# Set CROSSREF_MAILTO in .env to opt in; harmless (anonymous pool) if unset.
+_MAILTO = os.environ.get("CROSSREF_MAILTO", "").strip()
+_UA = ("bealls-data-quality/1.0 (research tooling"
+       + (f"; mailto:{_MAILTO}" if _MAILTO else "") + ")")
+
+# Transient HTTP statuses worth retrying (rate-limit + server errors).  A 404 is
+# NOT here: it means the DOI genuinely isn't in Crossref, so we cache that as None.
+_RETRY_STATUS = {429, 500, 502, 503, 504}
+_MAX_RETRIES = 4
 
 _crossref_cache = {}        # doi -> Crossref "message" dict, or None
 
@@ -237,16 +248,36 @@ _session.headers.update({"User-Agent": _UA})
 
 
 def _crossref_lookup(doi, *, timeout=10):
+    """Look up a DOI in Crossref, returning the 'message' dict or None (cached).
+
+    Retries transient failures — timeouts, connection errors, and HTTP 429/5xx —
+    with exponential backoff (honouring a ``Retry-After`` header when present), so
+    a single throttle or hiccup on a large run doesn't silently leave a paper
+    unresolved.  A 404 (the DOI is genuinely not in Crossref) is cached as None
+    immediately and not retried.
+    """
     if doi in _crossref_cache:
         return _crossref_cache[doi]
+    url = _CROSSREF_URL + requests.utils.quote(doi, safe="")
     message = None
-    try:
-        resp = _session.get(_CROSSREF_URL + requests.utils.quote(doi, safe=""),
-                            timeout=timeout)
-        if resp.status_code == 200:
-            message = resp.json().get("message")
-    except (requests.RequestException, ValueError):
-        message = None
+    for attempt in range(_MAX_RETRIES):
+        wait = 0
+        try:
+            resp = _session.get(url, timeout=timeout)
+            if resp.status_code == 200:
+                try:
+                    message = resp.json().get("message")
+                except ValueError:
+                    message = None
+                break                                   # got an answer
+            if resp.status_code not in _RETRY_STATUS:
+                break                                   # 404 / other -> don't retry
+            ra = resp.headers.get("Retry-After", "")
+            wait = int(ra) if ra.isdigit() else 0       # honour Retry-After on 429
+        except requests.RequestException:
+            pass                                        # transient -> retry
+        if attempt < _MAX_RETRIES - 1:
+            time.sleep(min(wait or 2 ** attempt, 30))   # 1s, 2s, 4s … capped at 30s
     _crossref_cache[doi] = message
     return message
 
