@@ -60,18 +60,19 @@ the entire run is offline. Pass `--crossref off` to force offline even when onli
 ## 3. Module reference
 
 All modules reside in `src/bealls_list_check/`. Each has a single responsibility.
+Three carry a colocated deep-dive doc (`*.md` next to the `*.py`), linked below.
 
 | Module | Responsibility |
 |---|---|
 | `bealls_list_check.py` | Conductor and command-line interface. Orchestrates the pipeline; contains no classification or rendering logic of its own. |
-| `match.py` | Determines each paper's verdict from Semantic Scholar metadata (domain, ISSN, exact-name, and fuzzy-name signals). Defines `BeallIndex` and the result dictionary. |
-| `resolve.py` | Upgrades or clears a `review` verdict using the paper's DOI via Crossref (four resolvers behind `resolve_review`). Network-dependent; invoked whenever Crossref is enabled (the default when online). |
+| `match.py` ([`match.md`](src/bealls_list_check/match.md)) | Determines each paper's verdict from Semantic Scholar metadata (domain, ISSN, exact-name, and fuzzy-name signals). Defines `BeallIndex` and the result dictionary. |
+| `resolve.py` ([`resolve.md`](src/bealls_list_check/resolve.md)) | Upgrades or clears a `review` verdict using the paper's DOI via Crossref (four resolvers behind `resolve_review`). Network-dependent; invoked whenever Crossref is enabled (the default when online). |
 | `data_quality.py` | Structural and consistency checks on each Semantic Scholar record, and the cached Crossref client through which all network lookups pass. |
 | `descriptions.py` | All human-readable text presented in the workbook: signal explanations, Beall-list names, and the Legend sheet content. Contains no I/O and no layout code. |
 | `report.py` | Renders the Excel workbook with openpyxl (sheets, per-paper blocks, merges, fonts, colours). Contains no classification logic; its text is sourced from `descriptions.py`. |
 | `normalize.py` | Canonicalisation of names, hosts, and ISSNs so that comparisons are consistent. |
 | `config.py` | File paths and matching parameters (fuzzy threshold, preprint domains, status colours, and similar constants). |
-| `user_lists.py` | Handling of the optional `--whitelist` (scope filter) and `--blacklist` (additional predatory venues). |
+| `user_lists.py` ([`user_lists.md`](src/bealls_list_check/user_lists.md)) | Handling of the optional `--whitelist` (scope filter) and `--blacklist` (additional predatory venues). |
 | `scrape_bealls_list.py` | Produces the vendored `data/bealls_snapshot.json` from the archived Beall's List. Run only when refreshing the snapshot. |
 | `bealls_llm_check.py` | Optional language-model pass over the `review` papers. Reuses the conductor (`import bealls_list_check as det`) for matching and for the workbook writer. |
 
