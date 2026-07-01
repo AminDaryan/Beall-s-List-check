@@ -42,6 +42,7 @@ sys.path.insert(0, str(_HERE.parent))          # src/ -> common
 from config import CORPUS_DIR, CORPUS_GLOB, SNAPSHOT_PATH, STATUS_FILL_COLORS
 from match import BeallIndex, match_paper, out_of_scope_result
 from user_lists import load_user_entries, WhitelistMatcher
+import data_quality                        # shared Crossref client (for the reachability probe)
 from common import input_quality          # the one shared input data-quality validator
 from resolve import resolve_review        # DOI-based resolution of 'review' verdicts
 from report import save_workbook          # Excel workbook writer; re-exported here so
@@ -92,8 +93,11 @@ def classify_corpus(index, whitelist=None, crossref="off"):
 
     The DOI-based review resolvers (hijacked clearance, alternate-URL,
     open-access-PDF and name_exact confirm/clear — see resolve.py) all use
-    Crossref, so they run ONLY when *crossref* is enabled.  With ``"off"`` (the
-    default) the whole pass is purely offline and never touches the network.
+    Crossref, so they run only when *crossref* is enabled.  With ``"off"`` the
+    whole pass is purely offline and never touches the network.  (The command-line
+    entry points default to ``"all"`` and downgrade to ``"off"`` when Crossref is
+    unreachable — see :func:`resolve_crossref_mode`; this parameter itself defaults
+    to ``"off"`` so a direct caller opts in explicitly.)
 
     Returns ``(results, sorted_corpus_files, n_out_of_scope)``.
     """
@@ -110,8 +114,9 @@ def classify_corpus(index, whitelist=None, crossref="off"):
                                        and r["status"] in ("on_list", "review"))
         r["data_quality"] = input_quality.validate_input(paper, use_crossref=use_cr)
         # The DOI resolvers all hit the network (Crossref), so they only run when
-        # Crossref is enabled.  With --crossref off (the default) the whole pass is
-        # purely offline and cannot stall on a slow connection.
+        # Crossref is enabled.  With --crossref off (or no internet — see
+        # resolve_crossref_mode) the whole pass is purely offline and cannot stall
+        # on a slow connection.
         if use_cr:
             resolve_review(r, paper, index)
         results.append(r)
@@ -146,15 +151,38 @@ def load_corpus():
 # MAIN
 # =============================================================================
 
+def resolve_crossref_mode(requested):
+    """Resolve the requested ``--crossref`` mode to the effective one, degrading
+    to ``"off"`` when Crossref can't be reached.
+
+    Crossref is used by DEFAULT (``requested`` defaults to ``"all"``): the check
+    resolves and cross-checks DOIs whenever there's internet, and silently falls
+    back to a fully-offline run when there isn't — so a user never has to ask for
+    it, and a run never stalls or fails just because the machine is offline. Pass
+    ``--crossref off`` to force offline even when online. Prints a one-line status
+    and returns the effective mode.
+    """
+    if requested == "off":
+        print("Crossref: off (fully offline, by request).")
+        return "off"
+    if data_quality.crossref_reachable():
+        print(f"Crossref: {requested} (online - resolving DOIs against the registry).")
+        return requested
+    print("Crossref: requested but unreachable (no internet?) - continuing fully offline.")
+    return "off"
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Beall's List predatory-venue check.")
     parser.add_argument("--whitelist", help="JSON list of venues; only papers whose "
                                             "venue is in it are checked (others -> out_of_scope)")
     parser.add_argument("--blacklist", help="JSON list of venues to add to Beall's List "
                                             "as predatory before matching")
-    parser.add_argument("--crossref", choices=["off", "flagged", "all"], default="off",
-                        help="cross-check DOIs against Crossref to catch wrong S2 metadata: "
-                             "off (default), flagged (on_list/review only), or all (every DOI)")
+    parser.add_argument("--crossref", choices=["off", "flagged", "all"], default="all",
+                        help="resolve/cross-check DOIs against Crossref: all (the default; "
+                             "every DOI), flagged (on_list/review only), or off (fully offline). "
+                             "Used automatically when online and falls back to offline with no "
+                             "internet, so you never need to pass this unless you want 'off'.")
     args = parser.parse_args(argv)
 
     print("=" * 70)
@@ -173,15 +201,11 @@ def main(argv=None):
         print(f"Whitelist active ({len(whitelist.domains)} domain(s) + "
               f"{len(whitelist.name_phrases)} name(s)) — papers outside it are skipped.")
 
-    if args.crossref != "off":
-        print(f"Crossref cross-check: {args.crossref} (verifying S2 venue/ISSN against Crossref).")
-    else:
-        print("Crossref: off (fully offline). DOI-based review resolution is skipped — "
-              "add '--crossref flagged' to resolve 'review' papers via their DOI.")
+    crossref_mode = resolve_crossref_mode(args.crossref)
 
     print(f"Loading corpus from {CORPUS_DIR} ...")
     started = time.time()
-    results, corpus_files, n_scope = classify_corpus(index, whitelist, crossref=args.crossref)
+    results, corpus_files, n_scope = classify_corpus(index, whitelist, crossref=crossref_mode)
 
     elapsed = time.time() - started
     out_path, n_flagged = save_workbook(results, snapshot["meta"], corpus_files)

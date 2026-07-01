@@ -222,15 +222,17 @@ with st.expander("⚙️ Options (optional)"):
     st.caption('Format for both boxes: a JSON list like '
                '`[{"name": "IEEE", "domain": "ieee.org"}]` (a plain `"name"` string works too).')
     crossref = st.checkbox(
-        "Double-check each venue against Crossref (more reliable, slower)",
+        "Cross-check each venue against Crossref (recommended; skipped automatically when offline)",
+        value=True,
         key=f"cr_{checker.id}",
         help="Crossref is the official registry of published articles (looked up by each "
-             "paper's DOI). When on, the journal name and ISSN that Semantic Scholar reports "
-             "are compared against Crossref's official record, and any that disagree are listed "
-             "on the Data quality sheet — catching papers where Semantic Scholar has the wrong "
-             "venue. Off is faster; on contacts Crossref once per paper.")
+             "paper's DOI). When on (the default), the journal name and ISSN that Semantic "
+             "Scholar reports are compared against Crossref's official record, and DOIs are "
+             "used to resolve uncertain matches — catching papers where Semantic Scholar has "
+             "the wrong venue. It contacts Crossref once per paper (a little slower) and is "
+             "skipped automatically when there's no internet. Uncheck to force a fully offline run.")
 aux_lists = {"--whitelist": wl, "--blacklist": bl}
-extra_args = ["--crossref", "all"] if crossref else None
+extra_args = None if crossref else ["--crossref", "off"]
 
 # Step 3 — run
 st.markdown("**Step 3 · Run**")

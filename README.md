@@ -81,13 +81,20 @@ you resolve the genuinely uncertain cases (see [§12](#12-the-thorough-check-an-
 | **Preprint** | A paper posted to a server such as arXiv or bioRxiv **before** (or instead of) journal publication. A preprint has no journal publisher, so it cannot be "on Beall's List." |
 | **Snapshot** | The local, dated copy of Beall's List this tool matches against. Stored in the repo so runs are reproducible and work offline. |
 | **Fuzzy match** | A "close but not identical" text match (e.g. a typo'd journal name). Used cautiously, and only ever produces a *review* verdict. |
-| **Crossref** | The official registry that publishers deposit their articles into ([crossref.org](https://www.crossref.org/)). Used optionally to double-check Semantic Scholar's metadata. |
+| **Crossref** | The official registry that publishers deposit their articles into ([crossref.org](https://www.crossref.org/)). Used **by default** (whenever there's internet, with an automatic offline fallback) to double-check Semantic Scholar's metadata and resolve uncertain matches. The tool queries Crossref's API *by DOI* for the deposited record (journal name, ISSN, publisher, landing-page URL); it never opens the DOI link or fetches the journal's own website. |
 
 ---
 
 ## 3. Quick start: the web app
 
-The fastest way to try the tool. From the project folder:
+The fastest way to try the tool.
+
+> [!IMPORTANT]
+> **Do the one-time [first-time setup](#8-first-time-setup) first.** `run_ui` runs
+> inside the `.venv` that `setup.ps1` / `setup.sh` creates, so it will not work
+> until you have run setup once.
+
+From the project folder:
 
 ```powershell
 .\run_ui.ps1          # Windows PowerShell
@@ -106,9 +113,6 @@ This opens a page in your browser at **`http://localhost:8501`**. There you:
 As soon as your papers load, an **Input data quality** panel flags any records
 that look unreliable. The web app runs the *same code* as the command line, so
 the output is identical.
-
-> First time? Run [`setup.ps1` / `setup.sh`](#8-first-time-setup) once before
-> `run_ui`.
 
 ---
 
@@ -152,7 +156,7 @@ the check has. Here is exactly how each field is used:
 | `publicationVenue.issn` | The journal's ISSN. An exact ISSN match is a high-confidence hit. |
 | `venue`, `publicationVenue.name`, `publicationVenue.alternate_names` | All the **names** the venue is known by. Used for exact-name and fuzzy-name matching. (The *Mentioned in* column shows the venue(s) that also have a URL — see [§7](#7-how-to-read-the-excel-report).) |
 | `publicationVenue.type` | `journal` / `conference` / etc. — shown for context. |
-| `externalIds.DOI` | Builds the clickable link to the article, and is the key for the optional Crossref cross-check. |
+| `externalIds.DOI` | Builds the clickable link to the article, and is the key for the Crossref cross-check (on by default). |
 | `openAccessPdf.url` | The host of the free PDF. A *weak* signal — if the PDF lives on a listed publisher's server it earns a *review*, never an automatic hit. |
 | `title`, `year`, `paperId` | Shown in the report; `paperId` also de-duplicates papers across files. |
 
@@ -187,7 +191,7 @@ flowchart TD
     C -- no --> D{ISSN on the list?}
     D -- yes --> ON
     D -- no --> E{Exact name match<br/>≥ 2 words?}
-    E -- yes --> E2{Paper's own website or ISSN<br/>backs the name?<br/>or listed entry has no website}
+    E -- yes --> E2{Paper's own website<br/>backs the name?<br/>or listed entry has no website}
     E2 -- yes --> ON
     E2 -- no --> RV([review])
     E -- no --> F{An *alternate* website<br/>on the list?}
@@ -220,9 +224,10 @@ order; the first hit wins:
 2. **ISSN** exactly equals a listed journal's ISSN.
 3. **Exact name *with* corroboration** — a venue name (at least **2 words** and
    **5 letters**) exactly equals a listed name, **and** the paper's own website
-   (or ISSN) backs it up: one of the paper's own URLs is the listed site, *or*
+   backs it up: one of the paper's own venue URLs is the listed site, *or*
    the listed entry records no website at all (so the name is the only identity
-   Beall recorded). Capitalisation, accents, and punctuation are ignored, so
+   Beall recorded). (An ISSN match isn't part of this step — it would already
+   have asserted `on_list` at the ISSN tier above.) Capitalisation, accents, and punctuation are ignored, so
    `MDPI AG`, `mdpi`, and `https://www.mdpi.com/` all normalise to the same key.
    (The ≥ 2-word rule stops generic single words like *"Research"* from colliding
    with legitimate journals.)
@@ -278,7 +283,8 @@ treating them as confident hits would be misleading:
   listed *International Journal for Multidisciplinary Research* at `ijfmr.com`,
   or a Wiley article mislabeled as *Revista de educación*). The exact-*name* hit
   is downgraded to `review`; *website* and *ISSN* matches are left untouched.
-  This `review` is then resolved by the paper's DOI (when `--crossref` is on):
+  This `review` is then resolved by the paper's DOI via Crossref (which runs by
+  default whenever there's internet — see [§11](#11-data-quality-checks-catching-unreliable-input)):
   Crossref tells which journal the DOI is actually registered to, matched **by
   publisher website or ISSN only — never by the shared name**. If it's the listed
   journal → `on_list`; if it's the paper's own, unlisted venue → `clean`;
@@ -439,8 +445,8 @@ source .venv/bin/activate         # macOS / Linux
 
 > [!NOTE]
 > **You only need API keys for the "thorough" check.** The fast check, the
-> data-quality checks, and the optional Crossref cross-check need **no keys at
-> all**. For the thorough check, set your LLM provider and key in `.env` (see the
+> data-quality checks, and Crossref cross-checking need **no keys at all**
+> (Crossref is free). For the thorough check, set your LLM provider and key in `.env` (see the
 > comments in [`.env.example`](.env.example)).
 
 ---
@@ -453,6 +459,9 @@ source .venv/bin/activate         # macOS / Linux
 python src/bealls_list_check/scrape_bealls_list.py
 
 # Step 2: the FAST check (rules only, no LLM) — writes the Excel report.
+#         Uses Crossref by default to resolve DOIs (see §11); automatically
+#         runs fully offline when there's no internet. Add '--crossref off'
+#         to force offline even when online.
 python src/bealls_list_check/bealls_list_check.py
 
 # Optional: the THOROUGH check — fast check + an LLM recommendation for each
@@ -483,9 +492,7 @@ papers to a temporary folder behind the scenes.)
 
 ## 10. Whitelist and blacklist (optional)
 
-Tailor a run with two optional inputs (CLI flags, also available in the web app).
-Each is a JSON list of `{"name": ..., "domain": ...}` entries (a plain string
-works as just a name):
+Tailor a run with two optional inputs (CLI flags, also available in the web app):
 
 ```bash
 python src/bealls_list_check/bealls_list_check.py \
@@ -498,6 +505,28 @@ python src/bealls_list_check/bealls_list_check.py \
   whitelisted name appears as a whole word in one of its venue names.)
 - **`--blacklist` extends the list.** Its entries are added to Beall's List for
   this run and matched like real entries, so a paper in one comes back `on_list`.
+
+### What the file looks like
+
+Both files use the **same format**: a JSON list whose items are each either a
+bare **name string** or an **object** with any of `name`, `domain` (or `url`),
+and `issns`. At least one of `name` / `domain` is required; items with neither
+are skipped. (A single object, not wrapped in a list, is also accepted.)
+
+```json
+[
+  "Bentham Science Publishers",
+  { "name": "Hindawi", "domain": "hindawi.com" },
+  { "domain": "scirp.org" },
+  { "name": "Journal of Example", "url": "https://example.com/jx", "issns": ["1234-5678"] }
+]
+```
+
+| Field | Meaning |
+|---|---|
+| `name` | The venue or publisher name. In a **whitelist** it matches as a whole-word phrase (so `"IEEE"` covers *IEEE Transactions on …*); in a **blacklist** it is matched like a real Beall name (exact ≥ 2-word match, or a ≥ 93% fuzzy match → `review`). |
+| `domain` / `url` | The venue's website — either key works. Matched exactly or as a subdomain, so a **publisher** domain covers all its journals. |
+| `issns` | Optional list of ISSNs. Used by the **blacklist** (an ISSN match flags the paper `on_list`); **ignored** by the whitelist scope filter. |
 
 ---
 
@@ -514,20 +543,31 @@ looks suspect, each with the specific issue:
 - leftover HTML codes (e.g. `&amp;`) in the venue name;
 - a **"merged venue"** — one record pointing at *two different publishers'*
   websites (the classic sign that Semantic Scholar fused two same-named
-  journals). For these, the check **looks the paper's DOI up in Crossref
-  automatically** and names the journal it was *actually* published in (e.g.
-  *"…actually published in Review of Education (ISSN 2049-6613; Wiley)…"*), so you
-  don't have to resolve it by hand. (This is the one online step in the otherwise
-  offline fast check; it runs only for merged-venue papers that have a DOI.)
+  journals). For these, the check **looks the paper's DOI up in Crossref** and
+  names the journal it was *actually* published in (e.g. *"…actually published in
+  Review of Education (ISSN 2049-6613; Wiley)…"*), even saying which of the merged
+  sites is correct — so you don't have to resolve it by hand. (This runs
+  automatically whenever there's internet; offline, it falls back to a note
+  telling you to open the DOI yourself.)
 
-Optionally, cross-check against **Crossref** (the official registry publishers
-submit their articles to): when enabled, the journal name and ISSN Semantic
+### Crossref cross-check (on by default)
+
+The check also cross-checks each paper against **Crossref** (the official
+registry publishers submit their articles to): the journal name and ISSN Semantic
 Scholar reports are compared with Crossref's record (looked up by the paper's
-DOI), and any disagreement is flagged.
+DOI), and any disagreement is flagged. This — together with the DOI-based
+resolution of `review` papers ([§5](#5-how-the-check-decides--step-by-step)) — is
+**on by default**: it runs automatically whenever there's internet and **falls
+back to a fully offline run when there isn't**, so you never have to ask for it.
+No key is needed (Crossref is free).
 
 ```bash
-# 'flagged' = only the on_list/review papers (cheap); 'all' = every DOI.
-python src/bealls_list_check/bealls_list_check.py --crossref flagged
+# Default: 'all' (every DOI) when online, offline when not — no flag needed.
+python src/bealls_list_check/bealls_list_check.py
+
+# Narrow it, or force offline:
+python src/bealls_list_check/bealls_list_check.py --crossref flagged   # on_list/review DOIs only
+python src/bealls_list_check/bealls_list_check.py --crossref off       # never contact Crossref
 ```
 
 > [!NOTE]
@@ -576,8 +616,8 @@ and committed to the repo. The bundled snapshot holds **~3,045 entries**:
 
 | List | Entries (approx.) | What it is |
 |---|---|---|
-| Predatory **publishers** | 1,339 | Core list — predatory publishers. |
-| Standalone **journals** | 1,505 | Core list — single predatory journals. |
+| Predatory **publishers** | 1,335 | Core list — predatory publishers. |
+| Standalone **journals** | 1,501 | Core list — single predatory journals. |
 | **Hijacked** journals | 139 | Core list — clones impersonating a real journal. |
 | **Fake-metrics** companies | 55 | Weak — sellers of invented impact factors. |
 | **Vanity** presses | 15 | Weak — book/monograph publishers. |
@@ -597,10 +637,12 @@ To rebuild the snapshot from the live site:
 python src/bealls_list_check/scrape_bealls_list.py
 ```
 
-The scraper takes only the **predatory** column of the hijacked-journals table
-(never the "authentic journal" column), and deliberately skips the site's
-*"Excluded — decide after reading"* section (e.g. MDPI, which the author chose
-**not** to list).
+From the hijacked-journals table the scraper lists only the **predatory** column
+as Beall entries; it also records that row's "authentic journal" as *reference
+data* (`authentic_url`) — used to clear false hijack matches (see
+[§5](#5-how-the-check-decides--step-by-step)), never listed as predatory itself.
+It deliberately skips the site's *"Excluded — decide after reading"* section
+(e.g. MDPI, which the author chose **not** to list).
 
 ---
 
@@ -651,7 +693,7 @@ The scraper takes only the **predatory** column of the hijacked-journals table
   the *Match* column. The optional LLM pass only *adds* recommendations for the
   `review` papers; it never changes a deterministic verdict.
 - **Garbage in, garbage out.** Verdicts are only as good as Semantic Scholar's
-  metadata — which is why the Data-quality sheet and the optional Crossref
-  cross-check exist. Use them.
+  metadata — which is why the Data-quality sheet exists and Crossref
+  cross-checking runs by default (whenever there's internet).
 </content>
 </invoke>

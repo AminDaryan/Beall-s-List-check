@@ -42,7 +42,7 @@ lines). It performs the following stages in order:
    2.  for each corpus paper ──────  load_corpus()         -> paper records
    3.    classify the venue ───────  match_paper()         -> result dict     (match.py)
    4.    validate the input ───────  input_quality.validate_input()           (common/)
-   5.    resolve 'review' (DOI) ───  resolve_review()      [only with --crossref] (resolve.py)
+   5.    resolve 'review' (DOI) ───  resolve_review()      [Crossref; on by default] (resolve.py)
    6.  render the workbook ────────  save_workbook()       -> results/*.xlsx   (report.py)
 ```
 
@@ -50,8 +50,10 @@ Each stage reads from, or writes to, a single **result dictionary** per paper
 (Section 4). That dictionary is the common data structure passed between modules.
 
 The Crossref-backed stage (5) and the Crossref branch of stage (4) perform network
-requests and run only when `--crossref` is supplied. With the default
-(`--crossref off`) the entire run is offline.
+requests. They run **by default** (`--crossref all`): `main()` probes Crossref
+once at startup (`resolve_crossref_mode()` → `data_quality.crossref_reachable()`)
+and, if it is unreachable (no internet), degrades the run to `--crossref off` so
+the entire run is offline. Pass `--crossref off` to force offline even when online.
 
 ---
 
@@ -63,7 +65,7 @@ All modules reside in `src/bealls_list_check/`. Each has a single responsibility
 |---|---|
 | `bealls_list_check.py` | Conductor and command-line interface. Orchestrates the pipeline; contains no classification or rendering logic of its own. |
 | `match.py` | Determines each paper's verdict from Semantic Scholar metadata (domain, ISSN, exact-name, and fuzzy-name signals). Defines `BeallIndex` and the result dictionary. |
-| `resolve.py` | Upgrades or clears a `review` verdict using the paper's DOI via Crossref (four resolvers behind `resolve_review`). Network-dependent; invoked only when `--crossref` is enabled. |
+| `resolve.py` | Upgrades or clears a `review` verdict using the paper's DOI via Crossref (four resolvers behind `resolve_review`). Network-dependent; invoked whenever Crossref is enabled (the default when online). |
 | `data_quality.py` | Structural and consistency checks on each Semantic Scholar record, and the cached Crossref client through which all network lookups pass. |
 | `descriptions.py` | All human-readable text presented in the workbook: signal explanations, Beall-list names, and the Legend sheet content. Contains no I/O and no layout code. |
 | `report.py` | Renders the Excel workbook with openpyxl (sheets, per-paper blocks, merges, fonts, colours). Contains no classification logic; its text is sourced from `descriptions.py`. |
@@ -117,9 +119,13 @@ and form the basis of the report.
 
 The following invariants are intended to be preserved by any change:
 
-1. **Offline by default.** A run without `--crossref` performs no network requests.
-   All Crossref access is confined to `resolve.py` and the Crossref branch of
-   `data_quality.py`, both gated behind the flag.
+1. **Crossref by default, with an offline fallback.** A run uses Crossref by
+   default (`--crossref all`) but degrades to fully offline when Crossref is
+   unreachable (probed once at startup) or when `--crossref off` is passed — so a
+   run never stalls or fails for lack of internet. All Crossref access is confined
+   to `resolve.py` and the Crossref branch of `data_quality.py`, both gated behind
+   the effective `--crossref` mode, and every offline-degraded path leaves the
+   affected papers exactly as a no-network run would (typically `review`).
 
 2. **Positive proof in DOI resolution.** In `resolve.py`, a `review` is promoted to
    `on_list` only when the DOI confirms the listed venue, and cleared to `clean`
@@ -173,11 +179,13 @@ The following invariants are intended to be preserved by any change:
 # Refresh the vendored snapshot (infrequent)
 python src/bealls_list_check/scrape_bealls_list.py
 
-# Deterministic check (offline, no language model)
+# Deterministic check (no language model). Uses Crossref by default when online,
+# and falls back to fully offline automatically when there's no internet.
 python src/bealls_list_check/bealls_list_check.py
 
-# With DOI cross-checking via Crossref (network): resolve the 'review' papers
-python src/bealls_list_check/bealls_list_check.py --crossref flagged
+# Narrow the Crossref work, or force a fully offline run:
+python src/bealls_list_check/bealls_list_check.py --crossref flagged   # on_list/review DOIs only
+python src/bealls_list_check/bealls_list_check.py --crossref off       # never contact Crossref
 
 # Optional language-model pass over the 'review' papers (requires provider
 # configuration; see .env.example)

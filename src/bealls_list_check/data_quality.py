@@ -307,6 +307,23 @@ def _crossref_lookup(doi, *, timeout=10):
     return message
 
 
+def crossref_reachable(timeout=5):
+    """Best-effort check that Crossref's API answers, used to decide up front
+    whether a run resolves DOIs (online) or falls back to fully offline (no
+    internet) — instead of failing a lookup per paper.
+
+    One lightweight request (an empty ``works`` query); any error, non-200, or an
+    already-tripped circuit breaker means "not reachable".
+    """
+    if _circuit_open:
+        return False
+    try:
+        resp = _session.get(_CROSSREF_URL.rstrip("/") + "?rows=0", timeout=timeout)
+        return resp.status_code == 200
+    except requests.RequestException:
+        return False
+
+
 def crossref_flags(paper, *, timeout=10):
     """Warnings from comparing S2's venue/ISSN to Crossref's (network)."""
     doi = ((paper.get("externalIds") or {}).get("DOI") or "").strip()
