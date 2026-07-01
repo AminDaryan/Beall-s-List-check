@@ -1,13 +1,13 @@
 # How the check decides — the matching logic
 
 > Deep-dive companion to [`match.py`](match.py). The main
-> [README](../../README.md#6-how-the-check-decides--and-the-six-verdicts) gives the
+> [README](../../../README.md) gives the
 > short version and links here for the full rules. DOI-based resolution of the
-> `review` verdicts is a separate step — see [`resolve.md`](resolve.md).
+> `review` verdicts is a separate step — see [`resolve.md`](../resolve/README.md).
 
 Everything here is **deterministic**: the same input always yields the same
 verdict, and the Excel report shows *why*. The logic lives in
-[`match.py`](match.py) and its tunables in [`config.py`](config.py).
+[`match.py`](match.py) and its tunables in [`config.py`](../config.py).
 
 ## The guiding principle
 
@@ -86,7 +86,7 @@ nothing in Step C matched:
    spelling variant or typo.
 
 Signals 4–6 are then resolved by the paper's DOI when it has one — see
-[`resolve.md`](resolve.md).
+[`resolve.md`](../resolve/README.md).
 
 **Step E — Nothing matched → `clean`.** The venue was identified and is not on
 the list.
@@ -118,7 +118,7 @@ Even a Step-C "strong" match is downgraded to `review` in three cases
   hijacked entry might actually be the **legitimate** journal. Only a *website*
   or *ISSN* match (the clone's own identity) is asserted as `on_list`; a name
   match is downgraded to `review`. Clearing such a `review` needs positive proof
-  — see [`resolve.md`](resolve.md).
+  — see [`resolve.md`](../resolve/README.md).
 - **Exact-name match the website doesn't back up.** A name alone is
   high-confidence only if the paper's own venue is hosted at the *same site* as
   the Beall entry (see Step C.3). Otherwise it's downgraded to `review`.

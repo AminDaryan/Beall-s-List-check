@@ -1,7 +1,7 @@
 # Whitelist and blacklist
 
 > Companion to [`user_lists.py`](user_lists.py). The main
-> [README](../../README.md#8-whitelist-and-blacklist-optional) gives the
+> [README](../../../README.md) gives the
 > one-paragraph version and links here.
 
 Two optional inputs let you tailor a run. Both are CLI flags and both are
@@ -57,7 +57,7 @@ living on a publisher's server doesn't make it that publisher's journal.
 
 Blacklist entries become real snapshot entries in the `BeallIndex`, so they flow
 through the exact same matching tiers as Beall's own lists (see
-[`match.md`](match.md)): domain, ISSN, exact name (with the ≥ 2-word rule), and
+[`match.md`](../match/README.md)): domain, ISSN, exact name (with the ≥ 2-word rule), and
 fuzzy name. `blacklist` outranks every Beall list when several entries share a
 domain — the user explicitly asserted it — and it is eligible for fuzzy near-name
 matching.

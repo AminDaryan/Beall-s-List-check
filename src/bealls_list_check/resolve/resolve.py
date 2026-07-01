@@ -29,7 +29,12 @@ Every resolver makes a (cached) Crossref lookup, so ``classify_corpus`` calls
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+# This module now lives in <pkg>/resolve/; put the package root and every foldered
+# module (foo/foo.py) on the path so the flat 'from x import y' imports still work.
+_ROOT = Path(__file__).resolve().parent.parent
+for _p in [_ROOT, *(d for d in _ROOT.iterdir() if d.is_dir() and (d / f"{d.name}.py").exists())]:
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 from normalize import normalize_host, normalize_name, normalize_issn
 from match import _hit, _review_reason, _best
 import data_quality                       # the shared, cached Crossref client

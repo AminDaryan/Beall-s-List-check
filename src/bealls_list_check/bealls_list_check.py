@@ -37,7 +37,12 @@ import time
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(_HERE))
+# Package root + each foldered module (foo/foo.py) on the path, so the flat
+# 'from x import y' imports keep working after match/resolve/user_lists moved
+# into their own folders.
+for _p in [_HERE, *(d for d in _HERE.iterdir() if d.is_dir() and (d / f"{d.name}.py").exists())]:
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 sys.path.insert(0, str(_HERE.parent))          # src/ -> common
 from config import CORPUS_DIR, CORPUS_GLOB, SNAPSHOT_PATH, STATUS_FILL_COLORS
 from match import BeallIndex, match_paper, out_of_scope_result

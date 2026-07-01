@@ -1,12 +1,12 @@
 # DOI-based resolution via Crossref
 
 > Deep-dive companion to [`resolve.py`](resolve.py) and the Crossref client in
-> [`data_quality.py`](data_quality.py). The main
-> [README](../../README.md#9-data-quality-and-the-crossref-cross-check) links here.
+> [`data_quality.py`](../data_quality.py). The main
+> [README](../../../README.md) links here.
 > For the first-pass matching that *produces* the `review` verdicts, see
-> [`match.md`](match.md).
+> [`match.md`](../match/README.md).
 
-[`match.py`](match.py) makes a first-pass verdict from Semantic Scholar metadata
+[`match.py`](../match/match.py) makes a first-pass verdict from Semantic Scholar metadata
 alone. Some of its `review` results are *soft/contested* — a venue name matched
 but the website differs, an alternate URL pointed at a listed site, a free PDF
 sits on a listed site, or a hijacked-journal name matched. In each case the
@@ -100,3 +100,19 @@ Net: **very reliable as a safety mechanism** (it won't make false clears — eve
 failure mode degrades toward `review`), and **moderately complete** as a
 resolution mechanism (many reviews legitimately stay `review` when there's no
 positive proof to be had).
+
+## Worked example (a hijacked-by-name review)
+
+Suppose Semantic Scholar reports a paper's venue as *Phyton: Annales Rei
+Botanicae* — the name of a listed **hijacked/cloned** entry, a real journal
+(authentic site `verlag-berger.at`) that a predatory site (`engineeronline.net`)
+once impersonated by copying its name. Because the match is by *name*, the check
+can't tell the genuine journal from the counterfeit, so it starts as a `review`.
+(A bare venue name like just `Phyton` wouldn't match at all — the exact-name tier
+needs ≥ 2 words — and would stay `clean`.) The check then reads the paper's DOI
+(`10.32604/phyton.2024.050556`) in Crossref: it was published by **Tech Science
+Press** — neither the counterfeit nor the recorded authentic journal, but a
+*third* journal that merely shares the short name "Phyton." Because it can't
+*prove* this is the genuine journal, it **stays `review`** for a human. A
+hijacked-by-name paper is cleared to `clean` only when the venue or DOI points to
+the authentic journal's own site — positive proof.

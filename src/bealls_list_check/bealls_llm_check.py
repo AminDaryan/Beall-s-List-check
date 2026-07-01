@@ -39,7 +39,10 @@ import time
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(_HERE))                       # config, match, normalize, bealls_list_check
+# package root + each foldered module (foo/foo.py) on the path (match/user_lists moved)
+for _p in [_HERE, *(d for d in _HERE.iterdir() if d.is_dir() and (d / f"{d.name}.py").exists())]:
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 sys.path.insert(0, str(_HERE.parent))                # src/ -> common, openai_client
 
 import bealls_list_check as det                       # deterministic pass, index/corpus helpers, Excel writer
