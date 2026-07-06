@@ -34,6 +34,10 @@ report you can audit line by line.
   workbook's **Legend** sheet documents every column and value.
 - **Optional LLM pass** — a keep/exclude recommendation for each `review` paper
   (`bealls_llm_check.py`); it never overrides a deterministic verdict.
+- **Batch CSV mode for server integration** — one command: a `.jsonl` of Semantic
+  Scholar records in, a `SS-ID, DOI, Status` CSV out. The input and output
+  structures are documented in full.
+  → [`batch_check/`](src/bealls_list_check/batch_check/README.md)
 - **Web app + CLI** — the same engine behind a Streamlit UI or the command line.
 
 ## How it works
@@ -86,6 +90,9 @@ press **Run**, then preview and download the report.
 ```bash
 python src/bealls_list_check/bealls_list_check.py            # fast check
 python src/bealls_list_check/bealls_llm_check.py --limit 50  # optional LLM pass (cheap test)
+
+# batch mode: JSONL in, CSV (SS-ID, DOI, Status) out — for scripts/servers
+python src/bealls_list_check/batch_check/batch_check.py papers.jsonl -o results.csv
 ```
 
 The fast check uses **Crossref by default** when online and falls back to fully

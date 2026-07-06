@@ -78,6 +78,7 @@ top of each moved module and each entry script.)
 | `user_lists/user_lists.py` ([`README`](src/bealls_list_check/user_lists/README.md)) | Handling of the optional `--whitelist` (scope filter) and `--blacklist` (additional predatory venues). |
 | `scrape_bealls_list.py` | Produces the vendored `data/bealls_snapshot.json` from the archived Beall's List. Run only when refreshing the snapshot. |
 | `bealls_llm_check.py` | Optional language-model pass over the `review` papers. Reuses the conductor (`import bealls_list_check as det`) for matching and for the workbook writer. |
+| `batch_check/batch_check.py` ([`README`](src/bealls_list_check/batch_check/README.md)) | Machine-readable entry point for server integration: reads one `.jsonl`/`.json` file of Semantic Scholar records, writes a CSV of `SS-ID, DOI, Status` (one row per record, input order). Reuses `build_index`/`resolve_crossref_mode` from the conductor plus `match_paper` and `resolve_review`; skips the data-quality validation and the Excel writer. |
 
 The separation of `descriptions.py` and `report.py` is deliberate: report text can
 be revised without touching layout code, and layout can be revised without reading
@@ -194,6 +195,9 @@ python src/bealls_list_check/bealls_list_check.py --crossref off       # never c
 # Optional language-model pass over the 'review' papers (requires provider
 # configuration; see .env.example)
 python src/bealls_list_check/bealls_llm_check.py
+
+# Batch mode for server integration: .jsonl in, CSV (SS-ID, DOI, Status) out
+python src/bealls_list_check/batch_check/batch_check.py papers.jsonl -o results.csv
 ```
 
 Output is written to `src/bealls_list_check/results/` (not tracked by git).
