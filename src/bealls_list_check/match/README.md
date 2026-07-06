@@ -58,6 +58,7 @@ Preprint detection looks only at the *venue*, never at the free-PDF host
 
 **Step C — Strong signals → `on_list` (high confidence).** Tried in this exact
 order; the first hit wins:
+
 1. **Canonical website** equals a listed site, *or* is a sub-page of one
    (e.g. `ojs.bilpublishing.com` sits under the listed `bilpublishing.com`).
 2. **ISSN** exactly equals a listed journal's ISSN.
@@ -73,11 +74,16 @@ order; the first hit wins:
    An exact name match **without** that corroboration is downgraded to `review`
    (Step D), because distinct journals frequently share a name.
 
-**Step D — Soft signals → `review` (a human should verify).** Only reached if
-nothing in Step C matched:
-4. An **exact name match whose website is not corroborated** — the venue name
-   equals a listed name, but none of the paper's own URLs are the listed site
-   (and that listed entry does have a website). Flagged, not asserted.
+**Step D — Soft signals → `review` (a human should verify).** Signal 4 is the
+weaker *outcome* of the Step C.3 name tier — the name matched, but nothing
+corroborated it — decided *within* that tier rather than after it. Signals 5–7
+are the genuinely softer checks, reached only when the strong tiers (C.1–C.3) all
+found nothing:
+
+4. **Exact name, website not corroborated** — the venue name equals a listed
+   name, but none of the paper's own URLs are the listed site (and that listed
+   entry does have a website). Because distinct journals frequently share a name,
+   it is flagged, not asserted.
 5. One of the **alternate websites** matches a listed site (the report lists
    *all* such candidates, not just the first).
 6. The **free PDF** is hosted on a listed site, even though the venue itself was

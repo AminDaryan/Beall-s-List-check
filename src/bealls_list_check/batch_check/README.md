@@ -74,13 +74,20 @@ SS-ID,DOI,Status
 `Status` takes one of five values (the main pipeline's `out_of_scope` cannot
 occur here, as the batch command has no whitelist):
 
-| Status | Meaning |
-|---|---|
-| `on_list` | The venue matches a Beall's List entry by a high-confidence signal (website, exact ISSN, or corroborated exact name). Read as *"appears on Beall's List"* — not proof the venue is predatory. |
-| `review` | A weak or uncertain match a human should verify. |
-| `clean` | The venue was identified and is **not** on the list. |
-| `no_venue` | A preprint, or a record with no venue signals — nothing to check. |
-| `error` | The record could not be processed (it still gets its row). |
+| Status | Colour | Meaning |
+|---|---|---|
+| `on_list` | 🔴 `#FFC7CE` | The venue matches a Beall's List entry by a high-confidence signal (website, exact ISSN, or corroborated exact name). Read as *"appears on Beall's List"* — not proof the venue is predatory. |
+| `review` | 🟠 `#FFD79A` | A weak or uncertain match a human should verify. |
+| `clean` | 🟢 `#C6EFCE` | The venue was identified and is **not** on the list. |
+| `no_venue` | ⚪ `#D9D9D9` | A preprint, or a record with no venue signals — nothing to check. |
+| `error` | ⚫ `#C00000` | The record could not be processed (it still gets its row). |
+
+A CSV is plain text and carries no colour itself; the **Colour** column above is
+the canonical per-status colour the server (or a spreadsheet) should apply when
+it *displays* a status, so it stays consistent with the tool's Excel report.
+These hex codes are the single source of truth in [`config.py`](../config.py)
+(`STATUS_FILL_COLORS`); the Streamlit UI's batch mode applies the very same
+colours to its status preview and to its colour-coded `.xlsx` download.
 
 The CSV carries the verdict only. For the evidence behind each verdict — which
 signal matched, why a row is `review`, data-quality warnings — run the main

@@ -184,6 +184,74 @@ def render_result(res: runners.RunResult, checker: runners.Checker):
             st.text(res.stderr[-4000:])
 
 
+_STATUS_ORDER = ("on_list", "review", "clean", "no_venue", "error")
+
+
+def _status_summary(rows):
+    """Coloured count-per-status chips (canonical colours), most-flagged first."""
+    counts = {}
+    for r in rows:
+        counts[r["Status"]] = counts.get(r["Status"], 0) + 1
+    ordered = [s for s in _STATUS_ORDER if s in counts] + \
+              [s for s in counts if s not in _STATUS_ORDER]
+    chips = []
+    for s in ordered:
+        hexc = runners.STATUS_FILL_COLORS.get(s, "FFFFFF")
+        chips.append(
+            f"<span style='background:#{hexc};color:#111;padding:2px 10px;"
+            f"border-radius:12px;margin:0 6px 6px 0;display:inline-block;"
+            f"font-size:0.85rem;'>{s}: <b>{counts[s]}</b></span>")
+    st.markdown("".join(chips), unsafe_allow_html=True)
+
+
+def _csv_status_preview(rows, max_rows=100):
+    """Preview the CSV with each Status cell shaded its canonical colour."""
+    preview = rows[:max_rows]
+    try:
+        import pandas as pd
+        df = pd.DataFrame(preview, columns=["SS-ID", "DOI", "Status"])
+
+        def _bg(val):
+            hexc = runners.STATUS_FILL_COLORS.get(val)
+            return f"background-color: #{hexc}" if hexc else ""
+
+        styler = df.style
+        # pandas >= 2.1 renamed Styler.applymap -> Styler.map.
+        styler = (styler.map(_bg, subset=["Status"]) if hasattr(styler, "map")
+                  else styler.applymap(_bg, subset=["Status"]))
+        st.dataframe(styler, use_container_width=True)
+    except Exception:
+        st.dataframe(preview, use_container_width=True)   # plain fallback
+    if len(rows) > max_rows:
+        st.caption(f"(showing first {max_rows} of {len(rows)} rows — download for the full CSV)")
+
+
+def render_csv_result(res: runners.BatchCsvResult):
+    if res.ok:
+        st.success(f"✅ Done — {len(res.rows)} record(s) classified. "
+                   "Download the CSV (SS-ID, DOI, Status) below.")
+        _status_summary(res.rows)
+        c1, c2 = st.columns(2)
+        with c1:
+            st.download_button("⬇️ Download CSV (SS-ID, DOI, Status)", data=res.csv_bytes,
+                               file_name="bealls_status.csv", key="dl_csv", mime="text/csv")
+        with c2:
+            st.download_button("⬇️ Download colour-coded Excel", key="dl_csv_xlsx",
+                               data=runners.build_status_xlsx(res.rows),
+                               file_name="bealls_status.xlsx",
+                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        _csv_status_preview(res.rows)
+    else:
+        st.error(f"The batch check exited with code {res.returncode} and produced no CSV. "
+                 "See the run log below.")
+    with st.expander("Run log", expanded=not res.ok):
+        if res.stdout:
+            st.text(res.stdout[-8000:])
+        if res.stderr:
+            st.caption("stderr")
+            st.text(res.stderr[-4000:])
+
+
 def _checker_badge(checker):
     if checker.needs_llm:
         return "🔑 Uses an LLM — needs API keys in `.env`, and costs tokens."
@@ -213,14 +281,19 @@ if items is not None:
 
 # Step 3 — options
 with st.expander("⚙️ Options (optional)"):
-    st.markdown("**Scope — whitelist** (optional)")
-    wl = venue_list_input("Only check papers from these venues — leave empty to check all",
-                          f"wl_{checker.id}")
-    st.markdown("**Extend the list — blacklist** (optional)")
-    bl = venue_list_input("Also treat papers from these venues as predatory",
-                          f"bl_{checker.id}")
-    st.caption('Format for both boxes: a JSON list like '
-               '`[{"name": "IEEE", "domain": "ieee.org"}]` (a plain `"name"` string works too).')
+    if checker.kind == "csv":
+        wl = bl = None
+        st.caption("Batch CSV mode classifies **every** record — it has no whitelist/blacklist "
+                   "scope filter (those are available on the fast and thorough checks).")
+    else:
+        st.markdown("**Scope — whitelist** (optional)")
+        wl = venue_list_input("Only check papers from these venues — leave empty to check all",
+                              f"wl_{checker.id}")
+        st.markdown("**Extend the list — blacklist** (optional)")
+        bl = venue_list_input("Also treat papers from these venues as predatory",
+                              f"bl_{checker.id}")
+        st.caption('Format for both boxes: a JSON list like '
+                   '`[{"name": "IEEE", "domain": "ieee.org"}]` (a plain `"name"` string works too).')
     crossref = st.checkbox(
         "Cross-check each venue against Crossref (recommended; skipped automatically when offline)",
         value=True,
@@ -261,8 +334,11 @@ if run and items is not None:
     try:
         with st.spinner(f'Running "{checker.label}"… '
                         "large corpora and the LLM pass can take a while."):
-            res = runners.run_checker(checker, items, aux_lists=aux_lists,
-                                      extra_args=extra_args, on_line=on_line)
+            if checker.kind == "csv":
+                res = runners.run_batch_csv(items, crossref=crossref, on_line=on_line)
+            else:
+                res = runners.run_checker(checker, items, aux_lists=aux_lists,
+                                          extra_args=extra_args, on_line=on_line)
     except Exception as e:
         progress.empty(); log_line.empty()
         st.session_state["res"] = None
@@ -277,4 +353,7 @@ if run and items is not None:
 
 res = st.session_state.get("res")
 if res is not None:
-    render_result(res, checker)
+    if isinstance(res, runners.BatchCsvResult):
+        render_csv_result(res)
+    else:
+        render_result(res, checker)

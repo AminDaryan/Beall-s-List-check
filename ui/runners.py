@@ -10,6 +10,7 @@ Excel it produced.
 This module is import-safe (no Streamlit) so it can be unit-tested on its own.
 """
 
+import csv
 import io
 import json
 import os
@@ -22,12 +23,27 @@ from pathlib import Path
 from typing import List, Optional
 
 import openpyxl
-from openpyxl.styles import Alignment, Font
+from openpyxl.styles import Alignment, Font, PatternFill
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC = REPO_ROOT / "src"
 RC = SRC                          # the dir that holds the ``common`` package (app.py adds it to sys.path)
 _BEALLS = SRC / "bealls_list_check"
+_BATCH_SCRIPT = _BEALLS / "batch_check" / "batch_check.py"
+
+# Canonical status -> fill colour. Single source of truth is config.py
+# (STATUS_FILL_COLORS), imported when the path shim allows; the literal is a
+# fallback so this module stays import-safe on its own. Used by the coloured
+# status preview and the colour-coded .xlsx the UI's batch mode offers.
+try:
+    if str(_BEALLS) not in sys.path:
+        sys.path.insert(0, str(_BEALLS))
+    from config import STATUS_FILL_COLORS
+except Exception:
+    STATUS_FILL_COLORS = {
+        "on_list": "FFC7CE", "review": "FFD79A", "clean": "C6EFCE",
+        "no_venue": "D9D9D9", "out_of_scope": "BDD7EE", "error": "C00000",
+    }
 
 
 @dataclass(frozen=True)
@@ -39,6 +55,7 @@ class Checker:
     needs_llm: bool = False
     note: str = ""
     description: str = ""        # plain-language "what this check answers", shown in the UI
+    kind: str = "xlsx"          # "xlsx" -> run_checker (Excel); "csv" -> run_batch_csv
 
 
 CHECKERS: List[Checker] = [
@@ -53,6 +70,13 @@ CHECKERS: List[Checker] = [
             needs_llm=True,
             description="Same as the fast check, then an LLM gives a keep/exclude/uncertain "
                         "recommendation for each 'review' paper. Uses tokens."),
+    Checker("bealls.batch_csv", "Batch CSV — SS-ID, DOI, Status (for server integration)",
+            _BATCH_SCRIPT,
+            _BEALLS / "batch_check",          # unused for kind="csv" (no fixed output file)
+            kind="csv",
+            description="One row per paper — SS-ID, DOI, and the Beall's List status — as a "
+                        "machine-readable CSV for scripts/servers, with a colour-coded preview "
+                        "and a matching Excel. Deterministic, no tokens."),
 ]
 
 CHECKERS_BY_ID = {c.id: c for c in CHECKERS}
@@ -180,6 +204,93 @@ def build_input_quality_xlsx(items: list, flagged: list) -> bytes:
         ws.cell(row=i + 1, column=4, value=(paper.get("externalIds") or {}).get("DOI") or "")
         wcell = ws.cell(row=i + 1, column=5, value="OK" if not warns else "\n".join(warns))
         wcell.alignment = Alignment(wrap_text=True, vertical="top")
+    ws.freeze_panes = "A2"
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+@dataclass
+class BatchCsvResult:
+    ok: bool
+    returncode: int
+    stdout: str
+    stderr: str
+    csv_bytes: Optional[bytes]
+    rows: list                       # [{"SS-ID", "DOI", "Status"}], input order
+
+
+def _parse_status_csv(csv_bytes: bytes) -> list:
+    """Parse the batch CSV into a list of ``{"SS-ID","DOI","Status"}`` dicts."""
+    reader = csv.DictReader(io.StringIO(csv_bytes.decode("utf-8")))
+    return [{"SS-ID": r.get("SS-ID", ""), "DOI": r.get("DOI", ""),
+             "Status": r.get("Status", "")} for r in reader]
+
+
+def run_batch_csv(items: list, *, crossref: bool = True, on_line=None,
+                  timeout: Optional[int] = None) -> BatchCsvResult:
+    """Run the batch check over *items* and return the SS-ID/DOI/Status CSV.
+
+    Unlike :func:`run_checker` (which feeds a corpus dir and reads back an Excel),
+    the batch script takes a single input file as a positional argument and writes
+    a CSV — so this uses its own invocation.  Still a subprocess, to keep the
+    module-name isolation the top-of-file docstring describes.
+    """
+    with tempfile.TemporaryDirectory(prefix="bealls_csv_") as tmp:
+        tmp = Path(tmp)
+        in_file = tmp / "input.json"
+        in_file.write_text(json.dumps(items, ensure_ascii=False), encoding="utf-8")
+        out_file = tmp / "status.csv"
+        cmd = [sys.executable, "-u", str(_BATCH_SCRIPT), str(in_file),
+               "-o", str(out_file), "--crossref", "on" if crossref else "off"]
+        env = os.environ.copy()
+        if on_line is None:
+            proc = subprocess.run(cmd, env=env, cwd=str(REPO_ROOT),
+                                  capture_output=True, text=True, timeout=timeout)
+            stdout, stderr, returncode = proc.stdout or "", proc.stderr or "", proc.returncode
+        else:
+            proc = subprocess.Popen(cmd, env=env, cwd=str(REPO_ROOT),
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                    text=True, bufsize=1)
+            captured = []
+            for line in proc.stdout:
+                line = line.rstrip("\n")
+                captured.append(line)
+                try:
+                    on_line(line)
+                except Exception:
+                    pass
+            proc.wait(timeout=timeout)
+            stdout, stderr, returncode = "\n".join(captured), "", proc.returncode
+        # Read inside the context — the temp dir (and the CSV) vanish on exit.
+        csv_bytes = out_file.read_bytes() if out_file.exists() else None
+    rows = _parse_status_csv(csv_bytes) if csv_bytes else []
+    return BatchCsvResult(ok=(returncode == 0 and csv_bytes is not None),
+                          returncode=returncode, stdout=stdout, stderr=stderr,
+                          csv_bytes=csv_bytes, rows=rows)
+
+
+def build_status_xlsx(rows: list) -> bytes:
+    """Colour-coded Excel of the SS-ID/DOI/Status rows.
+
+    The Status cell is filled with the canonical per-status colour
+    (:data:`STATUS_FILL_COLORS`), so the download matches the main report and the
+    UI preview.  A CSV can't carry colour; this xlsx is the human-friendly twin.
+    """
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Status"
+    for col, (header, width) in enumerate(zip(("SS-ID", "DOI", "Status"), (42, 28, 14)), 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True)
+        ws.column_dimensions[cell.column_letter].width = width
+    for i, row in enumerate(rows, 2):
+        ws.cell(row=i, column=1, value=row.get("SS-ID", ""))
+        ws.cell(row=i, column=2, value=row.get("DOI", ""))
+        status_cell = ws.cell(row=i, column=3, value=row.get("Status", ""))
+        hex_color = STATUS_FILL_COLORS.get(row.get("Status", ""))
+        if hex_color:
+            status_cell.fill = PatternFill("solid", fgColor=hex_color)
     ws.freeze_panes = "A2"
     buf = io.BytesIO()
     wb.save(buf)
