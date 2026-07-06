@@ -110,7 +110,7 @@ Input is a JSON list of Semantic Scholar records; the venue fields
 (`publicationVenue.url` / `issn` / `name`, plus `externalIds.DOI`) drive the check
 — see [`match/`](src/bealls_list_check/match/README.md) for exactly how each is used.
 
-## The six verdicts
+## Output — the six verdicts
 
 Every paper gets exactly one **status**, colour-coded in the report:
 
@@ -144,8 +144,11 @@ fake-metrics, 15 vanity) so runs are reproducible and work offline. Rebuild it
 from the live site with:
 
 ```bash
-python src/bealls_list_check/scrape_bealls_list.py
+python src/bealls_list_check/scrape_bealls_list/scrape_bealls_list.py
 ```
+
+See [`scrape_bealls_list/`](src/bealls_list_check/scrape_bealls_list/README.md)
+for exactly what it fetches and the traps it avoids.
 
 ## Limitations and responsible use
 

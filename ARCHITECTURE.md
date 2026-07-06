@@ -60,10 +60,10 @@ the entire run is offline. Pass `--crossref off` to force offline even when onli
 ## 3. Module reference
 
 All modules reside in `src/bealls_list_check/`. Each has a single responsibility.
-Three (`match`, `resolve`, `user_lists`) live in their **own folder** with a
-`README.md` deep-dive, linked below; the rest are flat files in the package
-directory. (The folders keep a bare-name import style via a small path shim at the
-top of each moved module and each entry script.)
+Five (`match`, `resolve`, `user_lists`, `batch_check`, `scrape_bealls_list`) live
+in their **own folder** with a `README.md` deep-dive, linked below; the rest are
+flat files in the package directory. (The folders keep a bare-name import style
+via a small path shim at the top of each moved module and each entry script.)
 
 | Module | Responsibility |
 |---|---|
@@ -76,7 +76,7 @@ top of each moved module and each entry script.)
 | `normalize.py` | Canonicalisation of names, hosts, and ISSNs so that comparisons are consistent. |
 | `config.py` | File paths and matching parameters (fuzzy threshold, preprint domains, status colours, and similar constants). |
 | `user_lists/user_lists.py` ([`README`](src/bealls_list_check/user_lists/README.md)) | Handling of the optional `--whitelist` (scope filter) and `--blacklist` (additional predatory venues). |
-| `scrape_bealls_list.py` | Produces the vendored `data/bealls_snapshot.json` from the archived Beall's List. Run only when refreshing the snapshot. |
+| `scrape_bealls_list/scrape_bealls_list.py` ([`README`](src/bealls_list_check/scrape_bealls_list/README.md)) | Produces the vendored `data/bealls_snapshot.json` from the archived Beall's List. Run only when refreshing the snapshot. |
 | `bealls_llm_check.py` | Optional language-model pass over the `review` papers. Reuses the conductor (`import bealls_list_check as det`) for matching and for the workbook writer. |
 | `batch_check/batch_check.py` ([`README`](src/bealls_list_check/batch_check/README.md)) | Machine-readable entry point for server integration: reads one `.jsonl`/`.json` file of Semantic Scholar records, writes a CSV of `SS-ID, DOI, Status` (one row per record, input order). Reuses `build_index`/`resolve_crossref_mode` from the conductor plus `match_paper` and `resolve_review`; skips the data-quality validation and the Excel writer. |
 
@@ -182,7 +182,7 @@ The following invariants are intended to be preserved by any change:
 
 ```bash
 # Refresh the vendored snapshot (infrequent)
-python src/bealls_list_check/scrape_bealls_list.py
+python src/bealls_list_check/scrape_bealls_list/scrape_bealls_list.py
 
 # Deterministic check (no language model). Uses Crossref by default when online,
 # and falls back to fully offline automatically when there's no internet.

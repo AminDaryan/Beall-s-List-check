@@ -26,7 +26,8 @@ The workbook has five sheets:
                    (snapshot date, corpus files) needed to interpret them.
   * Legend       — a plain-language data dictionary for every column and value.
 
-Run the scraper first (scrape_bealls_list.py) to produce the snapshot, then:
+Run the scraper first (scrape_bealls_list/scrape_bealls_list.py) to produce the
+snapshot, then:
   python bealls_list_check.py
 """
 
@@ -64,7 +65,7 @@ def load_snapshot():
     if not SNAPSHOT_PATH.exists():
         sys.exit(
             f"Snapshot not found: {SNAPSHOT_PATH}\n"
-            "Run scrape_bealls_list.py first to vendor the Beall's List."
+            "Run scrape_bealls_list/scrape_bealls_list.py first to vendor the Beall's List."
         )
     with open(SNAPSHOT_PATH, encoding="utf-8") as f:
         return json.load(f)

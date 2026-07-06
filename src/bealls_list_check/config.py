@@ -24,7 +24,7 @@ CORPUS_DIR = Path(os.environ.get("BEALLS_CORPUS_DIR", str(_DEFAULT_CORPUS_DIR)))
 # Glob for the corpus files inside CORPUS_DIR.
 CORPUS_GLOB = "*.json"
 
-# Vendored Beall's List snapshot produced by scrape_bealls_list.py.
+# Vendored Beall's List snapshot produced by scrape_bealls_list/scrape_bealls_list.py.
 SNAPSHOT_PATH = _HERE / "data" / "bealls_snapshot.json"
 
 # Where the combined results workbook is written.

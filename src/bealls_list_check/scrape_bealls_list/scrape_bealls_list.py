@@ -32,7 +32,7 @@ For the hijacked table only the *hijacker/predatory* column is taken — the
 be a false positive.
 
 Usage:
-  python scrape_bealls_list.py
+  python scrape_bealls_list/scrape_bealls_list.py
 """
 
 import json
@@ -45,7 +45,13 @@ from pathlib import Path
 
 import requests
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+# This module now lives in <pkg>/scrape_bealls_list/; put the package root and
+# every foldered module (foo/foo.py) on the path so the flat 'from x import y'
+# imports still work (same shim as match/resolve).
+_ROOT = Path(__file__).resolve().parent.parent
+for _p in [_ROOT, *(d for d in _ROOT.iterdir() if d.is_dir() and (d / f"{d.name}.py").exists())]:
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 from normalize import normalize_name, normalize_host, extract_issns
 
 # Make name printing safe on Windows consoles (cp1252 can't encode some names).
@@ -56,7 +62,9 @@ except Exception:
 
 BASE = "https://beallslist.net"
 USER_AGENT = "Mozilla/5.0 (compatible; bealls-list-check/1.0)"
-SNAPSHOT_PATH = Path(__file__).resolve().parent / "data" / "bealls_snapshot.json"
+# The snapshot lives in the package's data/ folder (one level up now that this
+# script sits in its own scrape_bealls_list/ folder).
+SNAPSHOT_PATH = Path(__file__).resolve().parent.parent / "data" / "bealls_snapshot.json"
 
 # (path, list_source, parse_mode)
 LIST_PAGES = [
