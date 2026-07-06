@@ -63,17 +63,34 @@ the full map.
 
 ## Getting started
 
-> [!IMPORTANT]
-> **Run the one-time setup first** — `run_ui` uses the `.venv` it creates.
+Three steps: **set up once, add your papers, run.**
+
+### Step 1 · Set up (once)
 
 ```powershell
 .\setup.ps1        # Windows PowerShell   (macOS/Linux: bash ./setup.sh)
 ```
 
-This creates a `.venv`, installs [`requirements.txt`](requirements.txt), and
-copies [`.env.example`](.env.example) to `.env`. **No API keys are needed** for the
-fast check, the data-quality checks, or Crossref — only the optional LLM pass
-needs a key.
+Creates a `.venv`, installs [`requirements.txt`](requirements.txt), and copies
+[`.env.example`](.env.example) to `.env`. **No API keys are needed** for the fast
+check, the data-quality checks, or Crossref — only the optional LLM pass needs a
+key. `run_ui` uses this `.venv`, so do this first.
+
+### Step 2 · Add your papers
+
+Input is a JSON list of **Semantic Scholar records**; the venue fields
+(`publicationVenue.url` / `issn` / `name`, plus `externalIds.DOI`) drive the check
+— see [`match/`](src/bealls_list_check/match/README.md) for how each is used. For
+the command line, papers live in `docs/Updated Abstract Papers/*.json` by default
+(not part of this repo), or point elsewhere:
+
+```bash
+export BEALLS_CORPUS_DIR=/path/to/my/papers    # PowerShell: $env:BEALLS_CORPUS_DIR = "C:\path"
+```
+
+> Using the **web app** (Step 3)? You upload or paste the papers there — skip this step.
+
+### Step 3 · Run the check
 
 **Web app** (easiest):
 
@@ -81,8 +98,8 @@ needs a key.
 .\run_ui.ps1       # opens http://localhost:8501   (macOS/Linux: bash ./run_ui.sh)
 ```
 
-Choose *fast* or *thorough*, paste or upload your papers (Semantic Scholar JSON),
-press **Run**, then preview and download the report.
+Choose *fast* or *thorough*, paste or upload your papers, press **Run**, then
+preview and download the report.
 
 **Command line** (activate the env first — `.\.venv\Scripts\Activate.ps1` or
 `source .venv/bin/activate`):
@@ -98,17 +115,6 @@ python src/bealls_list_check/batch_check/batch_check.py papers.jsonl -o results.
 The fast check uses **Crossref by default** when online and falls back to fully
 offline automatically; add `--crossref off` to force offline, or `--crossref
 flagged` to limit it to flagged papers.
-
-**Your papers** live in `docs/Updated Abstract Papers/*.json` by default (not part
-of this repo), or point the check elsewhere:
-
-```bash
-export BEALLS_CORPUS_DIR=/path/to/my/papers    # PowerShell: $env:BEALLS_CORPUS_DIR = "C:\path"
-```
-
-Input is a JSON list of Semantic Scholar records; the venue fields
-(`publicationVenue.url` / `issn` / `name`, plus `externalIds.DOI`) drive the check
-— see [`match/`](src/bealls_list_check/match/README.md) for exactly how each is used.
 
 ## Output — the six verdicts
 
