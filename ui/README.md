@@ -20,6 +20,9 @@ taken, in which case Streamlit selects the next free port.
 
 ![The page with papers loaded and the input data-quality panel open](screenshots/ui-main.png)
 
+> The screenshots predate the Step 1 comparison table and the Step 3/4 split
+> described below, and are due to be retaken.
+
 ## The three checks
 
 Selected in Step 1. All three run the same deterministic engine; they differ in
@@ -27,9 +30,9 @@ what they add and what they return.
 
 | Check | Runs | Returns | Cost |
 |---|---|---|---|
-| **Fast check — rules only (no LLM)** | [`bealls_list_check.py`](../src/bealls_list_check/bealls_list_check.py) | `bealls_list_results.xlsx` — the full five-sheet workbook | none |
-| **Thorough check — rules + LLM over the review papers** | [`bealls_llm_check.py`](../src/bealls_list_check/bealls_llm_check.py) | `bealls_llm_results.xlsx` — the same workbook plus an **LLM review** column on *Flagged only* | tokens; requires keys in `.env` |
-| **Batch CSV — SS-ID, DOI, Status** | [`batch_check.py`](../src/bealls_list_check/batch_check/batch_check.py) | `bealls_status.csv` **and** a colour-coded `bealls_status.xlsx` | none |
+| **Fast check** — rules only, no LLM | [`bealls_list_check.py`](../src/bealls_list_check/bealls_list_check.py) | `bealls_list_results.xlsx` — the full five-sheet workbook | none |
+| **Thorough check** — rules, then an LLM pass | [`bealls_llm_check.py`](../src/bealls_list_check/bealls_llm_check.py) | `bealls_llm_results.xlsx` — the same workbook plus an **LLM review** column on *Flagged only* | tokens; requires keys in `.env` |
+| **Batch CSV** — one row per paper | [`batch_check.py`](../src/bealls_list_check/batch_check/batch_check.py) | `bealls_status.csv` **and** a colour-coded `bealls_status.xlsx` | none |
 
 The sidebar shows which LLM provider and model are configured, and a short
 reminder that only the thorough check needs them.
@@ -38,13 +41,33 @@ reminder that only the thorough check needs them.
 
 ### Step 1 · Choose a check
 
-The dropdown is followed by a one-line description of what that check answers and
-a badge stating whether it uses an LLM.
+The three checks are presented as a comparison table rather than a dropdown: they
+are meant to be weighed against each other, and a dropdown shows only the option
+already chosen. One row per check, and one column per attribute they actually
+differ on:
+
+| | Check | What it does | API keys | Tokens | Returns |
+|---|---|---|---|---|---|
+
+The attributes therefore line up vertically, so comparing them is a scan down a
+column rather than a reading of three separate blocks. The leftmost column holds
+the **Select** button; the selected row is marked by a red accent on its name and
+a disabled **✓ Selected** button.
+
+Selecting the thorough check additionally verifies the LLM configuration, using
+the same `validate_provider_config()` the check itself calls. A missing key or
+endpoint is reported here, naming the empty `.env` values, rather than after a
+run has already been paid for. The model named is the one that will actually be
+used — the **first** entry when `AZURE_OPENAI_DEPLOYMENT` holds several.
+
+The selection does not disturb anything else on the page: loaded papers and
+options survive a change of check.
 
 ### Step 2 · Provide the papers
 
-Semantic Scholar **paper records**, either uploaded as a `.json` file or pasted
-into a text box. An expander shows the expected shape. Accepted input:
+Semantic Scholar **paper records**, from one of three sources: a `.json` upload,
+a paste box, or the bundled [example corpus](../examples/README.md). Accepted
+input:
 
 - a **JSON list** of paper objects, or
 - a **single** paper object (it is wrapped into a list automatically).
@@ -52,7 +75,7 @@ into a text box. An expander shows the expected shape. Accepted input:
 Anything else is rejected with a message rather than a traceback. **`.jsonl` is
 not accepted** — convert it to an array first, or use `batch_check.py` on the
 command line, which reads `.jsonl`, `.ndjson` and `.json`. Streamlit's upload
-limit is 200 MB per file.
+limit is 200 MB per file. An expander shows the expected shape.
 
 #### The input data-quality panel
 
@@ -89,13 +112,19 @@ box is shown for **Batch CSV**, which classifies every record.
 
 ### Step 4 · Run
 
-The **Run check** button stays disabled until papers are loaded. During the run a
+A one-line summary states what is about to run — the check, the number of papers,
+whether Crossref is on, and whether a whitelist or blacklist is in force. The
+**Run check** button stays disabled until papers are loaded. During the run a
 progress bar and the latest log line are shown. The bar is a true percentage only
 for the thorough check, which prints a `[i/N]` counter per venue; the fast and
 batch checks have no per-item counter, so the bar pulses to show the run is
 alive. A toast announces the outcome.
 
 ## What you get back
+
+A result survives a change of selection in Step 1 and stays labelled with the
+check that produced it, together with a note that a fresh run is needed for the
+newly selected one. Nothing is silently relabelled.
 
 ### Fast and thorough checks
 
@@ -106,6 +135,24 @@ data-quality report — truncated to the last 8,000 characters, and it opens
 automatically when a run fails.
 
 ![A finished fast check, with the workbook preview](screenshots/ui-report.png)
+
+#### Adding the CSV afterwards
+
+A workbook result is followed by **Also produce the batch CSV**, which runs the
+batch check over the same papers and appends the CSV, its colour-coded Excel twin
+and the status chips beneath the workbook.
+
+It is an action rather than an automatic by-product because the CSV **cannot be
+derived from the workbook**. The two disagree on record handling by design: the
+workbook is deduplicated on `paperId` → `title`, whereas the CSV carries one row
+per input record, in input order. Producing it therefore means running the
+deterministic pass a second time, repeating every Crossref lookup — a cost worth
+paying on request and not worth imposing on every run. For the same reason the
+CSV ignores any whitelist or blacklist, and never carries the thorough check's
+LLM verdict; the button's caption states all of this before it is pressed.
+
+The result is discarded whenever the check selection changes or a new run starts,
+so a CSV is never shown next to a workbook it did not come from.
 
 ### Batch CSV
 
@@ -135,6 +182,8 @@ The most useful table here — the app is not a strict superset of the CLI.
 | `.jsonl` input | not accepted | `batch_check.py` only |
 | Input data-quality validation | always, for all three checks | main check yes, `batch_check.py` no |
 | Record handling | Fast/Thorough deduplicate on `paperId` → `title`; Batch CSV keeps every record | same |
+| Example corpus | selectable in Step 2 | `BEALLS_CORPUS_DIR=examples`, or pass the file |
+| Workbook **and** CSV | one run, then **Also produce the batch CSV** | two commands |
 
 ## Limits and gotchas
 
@@ -144,9 +193,13 @@ The most useful table here — the app is not a strict superset of the CLI.
   reads back the newest `.xlsx` created since the run started. Two overlapping
   runs — two browser tabs, or the CLI at the same time — can therefore hand one
   session the other's workbook. Run one at a time.
-- **The sidebar reads `.env` once, at startup.** Restart the app after editing it.
+- **`.env` is read once, at startup**, and the LLM-readiness verdict shown under
+  the thorough check is cached for the session. Restart the app after editing it.
   The model is always labelled with the `AZURE_OPENAI_DEPLOYMENT` variable name,
   whichever provider is active.
+- **The readiness check is a configuration check, not a live call.** It confirms
+  that the provider's key and endpoint are present, not that they are valid or
+  that the deployment exists.
 - **The coloured status preview needs pandas**, which arrives as a Streamlit
   dependency rather than a direct requirement; without it the table still renders,
   just without colour.

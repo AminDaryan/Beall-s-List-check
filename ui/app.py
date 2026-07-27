@@ -57,12 +57,44 @@ _S2_EXAMPLE = json.dumps(
                            "issn": "1234-5678", "alternate_urls": []},
       "openAccessPdf": {"url": ""}}], indent=2)
 
+# The corpus shipped for verifying an installation (see examples/README.md),
+# offered in Step 2 so the app can be tried without supplying data.
+_EXAMPLE_CORPUS = runners.REPO_ROOT / "examples" / "sample_papers.json"
+
+
+@st.cache_data(show_spinner=False)
+def llm_status():
+    """Whether the configured LLM provider is usable: ``(ok, message, model)``.
+
+    Answered by the same ``validate_provider_config()`` the checks call, so the
+    thorough check cannot be reported as ready and then fail on the first
+    request.  ``ok is None`` means the question could not be answered — the
+    caller stays quiet rather than guessing.  *model* is the deployment the
+    check will actually use, which is the **first** name when several are
+    configured.
+
+    Deliberately not called on every page load: it imports litellm, which costs
+    a few seconds, and only the thorough check needs the answer.
+    """
+    try:
+        import openai_client
+    except Exception as exc:
+        return None, str(exc), ""
+    try:
+        openai_client.validate_provider_config()
+        return True, "", openai_client.AZURE_OPENAI_DEPLOYMENT
+    except Exception as exc:
+        return False, str(exc), openai_client.AZURE_OPENAI_DEPLOYMENT
+
 
 def env_sidebar():
     st.sidebar.header("Environment")
     prov = os.getenv("LLM_PROVIDER", "azure")
     st.sidebar.write(f"**LLM provider:** `{prov}`")
-    st.sidebar.write(f"**Model / deployment:** `{os.getenv('AZURE_OPENAI_DEPLOYMENT', '(unset)')}`")
+    model = os.getenv("AZURE_OPENAI_DEPLOYMENT", "(unset)")
+    st.sidebar.write(f"**Model / deployment:** `{model}`")
+    if model.lstrip().startswith("["):
+        st.sidebar.caption("Several names are configured; the check uses the first.")
     st.sidebar.caption("The **fast** check needs no keys. The **thorough** check uses an LLM "
                        "(keys read from the repo's `.env`) and costs tokens.")
     with st.sidebar.expander("ℹ️ What this tool does"):
@@ -75,22 +107,37 @@ def env_sidebar():
             "recommendation for each `review` paper.")
 
 
-def get_papers(key: str):
-    """Render the upload/paste widget and return a parsed list of papers, or None."""
+def get_papers():
+    """Render the input widgets and return a parsed list of papers, or None.
+
+    The widget keys are deliberately independent of the selected check, so
+    switching between the three cards in Step 1 keeps the loaded papers.
+    """
     st.caption("Input format: Semantic Scholar **paper records** (with `publicationVenue`). "
                "Upload a JSON **list**, or a **single** paper object.")
     with st.expander("See expected format"):
         st.code(_S2_EXAMPLE, language="json")
-    mode = st.radio("Provide papers via", ["Upload file", "Paste JSON"],
-                    horizontal=True, key=f"mode_{key}")
+    sources = ["Upload file", "Paste JSON"]
+    if _EXAMPLE_CORPUS.is_file():
+        sources.append("Example corpus")
+    mode = st.radio("Provide papers via", sources, horizontal=True, key="mode")
     raw = None
     if mode == "Upload file":
-        up = st.file_uploader("papers.json", type=["json"], key=f"file_{key}")
+        up = st.file_uploader("papers.json", type=["json"], key="file")
         if up is not None:
             raw = up.getvalue().decode("utf-8")
-    else:
-        raw = st.text_area("Paste JSON here", height=160, key=f"paste_{key}",
+    elif mode == "Paste JSON":
+        raw = st.text_area("Paste JSON here", height=160, key="paste",
                            placeholder=_S2_EXAMPLE)
+    else:
+        st.caption(f"Using the bundled `examples/{_EXAMPLE_CORPUS.name}` — eight synthetic "
+                   "records, exercising every verdict except `out_of_scope`. The expected "
+                   "result is tabulated in `examples/README.md`.")
+        try:
+            raw = _EXAMPLE_CORPUS.read_text(encoding="utf-8")
+        except OSError as e:
+            st.error(f"Could not read the example corpus: {e}")
+            return None
     if not raw or not raw.strip():
         return None
     try:
@@ -160,15 +207,19 @@ def _preview(xlsx_bytes: bytes, max_rows: int = 40):
     if not rows:
         return
     headers = [str(h) if h is not None else f"col{i}" for i, h in enumerate(rows[0])]
-    data = [dict(zip(headers, [("" if v is None else v) for v in r])) for r in rows[1:max_rows + 1]]
-    st.dataframe(data, use_container_width=True)
+    # Everything as text: a sheet column here mixes numbers, strings and the
+    # blanks left by merged cells, which Arrow cannot type (it logs a traceback
+    # and falls back).  A preview of a formatted workbook is text anyway.
+    data = [dict(zip(headers, [("" if v is None else str(v)) for v in r]))
+            for r in rows[1:max_rows + 1]]
+    st.dataframe(data)
     if len(rows) > max_rows + 1:
         st.caption(f"(showing first {max_rows} of {len(rows) - 1} rows — download for the full sheet)")
 
 
 def render_result(res: runners.RunResult, checker: runners.Checker):
     if res.ok:
-        st.success(f'✅ Done — "{checker.label}" finished. Your Excel is ready below.')
+        st.success(f"✅ Done — {checker.title} finished. Your Excel is ready below.")
         st.download_button(f"⬇️ Download {res.output_path.name}", data=res.output_bytes,
                            file_name=res.output_path.name, key=f"dl_{checker.id}",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -184,6 +235,12 @@ def render_result(res: runners.RunResult, checker: runners.Checker):
             st.text(res.stderr[-4000:])
 
 
+def _chip(text, bg):
+    """A small pill. Dark text on a light fill, so it reads in either theme."""
+    return (f"<span style='background:{bg};color:#111;padding:2px 10px;border-radius:12px;"
+            f"margin:0 6px 6px 0;display:inline-block;font-size:0.8rem;'>{text}</span>")
+
+
 _STATUS_ORDER = ("on_list", "review", "clean", "no_venue", "error")
 
 
@@ -194,14 +251,9 @@ def _status_summary(rows):
         counts[r["Status"]] = counts.get(r["Status"], 0) + 1
     ordered = [s for s in _STATUS_ORDER if s in counts] + \
               [s for s in counts if s not in _STATUS_ORDER]
-    chips = []
-    for s in ordered:
-        hexc = runners.STATUS_FILL_COLORS.get(s, "FFFFFF")
-        chips.append(
-            f"<span style='background:#{hexc};color:#111;padding:2px 10px;"
-            f"border-radius:12px;margin:0 6px 6px 0;display:inline-block;"
-            f"font-size:0.85rem;'>{s}: <b>{counts[s]}</b></span>")
-    st.markdown("".join(chips), unsafe_allow_html=True)
+    st.markdown("".join(_chip(f"{s}: <b>{counts[s]}</b>",
+                              "#" + runners.STATUS_FILL_COLORS.get(s, "FFFFFF"))
+                        for s in ordered), unsafe_allow_html=True)
 
 
 def _csv_status_preview(rows, max_rows=100):
@@ -219,9 +271,9 @@ def _csv_status_preview(rows, max_rows=100):
         # pandas >= 2.1 renamed Styler.applymap -> Styler.map.
         styler = (styler.map(_bg, subset=["Status"]) if hasattr(styler, "map")
                   else styler.applymap(_bg, subset=["Status"]))
-        st.dataframe(styler, use_container_width=True)
+        st.dataframe(styler)
     except Exception:
-        st.dataframe(preview, use_container_width=True)   # plain fallback
+        st.dataframe(preview)                             # plain fallback
     if len(rows) > max_rows:
         st.caption(f"(showing first {max_rows} of {len(rows)} rows — download for the full CSV)")
 
@@ -252,10 +304,26 @@ def render_csv_result(res: runners.BatchCsvResult):
             st.text(res.stderr[-4000:])
 
 
-def _checker_badge(checker):
-    if checker.needs_llm:
-        return "🔑 Uses an LLM — needs API keys in `.env`, and costs tokens."
-    return "⚡ No LLM — matched offline against the vendored Beall's List snapshot."
+# Step 1 is laid out as a comparison table: choose | check | what it does | and
+# then one column per attribute the three checks actually differ on.  The point
+# is that the attributes line up vertically, so comparing them is a scan down a
+# column rather than a reading of three separate blocks.
+_PICK_COLS = [1.25, 1.9, 4.3, 1.35, 1.3, 1.5]
+_PICK_HEADERS = ("Check", "What it does", "API keys", "Tokens", "Returns")
+
+
+def _cell(html, accent=False):
+    """A table cell: small text, with the selected row's name cell accented."""
+    style = "font-size:0.86rem;line-height:1.4;"
+    if accent:
+        style += "border-left:3px solid #ff4b4b;padding-left:0.55rem;"
+    return f"<div style='{style}'>{html}</div>"
+
+
+def _pick_checker(checker_id: str):
+    st.session_state["checker_id"] = checker_id
+    # The add-on CSV belongs to a particular result; a new selection invalidates it.
+    st.session_state.pop("csv_addon", None)
 
 
 # ── Page ────────────────────────────────────────────────────────────────────
@@ -264,23 +332,66 @@ st.caption("Is the paper's **journal/publisher on Beall's List** of potentially 
            "venues? Add your papers as JSON, run, and download the Excel report.")
 env_sidebar()
 
-# Step 1 — choose a check
+# Step 1 — choose a check, as a comparison table rather than a dropdown: the
+# three are meant to be weighed against each other, and a dropdown shows only the
+# option already chosen.
 st.markdown("**Step 1 · Choose a check**")
-labels = [c.label for c in runners.CHECKERS]
-label = st.selectbox("Check", labels, key="sel", label_visibility="collapsed")
-checker = runners.CHECKERS[labels.index(label)]
-st.markdown(f"➡️ {checker.description}")
-st.caption(_checker_badge(checker))
+st.caption("All three run the same deterministic engine. They differ in what they add "
+           "on top of it and in what you get back.")
+if st.session_state.get("checker_id") not in runners.CHECKERS_BY_ID:
+    st.session_state["checker_id"] = runners.CHECKERS[0].id
+
+# The header sits in a bordered container like the rows below it, so that the
+# container's padding is identical and the columns line up exactly.
+with st.container(border=True):
+    header = st.columns(_PICK_COLS, vertical_alignment="bottom")
+    for col, label in zip(header[1:], _PICK_HEADERS):
+        col.markdown(f"<div style='font-size:0.72rem;font-weight:600;letter-spacing:0.05em;"
+                     f"text-transform:uppercase;color:#6b7280;'>{label}</div>",
+                     unsafe_allow_html=True)
+
+for c in runners.CHECKERS:
+    chosen = st.session_state["checker_id"] == c.id
+    with st.container(border=True):
+        row = st.columns(_PICK_COLS, vertical_alignment="center")
+        with row[0]:
+            # on_click sets the selection before the rerun renders, so the page
+            # never lags a click behind.
+            st.button("✓ Selected" if chosen else "Select", key=f"pick_{c.id}",
+                      type="primary" if chosen else "secondary", disabled=chosen,
+                      width="stretch", on_click=_pick_checker, args=(c.id,))
+        row[1].markdown(_cell(f"<b>{c.icon} {c.title}</b><br>"
+                              f"<span style='color:#6b7280;font-size:0.78rem;'>"
+                              f"{c.tagline}</span>", accent=chosen), unsafe_allow_html=True)
+        row[2].markdown(_cell(c.description), unsafe_allow_html=True)
+        row[3].markdown(_cell(_chip("Required", "#FFD79A") if c.needs_llm
+                              else _chip("Not needed", "#C6EFCE")), unsafe_allow_html=True)
+        row[4].markdown(_cell(_chip("Per venue", "#FFD79A") if c.needs_llm
+                              else _chip("None", "#C6EFCE")), unsafe_allow_html=True)
+        row[5].markdown(_cell(_chip(c.output_label, "#E4E8EE")), unsafe_allow_html=True)
+checker = runners.CHECKERS_BY_ID[st.session_state["checker_id"]]
+if checker.needs_llm:
+    with st.spinner("Checking the LLM configuration…"):
+        llm_ok, llm_msg, llm_model = llm_status()
+    if llm_ok is False:
+        st.warning(f"⚠️ {llm_msg}")
+    elif llm_ok:
+        st.caption(f"🔑 LLM ready — `{os.getenv('LLM_PROVIDER', 'azure')}` / `{llm_model}`.")
+
+st.divider()
 
 # Step 2 — provide the papers
 st.markdown("**Step 2 · Provide the papers**")
-items = get_papers(checker.id)
+items = get_papers()
 if items is not None:
     st.success(f"✅ Loaded {len(items)} paper(s) — ready to run.")
-    show_input_quality(items, key=checker.id)
+    show_input_quality(items, key="input")
+
+st.divider()
 
 # Step 3 — options
-with st.expander("⚙️ Options (optional)"):
+st.markdown("**Step 3 · Options** (optional)")
+with st.expander("⚙️ Whitelist, blacklist and Crossref"):
     if checker.kind == "csv":
         wl = bl = None
         st.caption("Batch CSV mode classifies **every** record — it has no whitelist/blacklist "
@@ -288,16 +399,15 @@ with st.expander("⚙️ Options (optional)"):
     else:
         st.markdown("**Scope — whitelist** (optional)")
         wl = venue_list_input("Only check papers from these venues — leave empty to check all",
-                              f"wl_{checker.id}")
+                              "wl")
         st.markdown("**Extend the list — blacklist** (optional)")
-        bl = venue_list_input("Also treat papers from these venues as predatory",
-                              f"bl_{checker.id}")
+        bl = venue_list_input("Also treat papers from these venues as predatory", "bl")
         st.caption('Format for both boxes: a JSON list like '
                    '`[{"name": "IEEE", "domain": "ieee.org"}]` (a plain `"name"` string works too).')
     crossref = st.checkbox(
         "Cross-check each venue against Crossref (recommended; skipped automatically when offline)",
         value=True,
-        key=f"cr_{checker.id}",
+        key="cr",
         help="Crossref is the official registry of published articles (looked up by each "
              "paper's DOI). When on (the default), the journal name and ISSN that Semantic "
              "Scholar reports are compared against Crossref's official record, and DOIs are "
@@ -307,8 +417,15 @@ with st.expander("⚙️ Options (optional)"):
 aux_lists = {"--whitelist": wl, "--blacklist": bl}
 extra_args = None if crossref else ["--crossref", "off"]
 
-# Step 3 — run
-st.markdown("**Step 3 · Run**")
+st.divider()
+
+# Step 4 — run
+st.markdown("**Step 4 · Run**")
+summary = [f"{checker.icon} {checker.title}",
+           f"{len(items)} paper(s)" if items else "no papers yet",
+           "Crossref on" if crossref else "Crossref off"]
+summary += [name for name, lst in (("whitelist", wl), ("blacklist", bl)) if lst]
+st.caption(" · ".join(summary))
 run = st.button("▶ Run check", type="primary", key="run",
                 disabled=items is None,
                 help=None if items is not None else "Add papers in Step 2 first.")
@@ -332,7 +449,7 @@ if run and items is not None:
             log_line.caption("⏳ " + line[-140:])
 
     try:
-        with st.spinner(f'Running "{checker.label}"… '
+        with st.spinner(f"{checker.title} running… "
                         "large corpora and the LLM pass can take a while."):
             if checker.kind == "csv":
                 res = runners.run_batch_csv(items, crossref=crossref, on_line=on_line)
@@ -348,12 +465,42 @@ if run and items is not None:
     progress.progress(1.0, text="Done")
     log_line.empty()
     st.session_state["res"] = res
+    st.session_state["res_checker_id"] = checker.id
+    st.session_state.pop("csv_addon", None)      # belongs to the previous result
     notify("Check complete ✅" if res.ok else "Check failed 🛑",
            icon="✅" if res.ok else "🛑")
 
 res = st.session_state.get("res")
 if res is not None:
+    # A result outlives a change of selection in Step 1, so it is labelled with
+    # the check that actually produced it — never with whatever is selected now.
+    ran = runners.CHECKERS_BY_ID.get(st.session_state.get("res_checker_id"), checker)
+    st.divider()
+    st.markdown("**Result**")
+    if ran.id != checker.id:
+        st.caption(f"This result came from **{ran.title}**. Run again to get a "
+                   f"**{checker.title}** result.")
     if isinstance(res, runners.BatchCsvResult):
         render_csv_result(res)
     else:
-        render_result(res, checker)
+        render_result(res, ran)
+
+    # The machine-readable CSV, on demand, from a workbook result.  It cannot be
+    # derived from the workbook: the batch check keeps every input record while
+    # the workbook is deduplicated, so it is a second run of the deterministic
+    # pass — offered here rather than done automatically, because that pass
+    # repeats every Crossref lookup.
+    if res.ok and ran.kind == "xlsx":
+        st.markdown("**Also need it as a machine-readable list?**")
+        st.caption("Runs the batch check over the same papers: `SS-ID, DOI, Status`, "
+                   "**one row per input record in input order, with no deduplication** — "
+                   "so it can have more rows than the workbook. Any whitelist or "
+                   "blacklist is **not** applied, and neither is the LLM's verdict. The "
+                   "deterministic pass, including its Crossref lookups, runs again.")
+        if st.button("📄 Also produce the batch CSV", key="addon", disabled=items is None):
+            with st.spinner("Batch check running…"):
+                st.session_state["csv_addon"] = runners.run_batch_csv(
+                    items, crossref=crossref)
+        addon = st.session_state.get("csv_addon")
+        if addon is not None:
+            render_csv_result(addon)

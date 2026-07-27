@@ -136,24 +136,37 @@ already taken, in which case Streamlit picks the next free one.
 
 ![The web app, with papers loaded and the input data-quality panel open](ui/screenshots/ui-main.png)
 
-**Step 1 · Choose a check.** Three are offered:
+> This screenshot predates the Step 1 comparison table described below, and is
+> due to be retaken.
 
-| Check | What it does | Cost |
-|---|---|---|
-| **Fast** | Rules only — the deterministic match. Returns the full Excel report. | none |
-| **Thorough** | The fast check, then one LLM call per distinct `review` **venue**. | tokens; needs keys in `.env` |
-| **Batch CSV** | `SS-ID, DOI, Status` per record, for scripts and servers. | none |
+**Step 1 · Choose a check.** The three are laid out as a comparison table — one
+row each, one column per attribute they differ on — so that they can be weighed
+against each other before one is selected:
+
+| Check | What it does | API keys | Tokens | Returns |
+|---|---|---|---|---|
+| **Fast check** | Rules only — the deterministic match. | not needed | none | Excel workbook |
+| **Thorough check** | The fast check, then one LLM call per distinct `review` **venue**. | required | per venue | Excel workbook |
+| **Batch CSV** | `SS-ID, DOI, Status` per record, for scripts and servers. | not needed | none | CSV + Excel |
 
 **Step 2 · Provide the papers.** Upload a `.json` file — a list of Semantic
-Scholar records, or a single record — or paste the JSON directly. (`.jsonl` is
-not accepted here; convert it to an array, or use the batch command line.) An
-**Input data quality** panel appears as soon as the papers load: an offline check
-of the metadata *before* anything runs, downloadable as `input_data_quality.xlsx`.
+Scholar records, or a single record — or paste the JSON directly, or select the
+bundled [example corpus](examples/README.md) to try the app without supplying
+data. (`.jsonl` is not accepted here; convert it to an array, or use the batch
+command line.) An **Input data quality** panel appears as soon as the papers
+load: an offline check of the metadata *before* anything runs, downloadable as
+`input_data_quality.xlsx`.
 
-**Step 3 · Options, then Run.** The whitelist and blacklist are pasted as JSON
-here rather than passed as file paths, and apply to the Fast and Thorough checks
-only — Batch CSV classifies every record. One checkbox controls Crossref;
-clearing it is equivalent to `--crossref off`.
+**Step 3 · Options.** The whitelist and blacklist are pasted as JSON here rather
+than passed as file paths, and apply to the Fast and Thorough checks only —
+Batch CSV classifies every record. One checkbox controls Crossref; clearing it is
+equivalent to `--crossref off`.
+
+**Step 4 · Run.** A one-line summary states what is about to run, and the button
+stays disabled until papers are loaded. A workbook result is followed by **Also
+produce the batch CSV**, which adds the machine-readable file without a second
+trip through Step 1 — it re-runs the deterministic pass, because the CSV keeps
+every input record while the workbook is deduplicated.
 
 > [!WARNING]
 > The **Thorough** check in the browser assesses *every* distinct `review` venue

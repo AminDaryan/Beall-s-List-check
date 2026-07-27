@@ -49,34 +49,49 @@ except Exception:
 @dataclass(frozen=True)
 class Checker:
     id: str
-    label: str
+    label: str              # full name, as used in the documentation
     script: Path            # script to run as a subprocess
     output: Path            # Excel it writes (we also scan its folder for fresher files)
     needs_llm: bool = False
     note: str = ""
     description: str = ""        # plain-language "what this check answers", shown in the UI
     kind: str = "xlsx"          # "xlsx" -> run_checker (Excel); "csv" -> run_batch_csv
+    # Presentation only — the side-by-side cards the UI offers in Step 1. Kept
+    # here so the three checks are described in exactly one place.
+    icon: str = "🔎"
+    short_label: str = ""        # card heading and run messages; falls back to *label*
+    tagline: str = ""            # one line under the heading: how the check works
+    output_label: str = ""       # what the check hands back
+
+    @property
+    def title(self) -> str:
+        return self.short_label or self.label
 
 
 CHECKERS: List[Checker] = [
     Checker("bealls.deterministic", "Fast check — rules only (no LLM)",
             _BEALLS / "bealls_list_check.py",
             _BEALLS / "results" / "bealls_list_results.xlsx",
-            description="Is the paper's journal/publisher on Beall's List of potentially "
-                        "predatory venues? Fast, deterministic, no tokens."),
+            icon="⚡", short_label="Fast check", tagline="Rules only — no LLM",
+            output_label="Excel workbook",
+            description="Is the paper's journal or publisher on Beall's List of "
+                        "potentially predatory venues?"),
     Checker("bealls.llm", "Thorough check — rules + LLM over the review papers",
             _BEALLS / "bealls_llm_check.py",
             _BEALLS / "results" / "bealls_llm_results.xlsx",
             needs_llm=True,
-            description="Same as the fast check, then an LLM gives a keep/exclude/uncertain "
-                        "recommendation for each 'review' paper. Uses tokens."),
+            icon="🧠", short_label="Thorough check", tagline="Rules, then an LLM pass",
+            output_label="Excel workbook",
+            description="The fast check, then a keep / exclude / uncertain recommendation "
+                        "from an LLM for every paper that needs review."),
     Checker("bealls.batch_csv", "Batch CSV — SS-ID, DOI, Status (for server integration)",
             _BATCH_SCRIPT,
             _BEALLS / "batch_check",          # unused for kind="csv" (no fixed output file)
             kind="csv",
-            description="One row per paper — SS-ID, DOI, and the Beall's List status — as a "
-                        "machine-readable CSV for scripts/servers, with a colour-coded preview "
-                        "and a matching Excel. Deterministic, no tokens."),
+            icon="📄", short_label="Batch CSV", tagline="One row per paper",
+            output_label="CSV + Excel",
+            description="SS-ID, DOI and the verdict as a machine-readable CSV for scripts "
+                        "and servers, with a colour-coded Excel twin."),
 ]
 
 CHECKERS_BY_ID = {c.id: c for c in CHECKERS}
