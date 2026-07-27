@@ -207,9 +207,10 @@ _LEGEND_SECTIONS = [
              "its result.",),
             ("OUTPUT (the sheets in this file): Results = every paper; Flagged only "
              "= just the on_list + review papers to act on; Data quality = papers "
-             "whose Semantic Scholar metadata looks suspect; Summary = counts + run "
-             "details; Legend = this page. The thorough check adds an 'LLM review' "
-             "column on Flagged only.",),
+             "whose Semantic Scholar metadata looks suspect, plus those whose DOI "
+             "was cross-checked against Crossref; Summary = counts + run details; "
+             "Legend = this page. The thorough check adds an 'LLM review' column "
+             "on Flagged only.",),
             ("NOT proof: Beall's List is an unofficial, archived (~2021), CONTESTED "
              "list, so read 'on_list' as \"appears on the list\", not \"is "
              "predatory\". See the Caveats at the bottom.",),
@@ -230,8 +231,9 @@ _LEGEND_SECTIONS = [
             ("ISSN — the 8-digit number unique to a journal (e.g. 0079-2047).",),
             ("Domain — the venue's website host (e.g. mdpi.com); the most reliable "
              "match signal.",),
-            ("Crossref — the publisher-deposited registry used (optionally, via "
-             "--crossref) to double-check Semantic Scholar's venue/ISSN.",),
+            ("Crossref — the publisher-deposited registry used by default "
+             "(disable with --crossref off) to double-check Semantic Scholar's "
+             "venue/ISSN and to settle uncertain 'review' verdicts.",),
         ],
     },
     {
@@ -359,9 +361,12 @@ _LEGEND_SECTIONS = [
         "headers": ("Column", "Rows (top -> bottom)", "Meaning"),
         "rows": [
             ("(which papers)", "one block per paper",
-             "Lists ONLY the papers whose Semantic Scholar record looks suspect "
-             "— so a verdict above isn't trusted blindly. Papers with clean "
-             "metadata do not appear here."),
+             "Lists the papers whose Semantic Scholar record looks suspect — so a "
+             "verdict above isn't trusted blindly — PLUS any paper whose DOI was "
+             "checked against Crossref, showing what that check found. A row here "
+             "is therefore not automatically a problem: it may simply be the "
+             "record of a venue that Crossref confirmed or cleared. This sheet is "
+             "omitted entirely when there is nothing at all to report."),
             ("Data-quality issue", "one row per issue",
              "The specific problem(s) found: no venue info, a malformed "
              "DOI/ISSN, leftover HTML codes in the name, a 'merged venue' (one "
