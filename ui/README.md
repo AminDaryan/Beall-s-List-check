@@ -29,11 +29,16 @@ change rather than left to drift. The script documents its own invocation.
 Selected in Step 1. All three run the same deterministic engine; they differ in
 what they add and what they return.
 
-| Check | Runs | Returns | Cost |
-|---|---|---|---|
-| **Fast check** — rules only, no LLM | [`bealls_list_check.py`](../src/bealls_list_check/bealls_list_check.py) | `bealls_list_results.xlsx` — the full five-sheet workbook | none |
-| **Thorough check** — rules, then an LLM pass | [`bealls_llm_check.py`](../src/bealls_list_check/bealls_llm_check.py) | `bealls_llm_results.xlsx` — the same workbook plus an **LLM review** column on *Flagged only* | tokens; requires keys in `.env` |
-| **Batch CSV** — one row per paper | [`batch_check.py`](../src/bealls_list_check/batch_check/batch_check.py) | `bealls_status.csv` **and** a colour-coded `bealls_status.xlsx` | none |
+| Check | Runs | Returns | Records | Cost |
+|---|---|---|---|---|
+| **Fast check** — rules only, no LLM | [`bealls_list_check.py`](../src/bealls_list_check/bealls_list_check.py) | `bealls_list_results.xlsx` — the full five-sheet workbook | merged | none |
+| **Thorough check** — rules, then an LLM pass | [`bealls_llm_check.py`](../src/bealls_list_check/bealls_llm_check.py) | `bealls_llm_results.xlsx` — the same workbook plus an **LLM review** column on *Flagged only* | merged | tokens; requires keys in `.env` |
+| **Batch CSV** — one row per input record | [`batch_check.py`](../src/bealls_list_check/batch_check/batch_check.py) | `bealls_status.csv` **and** a colour-coded `bealls_status.xlsx` | all kept | none |
+
+*Merged* means a paper repeated in the corpus is reported once — deduplicated on
+`paperId`, falling back to the title. *All kept* means exactly one CSV row per
+record supplied, in the order supplied, so a corpus that repeats a paper yields
+more rows than the workbook.
 
 The sidebar states what the tool answers and lists the two pages — **Run a
 check**, documented below, and **Tutorial**, which renders
@@ -43,6 +48,20 @@ one check, so it sits in a collapsed **Environment** expander.
 
 ## The page, step by step
 
+Each step carries a header bar: a numbered badge, the title, a one-line hint, and
+— on the right — a pill naming that step's live answer. The pill is green when
+the step is settled, amber when it is what holds the run up, and grey when there
+is nothing to settle. Reading down the four pills therefore states the whole
+flow's condition, so a page scrolled halfway still says what would happen if
+**▶ Run check** were pressed.
+
+| Step | Pill states |
+|---|---|
+| 1 · Choose a check | the selected check, always green |
+| 2 · Provide the papers | `✅ N paper(s)`, or amber `waiting for papers` |
+| 3 · Options | the options in force, e.g. `Crossref on · whitelist` |
+| 4 · Run | green `ready`, or amber `add papers first` |
+
 ### Step 1 · Choose a check
 
 The three checks are presented as a comparison table rather than a dropdown: they
@@ -50,16 +69,31 @@ are meant to be weighed against each other, and a dropdown shows only the option
 already chosen. One row per check, and one column per attribute they actually
 differ on:
 
-| | Check | What it does | API keys | Tokens | Returns |
+| | Check | What it does | Cost | Records | Returns |
 |---|---|---|---|---|---|
 
 The attributes therefore line up vertically, so comparing them is a scan down a
-column rather than a reading of three separate blocks. The leftmost column holds
-the **Select** button. The selected row is tinted and its button turns solid —
-marking it by colour rather than by an accent in the margin, which would have to
-reserve space in every row. The button stays enabled, because a disabled control
-greys out and grey should not mark the active choice; re-clicking it does
-nothing.
+column rather than a reading of three separate blocks. The **Cost**, **Records**
+and **Returns** cells are pills whose hover text carries the sentence of detail
+that does not fit in a pill — the exact output filenames, what deduplication
+matches on, what the LLM pass is charged per.
+
+The leftmost column holds the **Select** button. The selected row is tinted and
+its button turns solid — marking it by colour rather than by an accent in the
+margin, which would have to reserve space in every row. The button stays enabled,
+because a disabled control greys out and grey should not mark the active choice;
+re-clicking it does nothing.
+
+A row is **two** Streamlit columns — the Select button, then a single element
+holding a five-column CSS grid — rather than six Streamlit columns. Streamlit
+hangs `margin-bottom:-16px` on every markdown container to cancel the gap between
+elements of a vertical block; a column holding one markdown element has no gap to
+cancel, but the negative margin still shortens the column's layout box by 16px
+while the text keeps its height and overflows. Streamlit centres that too-short
+box, which left the text 8px low beside a Select button that was centred
+correctly. The grid centres its own cells and inherits the header row's column
+template, so the header and the rows align without either knowing about the
+other.
 
 Selecting the thorough check additionally verifies the LLM configuration, using
 the same `validate_provider_config()` the check itself calls. A missing key or
@@ -90,15 +124,18 @@ As soon as papers load, an **Input data quality** panel reports how many of them
 have suspect Semantic Scholar metadata — computed offline, in-process, *before*
 any check runs, so problems surface before tokens or minutes are spent. The first
 five are listed inline; the **Download report (.xlsx)** button produces
-`input_data_quality.xlsx` with **one row per paper**, reading `OK` where there is
-nothing to report.
+`input_data_quality.xlsx` with **one row per record supplied**, reading `OK` where
+there is nothing to report.
 
 This panel runs for all three checks — including Batch CSV, whose command-line
 form skips input validation entirely.
 
 ### Step 3 · Options
 
-Collapsed by default; all optional.
+Collapsed by default; all optional. Because they are collapsed, the step's pill
+names the options actually in force — read from `st.session_state` rather than
+from the widgets, since the header is drawn above the expander that holds them,
+and Streamlit has already written the current rerun's values there.
 
 - **Whitelist** — restrict the run to these venues; everything else becomes
   `out_of_scope`.
@@ -119,8 +156,9 @@ box is shown for **Batch CSV**, which classifies every record.
 
 ### Step 4 · Run
 
-A one-line summary states what is about to run — the check, the number of papers,
-whether Crossref is on, and whether a whitelist or blacklist is in force. The
+A row of pills restates every decision made above — the check, the number of
+papers, whether Crossref is on, and whether a whitelist or blacklist is in force —
+so what is about to run can be checked without scrolling back up. The
 **Run check** button stays disabled until papers are loaded. During the run a
 progress bar and the latest log line are shown. The bar is a true percentage only
 for the thorough check, which prints a `[i/N]` counter per venue; the fast and

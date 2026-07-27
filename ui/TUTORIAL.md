@@ -81,10 +81,18 @@ The repository ships an eight-record corpus whose expected result is published,
 so a fresh installation can be verified without supplying real data. It exercises
 every verdict except `out_of_scope`.
 
+Every step carries a header bar — a numbered badge, the title, and a pill on the
+right naming that step's live answer. The pill is green when the step is settled
+and amber when it is what holds the run up, so the four of them read as a
+checklist of what still has to be decided.
+
 **Step 1 · Choose a check.** The three checks are laid out as a comparison table,
-one row each. Select **⚡ Fast check** — rules only, no API keys, no cost. The
-selected row is tinted and its button turns solid; the rest of the page is
-unaffected by the choice.
+one row each, with a column per attribute they differ on: **Cost**, **Records**
+and **Returns**. Hover any of those pills for the detail behind it — which file
+comes back, what a run is charged for, whether repeated records are merged.
+Select **⚡ Fast check** — rules only, no API keys, no cost. The selected row is
+tinted and its button turns solid; the rest of the page is unaffected by the
+choice.
 
 **Step 2 · Provide the papers.** Under *Provide papers via*, select **Example
 corpus**. The app confirms `✅ Loaded 8 paper(s) — ready to run` and opens the
@@ -94,9 +102,9 @@ offline inspection of the metadata *before* anything runs, and it is downloadabl
 as `input_data_quality.xlsx`.
 
 **Step 3 · Options.** Leave them alone. Crossref is on by default, which is the
-recommended setting.
+recommended setting — and which the step's pill confirms without opening it.
 
-**Step 4 · Run.** A one-line summary states what is about to run — the check, the
+**Step 4 · Run.** A row of pills restates what is about to run — the check, the
 number of papers, whether Crossref is on. Press **▶ Run check**. A progress bar
 and the latest log line appear; the fast check has no per-item counter, so the
 bar pulses rather than filling. Eight records complete in a few seconds.

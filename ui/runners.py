@@ -56,24 +56,46 @@ class Checker:
     note: str = ""
     description: str = ""        # plain-language "what this check answers", shown in the UI
     kind: str = "xlsx"          # "xlsx" -> run_checker (Excel); "csv" -> run_batch_csv
-    # Presentation only — the side-by-side cards the UI offers in Step 1. Kept
-    # here so the three checks are described in exactly one place.
+    # Presentation only — the comparison table the UI offers in Step 1. Kept here
+    # so the three checks are described in exactly one place. Each ``*_label`` is
+    # the chip shown in its column; the matching ``*_note`` is its hover text,
+    # which carries the detail that would not fit in a chip.
     icon: str = "🔎"
-    short_label: str = ""        # card heading and run messages; falls back to *label*
+    short_label: str = ""        # table heading and run messages; falls back to *label*
     tagline: str = ""            # one line under the heading: how the check works
+    cost_label: str = ""         # what running it costs
+    cost_note: str = ""
+    records_label: str = ""      # what it does with records that repeat in the corpus
+    records_note: str = ""
     output_label: str = ""       # what the check hands back
+    output_note: str = ""
 
     @property
     def title(self) -> str:
         return self.short_label or self.label
 
 
+# The two workbook checks share their cost and record handling, so those strings
+# are named once rather than repeated per check.
+_FREE = "Free"
+_FREE_NOTE = ("No API keys and no tokens — the whole check runs offline against the "
+              "scraped Beall's List snapshot. Crossref lookups need the internet but "
+              "are optional and free.")
+_DEDUPED = "Merged"
+_DEDUPED_NOTE = ("A paper that appears more than once in the corpus is reported once: "
+                 "records are deduplicated on paperId, falling back to the title. The "
+                 "workbook therefore has fewer entries than the corpus when it repeats.")
+
 CHECKERS: List[Checker] = [
     Checker("bealls.deterministic", "Fast check — rules only (no LLM)",
             _BEALLS / "bealls_list_check.py",
             _BEALLS / "results" / "bealls_list_results.xlsx",
             icon="⚡", short_label="Fast check", tagline="Rules only — no LLM",
+            cost_label=_FREE, cost_note=_FREE_NOTE,
+            records_label=_DEDUPED, records_note=_DEDUPED_NOTE,
             output_label="Excel workbook",
+            output_note="bealls_list_results.xlsx — the five-sheet report, in which each "
+                        "paper occupies a block of rows rather than a single row.",
             description="Is the paper's journal or publisher on Beall's List of "
                         "potentially predatory venues?"),
     Checker("bealls.llm", "Thorough check — rules + LLM over the review papers",
@@ -81,15 +103,28 @@ CHECKERS: List[Checker] = [
             _BEALLS / "results" / "bealls_llm_results.xlsx",
             needs_llm=True,
             icon="🧠", short_label="Thorough check", tagline="Rules, then an LLM pass",
+            cost_label="LLM tokens",
+            cost_note="Needs provider keys in the repository's .env, and spends tokens: "
+                      "one LLM call per distinct venue that the rules left as review.",
+            records_label=_DEDUPED, records_note=_DEDUPED_NOTE,
             output_label="Excel workbook",
+            output_note="bealls_llm_results.xlsx — the same five-sheet report plus an "
+                        "LLM review column on the 'Flagged only' sheet.",
             description="The fast check, then a keep / exclude / uncertain recommendation "
                         "from an LLM for every paper that needs review."),
     Checker("bealls.batch_csv", "Batch CSV — SS-ID, DOI, Status (for server integration)",
             _BATCH_SCRIPT,
             _BEALLS / "batch_check",          # unused for kind="csv" (no fixed output file)
             kind="csv",
-            icon="📄", short_label="Batch CSV", tagline="One row per paper",
+            icon="📄", short_label="Batch CSV", tagline="One row per input record",
+            cost_label=_FREE, cost_note=_FREE_NOTE,
+            records_label="All kept",
+            records_note="Exactly one CSV row per record you supply, in the order you "
+                         "supplied them — nothing is merged and nothing is dropped, so a "
+                         "corpus that repeats a paper yields more rows than the workbook.",
             output_label="CSV + Excel",
+            output_note="bealls_status.csv — three columns, SS-ID, DOI and Status — plus "
+                        "the same three columns as a colour-coded bealls_status.xlsx.",
             description="SS-ID, DOI and the verdict as a machine-readable CSV for scripts "
                         "and servers, with a colour-coded Excel twin."),
 ]

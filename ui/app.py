@@ -16,6 +16,7 @@ below) and **Tutorial**, which renders ``ui/TUTORIAL.md`` — the same walkthrou
 that is readable on GitHub, so the instructions exist in exactly one place.
 """
 
+import html
 import io
 import json
 import os
@@ -110,8 +111,8 @@ def sidebar():
         "**not** that the paper is bad. Input is **Semantic Scholar paper records** "
         "(each with a `publicationVenue`), not GitHub links.")
     st.sidebar.caption("**Fast** = rules only (no LLM). **Thorough** = the fast check plus an "
-                       "LLM recommendation for each `review` paper. **Batch CSV** = one row "
-                       "per paper, for scripts.")
+                       "LLM recommendation for each `review` paper. **Batch CSV** = a "
+                       "machine-readable CSV, one row per input record, for scripts.")
     st.sidebar.caption("First time here? Open the **Tutorial** page above.")
     with st.sidebar.expander("⚙️ Environment", expanded=False):
         prov = os.getenv("LLM_PROVIDER", "azure")
@@ -253,10 +254,23 @@ def render_result(res: runners.RunResult, checker: runners.Checker):
             st.text(res.stderr[-4000:])
 
 
-def _chip(text, bg):
-    """A small pill. Dark text on a light fill, so it reads in either theme."""
-    return (f"<span style='background:{bg};color:#111;padding:2px 10px;border-radius:12px;"
-            f"margin:0 6px 6px 0;display:inline-block;font-size:0.8rem;'>{text}</span>")
+def _chip(text, bg, *, title=None, flow=False):
+    """A small pill. Dark text on a light fill, so it reads in either theme.
+
+    *title* becomes the browser's hover text — the sentence of detail that does
+    not fit inside a pill — and marks the pill with the help cursor so there is
+    something to invite the hover.  *flow* adds the trailing margins wanted when
+    several pills wrap across a line; a pill alone in a table cell wants none,
+    because the margin would push it off the cell's vertical centre.
+    """
+    style = (f"background:{bg};color:#111;padding:2px 10px;border-radius:12px;"
+             f"display:inline-block;font-size:0.8rem;line-height:1.5;")
+    if flow:
+        style += "margin:0 6px 6px 0;"
+    if not title:
+        return f"<span style='{style}'>{text}</span>"
+    return (f"<span style='{style}cursor:help;' "
+            f"title='{html.escape(title, quote=True)}'>{text}</span>")
 
 
 _STATUS_ORDER = ("on_list", "review", "clean", "no_venue", "error")
@@ -270,7 +284,7 @@ def _status_summary(rows):
     ordered = [s for s in _STATUS_ORDER if s in counts] + \
               [s for s in counts if s not in _STATUS_ORDER]
     st.markdown("".join(_chip(f"{s}: <b>{counts[s]}</b>",
-                              "#" + runners.STATUS_FILL_COLORS.get(s, "FFFFFF"))
+                              "#" + runners.STATUS_FILL_COLORS.get(s, "FFFFFF"), flow=True)
                         for s in ordered), unsafe_allow_html=True)
 
 
@@ -322,17 +336,29 @@ def render_csv_result(res: runners.BatchCsvResult):
             st.text(res.stderr[-4000:])
 
 
+# ── Step 1: the comparison table ─────────────────────────────────────────────
 # Step 1 is laid out as a comparison table: choose | check | what it does | and
 # then one column per attribute the three checks actually differ on.  The point
 # is that the attributes line up vertically, so comparing them is a scan down a
 # column rather than a reading of three separate blocks.
-_PICK_COLS = [1.25, 1.9, 4.3, 1.35, 1.3, 1.5]
-_PICK_HEADERS = ("Check", "What it does", "API keys", "Tokens", "Returns")
+#
+# A row is *two* Streamlit columns — the Select button, then everything else —
+# and the "everything else" is a single element holding a five-column CSS grid.
+# The five attributes are deliberately not five Streamlit columns: a grid centres
+# its own cells and lines them up with the header row by construction, neither of
+# which Streamlit's columns manage (see the stMarkdownContainer note in
+# _PAGE_CSS).  Widths are `fr` units, so they behave like the column ratios they
+# replace.
+_PICK_COLS = [1.3, 8.9]
+_PICK_GRID = "1.85fr 4.1fr 1.4fr 1.4fr 1.5fr"
+_PICK_HEADERS = ("Check", "What it does", "Cost", "Records", "Returns")
 
 
-def _cell(html):
-    """A table cell: small text, uniform in every row."""
-    return f"<div style='font-size:0.86rem;line-height:1.4;'>{html}</div>"
+def _grid(cells, head=False):
+    """The five attribute cells of one comparison row, as a single CSS grid."""
+    return (f"<div class='bl-grid{' bl-head' if head else ''}' "
+            f"style='grid-template-columns:{_PICK_GRID};'>"
+            + "".join(f"<div>{c}</div>" for c in cells) + "</div>")
 
 
 def _row_key(checker_id: str) -> str:
@@ -345,14 +371,15 @@ def _row_key(checker_id: str) -> str:
 # space in every row or shift the text of the row that happens to be selected.
 # Streamlit turns a container's ``key`` into the CSS class ``st-key-<key>``, so
 # the tint can be applied to the row container itself, the gaps between its
-# columns included.  The colour is the theme's primary red, translucent: strong
-# enough to be unmistakable, light enough to leave the text at full contrast.
-# The dark background needs a higher alpha to show the same amount of colour.
+# columns included; the rule is re-emitted for the selected row on every rerun.
+#
+# The colour is the theme's primary red, translucent: strong enough to be
+# unmistakable, light enough to leave the text at full contrast.  The dark
+# background needs a higher alpha to show the same amount of colour, and the
+# media query follows the browser preference exactly as Streamlit's own default
+# theme does.
 _ROW_TINT_CSS = """
 <style>
-div[class*="st-key-pickrow-"] {{
-    transition: background-color 120ms ease, border-color 120ms ease;
-}}
 .st-key-{key} {{
     background-color: rgba(255, 75, 75, 0.10);
     border-color: rgba(255, 75, 75, 0.55);
@@ -365,6 +392,85 @@ div[class*="st-key-pickrow-"] {{
 }}
 </style>
 """
+
+
+# The rest of the page's styling, emitted once per render.  Three things are not
+# reachable through Streamlit's own arguments: the step headers, the comparison
+# grid, and one correction to Streamlit itself.
+_PAGE_CSS = """
+<style>
+/* Step headers: a numbered badge, the title, and a status pill pushed right. */
+.bl-step {display:flex; align-items:center; gap:.6rem; flex-wrap:wrap;
+          padding:.5rem .85rem; border-radius:8px;
+          background:rgba(128,128,128,.10); border-left:3px solid #ff4b4b;}
+.bl-step-n {flex:0 0 auto; width:1.6rem; height:1.6rem; border-radius:50%;
+            display:inline-flex; align-items:center; justify-content:center;
+            background:#ff4b4b; color:#fff; font-size:.82rem; font-weight:700;}
+.bl-step-t {font-size:1rem; font-weight:600;}
+.bl-step-h {font-size:.82rem; opacity:.65;}
+.bl-step-s {margin-left:auto; font-size:.78rem; font-weight:600; color:#111;
+            padding:2px 10px; border-radius:12px; white-space:nowrap;}
+.bl-ok   {background:#C6EFCE;}
+.bl-wait {background:#FFD79A;}
+.bl-idle {background:#E4E8EE;}
+
+/* The Step 1 comparison grid.  The header row and every check row are handed
+   the same column template, so they line up without either knowing the other. */
+.bl-grid {display:grid; gap:0 1rem; align-items:center;}
+.bl-grid > div {font-size:.86rem; line-height:1.4;}
+.bl-head > div {font-size:.72rem; font-weight:600; letter-spacing:.05em;
+                text-transform:uppercase; opacity:.6;}
+.bl-sub {font-size:.78rem; opacity:.7;}
+/* The header sits in a bordered container purely so its padding matches the
+   rows' and the columns therefore align; its border is not wanted. */
+.st-key-pickhead {border-color:transparent !important; padding-bottom:0 !important;}
+
+/* A correction to Streamlit.  Every stMarkdownContainer carries
+   margin-bottom:-16px, to cancel the 16px gap between the elements of a vertical
+   block.  A column holding one markdown element has no gap to cancel, but the
+   negative margin still shortens the column's layout box by 16px while the text
+   keeps its full height and quietly overflows it.  Streamlit then centres that
+   too-short box, leaving the visible text 8px below the middle of the row --
+   beside a Select button that IS centred, so the row reads as misaligned.  Zero
+   it out inside Step 1, where the two have to line up. */
+div[class*="st-key-pickrow-"] [data-testid="stMarkdownContainer"],
+.st-key-pickhead [data-testid="stMarkdownContainer"] {margin-bottom:0;}
+</style>
+"""
+
+
+def step_header(num, title, hint="", state="", tone="idle", into=None):
+    """The header bar for one step of the flow.
+
+    *state* is the step's live answer — the check chosen, the papers loaded, the
+    options in force — shown as a pill on the right, so the state of the whole
+    flow can be read while scrolling past it.  *tone* colours that pill: ``ok``
+    green when the step is settled, ``wait`` amber when it is what holds the run
+    up, ``idle`` grey when there is nothing to settle.  *into* renders into a
+    placeholder reserved earlier, for the steps whose state is only known once
+    their own widgets have run.
+    """
+    st_ = into if into is not None else st
+    st_.markdown(
+        f"<div class='bl-step'><span class='bl-step-n'>{num}</span>"
+        f"<span class='bl-step-t'>{title}</span>"
+        + (f"<span class='bl-step-h'>{hint}</span>" if hint else "")
+        + (f"<span class='bl-step-s bl-{tone}'>{state}</span>" if state else "")
+        + "</div>", unsafe_allow_html=True)
+
+
+def _options_state(checker):
+    """Step 3's status pill: the options in force, named before they render.
+
+    Read out of ``st.session_state`` rather than from the widgets, because the
+    header is drawn above the expander that holds them.  Streamlit has already
+    written this rerun's values there, so the pill is never a run behind.
+    """
+    bits = ["Crossref on" if st.session_state.get("cr", True) else "Crossref off"]
+    if checker.kind != "csv":                 # batch mode ignores both lists
+        bits += [name for name, key in (("whitelist", "wl"), ("blacklist", "bl"))
+                 if (st.session_state.get(key) or "").strip()]
+    return " · ".join(bits)
 
 
 def _pick_checker(checker_id: str):
@@ -382,32 +488,33 @@ def page_check():
     st.caption("Is the paper's **journal/publisher on Beall's List** of potentially predatory "
                "venues? Add your papers as JSON, run, and download the Excel report. "
                "Step-by-step instructions are on the **Tutorial** page.")
+    st.markdown(_PAGE_CSS, unsafe_allow_html=True)
 
-    # Step 1 — choose a check, as a comparison table rather than a dropdown: the
-    # three are meant to be weighed against each other, and a dropdown shows only the
-    # option already chosen.
-    st.markdown("**Step 1 · Choose a check**")
-    st.caption("All three run the same deterministic engine. They differ in what they add "
-               "on top of it and in what you get back.")
     if st.session_state.get("checker_id") not in runners.CHECKERS_BY_ID:
         st.session_state["checker_id"] = runners.CHECKERS[0].id
+    checker = runners.CHECKERS_BY_ID[st.session_state["checker_id"]]
+
+    # Step 1 — choose a check.  A comparison table rather than a dropdown: the
+    # three are meant to be weighed against each other, and a dropdown shows only
+    # the option already chosen.
+    step_header(1, "Choose a check", "what to run over your papers",
+                f"{checker.icon} {checker.title}", "ok")
+    st.caption("All three run the same deterministic engine. They differ in what they add "
+               "on top of it, what they cost, and what you get back. "
+               "Hover a **Cost**, **Records** or **Returns** pill for the detail.")
 
     # The header sits in a bordered container like the rows below it, so that the
     # container's padding is identical and the columns line up exactly.
-    with st.container(border=True):
-        header = st.columns(_PICK_COLS, vertical_alignment="bottom")
-        for col, label in zip(header[1:], _PICK_HEADERS):
-            col.markdown(f"<div style='font-size:0.72rem;font-weight:600;letter-spacing:0.05em;"
-                         f"text-transform:uppercase;color:#6b7280;'>{label}</div>",
-                         unsafe_allow_html=True)
+    with st.container(border=True, key="pickhead"):
+        st.columns(_PICK_COLS)[1].markdown(_grid(_PICK_HEADERS, head=True),
+                                           unsafe_allow_html=True)
 
-    # The tint marking the selected row (see _ROW_TINT_CSS) names that row's
-    # container class, so it is emitted once the selection is known.
-    st.markdown(_ROW_TINT_CSS.format(key=_row_key(st.session_state["checker_id"])),
-                unsafe_allow_html=True)
+    # The tint names the selected row's container class, so it is emitted once
+    # the selection for this rerun is known.
+    st.markdown(_ROW_TINT_CSS.format(key=_row_key(checker.id)), unsafe_allow_html=True)
 
     for c in runners.CHECKERS:
-        chosen = st.session_state["checker_id"] == c.id
+        chosen = c.id == checker.id
         with st.container(border=True, key=_row_key(c.id)):
             row = st.columns(_PICK_COLS, vertical_alignment="center")
             with row[0]:
@@ -418,16 +525,15 @@ def page_check():
                 st.button("✓ Selected" if chosen else "Select", key=f"pick_{c.id}",
                           type="primary" if chosen else "secondary",
                           width="stretch", on_click=_pick_checker, args=(c.id,))
-            row[1].markdown(_cell(f"<b>{c.icon} {c.title}</b><br>"
-                                  f"<span style='color:#6b7280;font-size:0.78rem;'>"
-                                  f"{c.tagline}</span>"), unsafe_allow_html=True)
-            row[2].markdown(_cell(c.description), unsafe_allow_html=True)
-            row[3].markdown(_cell(_chip("Required", "#FFD79A") if c.needs_llm
-                                  else _chip("Not needed", "#C6EFCE")), unsafe_allow_html=True)
-            row[4].markdown(_cell(_chip("Per venue", "#FFD79A") if c.needs_llm
-                                  else _chip("None", "#C6EFCE")), unsafe_allow_html=True)
-            row[5].markdown(_cell(_chip(c.output_label, "#E4E8EE")), unsafe_allow_html=True)
-    checker = runners.CHECKERS_BY_ID[st.session_state["checker_id"]]
+            row[1].markdown(_grid((
+                f"<b>{c.icon} {c.title}</b><br><span class='bl-sub'>{c.tagline}</span>",
+                c.description,
+                _chip(c.cost_label, "#FFD79A" if c.needs_llm else "#C6EFCE",
+                      title=c.cost_note),
+                _chip(c.records_label, "#E4E8EE", title=c.records_note),
+                _chip(c.output_label, "#E4E8EE", title=c.output_note),
+            )), unsafe_allow_html=True)
+
     if checker.needs_llm:
         with st.spinner("Checking the LLM configuration…"):
             llm_ok, llm_msg, llm_model = llm_status()
@@ -436,19 +542,21 @@ def page_check():
         elif llm_ok:
             st.caption(f"🔑 LLM ready — `{os.getenv('LLM_PROVIDER', 'azure')}` / `{llm_model}`.")
 
-    st.divider()
-
-    # Step 2 — provide the papers
-    st.markdown("**Step 2 · Provide the papers**")
+    # Step 2 — provide the papers.  The header is reserved first and written
+    # afterwards: how many papers there are is only known once the widgets below
+    # it have run, and the pill would otherwise report the previous rerun.
+    head2 = st.empty()
     items = get_papers()
+    step_header(2, "Provide the papers", "Semantic Scholar records, as JSON",
+                f"✅ {len(items)} paper(s)" if items else "waiting for papers",
+                "ok" if items else "wait", into=head2)
     if items is not None:
         st.success(f"✅ Loaded {len(items)} paper(s) — ready to run.")
         show_input_quality(items, key="input")
 
-    st.divider()
-
-    # Step 3 — options
-    st.markdown("**Step 3 · Options** (optional)")
+    # Step 3 — options.  All optional, so the pill states what is in force rather
+    # than whether anything was touched.
+    step_header(3, "Options", "optional", _options_state(checker))
     with st.expander("⚙️ Whitelist, blacklist and Crossref"):
         if checker.kind == "csv":
             wl = bl = None
@@ -475,15 +583,20 @@ def page_check():
     aux_lists = {"--whitelist": wl, "--blacklist": bl}
     extra_args = None if crossref else ["--crossref", "off"]
 
-    st.divider()
-
-    # Step 4 — run
-    st.markdown("**Step 4 · Run**")
-    summary = [f"{checker.icon} {checker.title}",
-               f"{len(items)} paper(s)" if items else "no papers yet",
-               "Crossref on" if crossref else "Crossref off"]
-    summary += [name for name, lst in (("whitelist", wl), ("blacklist", bl)) if lst]
-    st.caption(" · ".join(summary))
+    # Step 4 — run.  The summary restates every decision made above as a row of
+    # pills, so what is about to run can be checked without scrolling back up.
+    step_header(4, "Run", "everything above, in one go",
+                "ready" if items else "add papers first", "ok" if items else "wait")
+    summary = [(f"{checker.icon} {checker.title}", "#E4E8EE"),
+               (f"{len(items)} paper(s)" if items else "no papers yet",
+                "#C6EFCE" if items else "#FFD79A"),
+               ("Crossref on" if crossref else "Crossref off", "#E4E8EE")]
+    summary += [(name, "#E4E8EE") for name, lst in (("whitelist", wl), ("blacklist", bl)) if lst]
+    # Keyed so that the screenshot script can wait on this summary — the one place
+    # that states which check a press of Run would actually start.
+    with st.container(key="runsummary"):
+        st.markdown("".join(_chip(t, bg, flow=True) for t, bg in summary),
+                    unsafe_allow_html=True)
     run = st.button("▶ Run check", type="primary", key="run",
                     disabled=items is None,
                     help=None if items is not None else "Add papers in Step 2 first.")
@@ -603,7 +716,8 @@ def page_tutorial():
 # ── Navigation ──────────────────────────────────────────────────────────────
 # Two pages in the sidebar: the flow, and the instructions for it.
 nav = st.navigation([
-    st.Page(page_check, title="Run a check", icon="▶️", default=True, url_path="check"),
+    # The default page is served from "/", so it is given no url_path of its own.
+    st.Page(page_check, title="Run a check", icon="▶️", default=True),
     st.Page(page_tutorial, title="Tutorial", icon="📘", url_path="tutorial"),
 ])
 sidebar()          # below the page links, on every page

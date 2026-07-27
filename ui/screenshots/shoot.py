@@ -52,7 +52,7 @@ def main():
         page = browser.new_page(viewport={"width": 1500, "height": 1320},
                                 device_scale_factor=2, color_scheme="light")
         page.goto(BASE, wait_until="networkidle")
-        page.wait_for_selector("text=Step 1 · Choose a check", timeout=60_000)
+        page.wait_for_selector("text=Choose a check", timeout=60_000)
         settle(page)
 
         # ── 1. The whole form: the check table, papers loaded, quality panel ──
@@ -64,7 +64,10 @@ def main():
 
         # ── 2. A finished fast check, framed on the workbook preview ─────────
         page.set_viewport_size({"width": 1500, "height": 1150})
-        page.wait_for_selector("text=Fast check · 8 paper(s)", timeout=60_000)
+        # Step 4's summary is the one place that names the check a press of Run
+        # would actually start, so it is the guard against running the wrong one.
+        # It is scoped to that container: "Fast check" also appears in Step 1.
+        page.wait_for_selector(".st-key-runsummary:has-text('Fast check')", timeout=60_000)
         page.get_by_role("button", name="▶ Run check").click()
         page.wait_for_selector("text=Your Excel is ready below", timeout=RUN_TIMEOUT)
         settle(page, TOAST)
@@ -82,7 +85,7 @@ def main():
         # the LLM check by accident. The wait below is the guard against that:
         # never press Run until the summary confirms which check is selected.
         page.get_by_role("button", name="Select", exact=True).last.click()
-        page.wait_for_selector("text=Batch CSV · 8 paper(s)", timeout=60_000)
+        page.wait_for_selector(".st-key-runsummary:has-text('Batch CSV')", timeout=60_000)
         settle(page)
         page.get_by_role("button", name="▶ Run check").click()
         page.wait_for_selector("text=record(s) classified", timeout=RUN_TIMEOUT)

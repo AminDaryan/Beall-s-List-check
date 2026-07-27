@@ -134,17 +134,33 @@ action. Its expected output is tabulated in [`examples/`](examples/README.md).
 Open the URL the launcher prints — `http://localhost:8501` unless that port is
 already taken, in which case Streamlit picks the next free one.
 
+The app has two pages, listed in its sidebar. **Run a check** is the four-step
+flow summarised below; **Tutorial** is a guided path from installation to a first
+verified run against the bundled example corpus, whose expected result is
+published — the fastest way to learn the app and to confirm that the
+installation works. It renders [`ui/TUTORIAL.md`](ui/TUTORIAL.md), which is
+equally readable here on GitHub.
+
 ![The web app, with papers loaded and the input data-quality panel open](ui/screenshots/ui-main.png)
+
+Every step carries a header bar — a numbered badge, the title, and a pill naming
+that step's live answer — so a page scrolled halfway still states what pressing
+**Run check** would do.
 
 **Step 1 · Choose a check.** The three are laid out as a comparison table — one
 row each, one column per attribute they differ on — so that they can be weighed
 against each other before one is selected:
 
-| Check | What it does | API keys | Tokens | Returns |
+| Check | What it does | Cost | Records | Returns |
 |---|---|---|---|---|
-| **Fast check** | Rules only — the deterministic match. | not needed | none | Excel workbook |
-| **Thorough check** | The fast check, then one LLM call per distinct `review` **venue**. | required | per venue | Excel workbook |
-| **Batch CSV** | `SS-ID, DOI, Status` per record, for scripts and servers. | not needed | none | CSV + Excel |
+| **Fast check** | Rules only — the deterministic match. | free | merged | Excel workbook |
+| **Thorough check** | The fast check, then one LLM call per distinct `review` **venue**. | tokens; keys required | merged | Excel workbook |
+| **Batch CSV** | `SS-ID, DOI, Status` per record, for scripts and servers. | free | all kept | CSV + Excel |
+
+*Merged* means a paper repeated in the corpus is reported once — deduplicated on
+`paperId`, falling back to the title. *All kept* means one CSV row per record
+supplied, in the order supplied. In the app, each of those cells is a pill whose
+hover text carries the detail.
 
 **Step 2 · Provide the papers.** Upload a `.json` file — a list of Semantic
 Scholar records, or a single record — or paste the JSON directly, or select the
@@ -159,7 +175,7 @@ than passed as file paths, and apply to the Fast and Thorough checks only —
 Batch CSV classifies every record. One checkbox controls Crossref; clearing it is
 equivalent to `--crossref off`.
 
-**Step 4 · Run.** A one-line summary states what is about to run, and the button
+**Step 4 · Run.** A row of pills restates what is about to run, and the button
 stays disabled until papers are loaded. A workbook result is followed by **Also
 produce the batch CSV**, which adds the machine-readable file without a second
 trip through Step 1 — it re-runs the deterministic pass, because the CSV keeps
