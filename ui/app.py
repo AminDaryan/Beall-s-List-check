@@ -158,24 +158,21 @@ def selected_model():
 
 
 def sidebar():
-    """Sidebar content, below the page links: what this is, then the environment.
+    """Sidebar content, below the page links: what this is, and where to learn it.
 
     Kept short on purpose.  The sidebar is on every page, so it holds only what
-    is true on every page: what the tool answers, where the instructions are, and
-    what the machine is configured with.  What used to be here besides — how the
-    three checks differ, what shape the input takes — now lives where it is
-    acted on, in Step 1's comparison table and Step 2's caption, rather than
-    being said twice.
+    is true on every page: what the tool answers and where the instructions are.
+    What used to be here besides — how the three checks differ, what shape the
+    input takes — now lives where it is acted on, in Step 1's comparison table
+    and Step 2's caption, rather than being said twice.
 
-    The **Environment** panel comes before Step 1 simply by being in the sidebar,
-    and its heading names the provider so the common question is answered without
-    opening it.  It is not promoted into the flow itself: it applies to one of
-    the three checks, and that check reports its own readiness in Step 1 the
-    moment it is selected.
-
-    What it reports is what ``.env`` configures — the **defaults** a run starts
-    from, not what a run necessarily uses.  Both the provider and the model are
-    picked in Step 3, which is where they are decided and where they are shown.
+    An **Environment** panel used to sit here too, naming the provider and model
+    ``.env`` configures.  It is gone, and its absence is the point: the LLM is
+    used by one of the three checks, so a panel on every page of every run was
+    answering a question most runs do not ask.  Everything it said now sits where
+    it is acted on — the two values are the starting positions of Step 3's own
+    pickers, and whether they *work* is reported by Step 1's readiness line and
+    again in Step 4's summary, beside the rest of what is about to run.
     """
     st.sidebar.markdown("### Beall's List check")
     st.sidebar.caption(
@@ -183,14 +180,6 @@ def sidebar():
         "predatory venues? A match means the **venue appears on the list** — not "
         "that the paper is bad.")
     st.sidebar.caption("📘 New here? Open the **Tutorial** page above.")
-    with st.sidebar.expander(f"⚙️ Environment · `{ENV_PROVIDER}`", expanded=False):
-        st.write(f"**LLM provider:** `{ENV_PROVIDER}`")
-        st.write(f"**Model / deployment:** `{os.getenv('AZURE_OPENAI_DEPLOYMENT', '(unset)')}`")
-        st.caption("The **defaults**. Both are chosen per run in **Step 3**, which can point a "
-                   "single run at another provider or another model without this changing — "
-                   "and only the **thorough** check uses either, the fast and batch checks "
-                   "needing no keys at all. Read from the repo's `.env` at startup; restart "
-                   "the app after editing it.")
 
 
 def _load_example_corpus():
@@ -1217,6 +1206,7 @@ def page_check():
     # never appears or disappears, only changes its text.
     llm_slot = st.empty()
     llm_html, llm_models = "&nbsp;", []
+    llm_ok, llm_msg = None, ""          # also read by Step 4's summary, below
     if checker.needs_llm:
         llm_slot.markdown("<div class='bl-llm'>⏳ Checking the LLM configuration…</div>",
                           unsafe_allow_html=True)
@@ -1307,7 +1297,8 @@ def page_check():
                      "**deployment** name, which need not match the underlying model's.").strip()
             st.caption("Typed names are not checked before the run: whether the provider "
                        "serves this one is answered by the provider, on the first request. "
-                       "Add it to `.env` to have it offered in the list from now on.")
+                       "To have it offered in the list from now on, add it to `.env` and "
+                       "restart the app — `.env` is read once, at startup.")
 
     crossref = st.checkbox(
         "Cross-check every venue against Crossref",
@@ -1381,11 +1372,26 @@ def page_check():
         # Only the check that spends tokens has an LLM, so only it is asked
         # about — and it is asked as one thing, because provider and model are
         # only an answer together.
-        summary.insert(1, ("LLM", f"{provider} / {model}" if model
-                           else f"{provider} / no model chosen",
-                           "" if model else "bl-sum-todo",
-                           "" if model else "Name a model in Step 3. Without one the run "
-                                            "falls back to whatever .env configures."))
+        #
+        # The cell reports readiness as well as identity, which is what the
+        # sidebar's Environment panel used to be for.  This is the better place
+        # for it: the summary exists to be read immediately before pressing Run,
+        # and "which LLM" and "will it answer" are one question at that moment.
+        # Step 1's line still says it first, when the check is chosen; this says
+        # it last, next to the button.
+        if not model:
+            llm_cell = (f"{provider} / no model chosen", "bl-sum-todo",
+                        "Name a model in Step 3. Without one the run falls back to "
+                        "whatever .env configures, which may not be a model this "
+                        "provider serves.")
+        elif llm_ok:
+            llm_cell = (f"{provider} / {model}", "", "")
+        else:
+            # Unverified (ok is None) reads the same as unconfigured here: either
+            # way the run is about to start on an answer nobody has.
+            llm_cell = (f"⚠️ {provider} / {model}", "bl-sum-todo",
+                        llm_msg or "The LLM configuration could not be verified.")
+        summary.insert(1, ("LLM", *llm_cell))
 
     def _cell(k, v, cls, why):
         attrs = (f" class='bl-sum-v {cls} bl-help' title='{html.escape(why, quote=True)}'"

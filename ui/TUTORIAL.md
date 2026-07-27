@@ -88,13 +88,11 @@ produce every verdict except `out_of_scope`.
 
 ![The app after startup, with the example papers loaded](static/ui-main.png)
 
-The sidebar holds three things: the links to the two pages (**Run a check** and
-**Tutorial**), one line on what the app does, and an **Environment** panel. The
-title of that panel names the LLM provider configured in `.env` — the default a
-run starts from, which Step 3 can change for that run. It only matters for the
-thorough check, so it stays closed until then. The app follows the light or dark
-setting of the browser, and the **⚙** button in the top right corner overrides
-it.
+The sidebar holds two things: the links to the two pages (**Run a check** and
+**Tutorial**) and one line on what the app does. Everything about the LLM is in
+the flow itself, because only one of the three checks uses one. The app follows
+the light or dark setting of the browser, and the **⚙** button in the top right
+corner overrides it.
 
 Every step has a header bar: a number, the title, an ⓘ that links to the matching
 section of this guide, and a label on the right with that step's current answer.

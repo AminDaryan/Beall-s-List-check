@@ -52,10 +52,15 @@ pages — **Run a check**, documented below, and **Tutorial**, which renders
 [`TUTORIAL.md`](TUTORIAL.md) so the walkthrough has one copy, readable both in
 the app and on GitHub. It is deliberately short: how the three checks differ is
 said by Step 1's comparison table and what shape the input takes by Step 2's
-caption, and neither is worth saying twice. Which LLM provider and model are
-configured is a detail of one check, so it sits in an **Environment** expander
-whose heading names the provider — enough to answer the usual question without
-opening it.
+caption, and neither is worth saying twice.
+
+An **Environment** expander naming the configured provider and model used to sit
+here as well. It was removed, and the reason generalises: the LLM belongs to one
+of the three checks, so a panel present on every page of every run was answering
+a question most runs never ask. The two values it held are the starting positions
+of Step 3's own pickers, and whether they *work* is now reported twice where it
+is acted on — by the readiness line under Step 1 when the check is chosen, and by
+Step 4's summary immediately above the Run button.
 
 ## Colour
 
