@@ -4,11 +4,12 @@
 > [README](../../../README.md) gives the
 > one-paragraph version and links here.
 
-Two optional inputs let you tailor a run. Both are CLI flags and both are
-available in the web app.
+Two optional inputs let you tailor a run. Both are CLI flags, and both are
+available in the web app's **Fast** and **Thorough** checks (batch CSV mode has
+neither — it classifies every record).
 
 ```bash
-python bealls_list_check.py --whitelist whitelist.json --blacklist blacklist.json
+python src/bealls_list_check/bealls_list_check.py --whitelist whitelist.json --blacklist blacklist.json
 ```
 
 - **`--whitelist` narrows the scope.** Only papers whose venue matches a
@@ -64,6 +65,7 @@ matching.
 
 ## Web app
 
-The two boxes under a checker accept the same JSON. The app writes your uploaded
-papers to a temporary folder and passes the lists through as the same CLI flags,
-so behaviour is identical to the command line.
+The two boxes under a checker accept the same JSON (pasted directly, rather than
+as a file path). The app writes your uploaded papers to a temporary folder and
+passes the lists through as the same CLI flags, so behaviour is identical to the
+command line. See [`ui/README.md`](../../../ui/README.md).

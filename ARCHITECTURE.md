@@ -59,11 +59,13 @@ the entire run is offline. Pass `--crossref off` to force offline even when onli
 
 ## 3. Module reference
 
-All modules reside in `src/bealls_list_check/`. Each has a single responsibility.
-Five (`match`, `resolve`, `user_lists`, `batch_check`, `scrape_bealls_list`) live
-in their **own folder** with a `README.md` deep-dive, linked below; the rest are
-flat files in the package directory. (The folders keep a bare-name import style
-via a small path shim at the top of each moved module and each entry script.)
+The processing modules reside in `src/bealls_list_check/`; the web front end
+resides in `ui/`. Each has a single responsibility. Five processing modules
+(`match`, `resolve`, `user_lists`, `batch_check`, `scrape_bealls_list`) live in
+their **own folder** with a `README.md` deep-dive, linked below, as does `ui/`;
+the rest are flat files in the package directory. (The folders keep a bare-name
+import style via a small path shim at the top of each moved module and each entry
+script.)
 
 | Module | Responsibility |
 |---|---|
@@ -79,6 +81,16 @@ via a small path shim at the top of each moved module and each entry script.)
 | `scrape_bealls_list/scrape_bealls_list.py` ([`README`](src/bealls_list_check/scrape_bealls_list/README.md)) | Produces the vendored `data/bealls_snapshot.json` from the archived Beall's List. Run only when refreshing the snapshot. |
 | `bealls_llm_check.py` | Optional language-model pass over the `review` papers. Reuses the conductor (`import bealls_list_check as det`) for matching and for the workbook writer. |
 | `batch_check/batch_check.py` ([`README`](src/bealls_list_check/batch_check/README.md)) | Machine-readable entry point for server integration: reads one `.jsonl`/`.json` file of Semantic Scholar records, writes a CSV of `SS-ID, DOI, Status` (one row per record, input order). Reuses `build_index`/`resolve_crossref_mode` from the conductor plus `match_paper` and `resolve_review`; skips the data-quality validation and the Excel writer. |
+| `ui/app.py`, `ui/runners.py` ([`README`](ui/README.md)) | Streamlit front end for local, single-user runs, offering the fast, thorough and batch-CSV checks. `app.py` is the page; `runners.py` is the Streamlit-free adapter that executes each check. |
+
+The UI deliberately does **not** import the checks in-process: they use flat
+module names (`config`, `match`, …) that would collide. `runners.py` instead
+writes the uploaded records to a temporary corpus directory, points
+`BEALLS_CORPUS_DIR` at it, runs the check as a subprocess (`python -u`, stdout
+streamed for the progress bar), and reads the resulting workbook back from
+`results/`, preferring any `.xlsx` newer than the run's start time so the
+locked-file fallback is picked up. Consequently the workbook's "Corpus files"
+metadata always reads `uploaded_corpus.json` for a UI run.
 
 The separation of `descriptions.py` and `report.py` is deliberate: report text can
 be revised without touching layout code, and layout can be revised without reading
