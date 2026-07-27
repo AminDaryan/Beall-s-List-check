@@ -20,7 +20,7 @@
 
 [theme]
 base                      = "light"
-primaryColor              = "#2563EB"   # blue-600
+primaryColor              = "#3B82F6"   # blue-500
 backgroundColor           = "#FFFFFF"
 secondaryBackgroundColor  = "#F1F5F9"   # slate-100
 textColor                 = "#1E293B"   # slate-800
@@ -29,10 +29,30 @@ borderColor               = "#E2E8F0"   # slate-200
 baseRadius                = "medium"
 
 [theme.dark]
-primaryColor              = "#60A5FA"   # blue-400 — lifted for a dark background
+# The same blue-500 as the light theme, deliberately.  ui/app.py draws the step
+# badges and the selected-row tint from one opaque accent that works on either
+# background, and overrides the filled buttons' label to slate-900 for a 4.8:1
+# ratio; a different primary here would put that override on the wrong blue.
+primaryColor              = "#3B82F6"   # blue-500
 backgroundColor           = "#0F172A"   # slate-900
 secondaryBackgroundColor  = "#1E293B"   # slate-800
 textColor                 = "#F1F5F9"   # slate-100
 linkColor                 = "#93C5FD"   # blue-300
 borderColor               = "#334155"   # slate-700
 baseRadius                = "medium"
+
+# The Deploy button offers to publish to Streamlit Community Cloud, which is
+# meaningless for a local, single-user tool that reads the machine's .env and
+# writes to the repository.  "viewer" drops it and the other developer actions
+# (Rerun, Clear cache, Record a screencast) while keeping the menu itself, which
+# is where Settings -- and with it the light/dark override -- lives.  "minimal"
+# would have removed the menu too.
+[client]
+toolbarMode = "viewer"
+
+# Serve ui/static/ at /app/static/.  The tutorial's screenshots are rendered as
+# plain <img> tags rather than through st.image, which re-encodes them as JPEG --
+# visibly lossy on a screenshot of text -- and offers no way to click through to
+# the full-size original.
+[server]
+enableStaticServing = true

@@ -135,13 +135,13 @@ Open the URL the launcher prints — `http://localhost:8501` unless that port is
 already taken, in which case Streamlit picks the next free one.
 
 The app has two pages, listed in its sidebar. **Run a check** is the four-step
-flow summarised below; **Tutorial** is a guided path from installation to a first
-verified run against the bundled example corpus, whose expected result is
-published — the fastest way to learn the app and to confirm that the
-installation works. It renders [`ui/TUTORIAL.md`](ui/TUTORIAL.md), which is
-equally readable here on GitHub.
+flow summarised below; **Tutorial** is a guided path through a first verified run
+against the bundled example corpus, whose expected result is published — the
+fastest way to learn the app and to confirm that the installation works. Each
+step of the flow carries an **ⓘ** into the matching section of it. It renders
+[`ui/TUTORIAL.md`](ui/TUTORIAL.md), which is equally readable here on GitHub.
 
-![The web app, with papers loaded and the input data-quality panel open](ui/screenshots/ui-main.png)
+![The web app, with papers loaded and the input data-quality panel open](ui/static/ui-main.png)
 
 Every step carries a header bar — a numbered badge, the title, and a pill naming
 that step's live answer — so a page scrolled halfway still states what pressing
@@ -175,7 +175,10 @@ load: an offline check of the metadata *before* anything runs, downloadable as
 equivalent to `--crossref off`. Under **Advanced**, a whitelist (*only check
 these venues*) and a blacklist (*also treat these venues as predatory*) are
 pasted as JSON rather than passed as file paths, and apply to the Fast and
-Thorough checks only — Batch CSV classifies every record.
+Thorough checks only — Batch CSV classifies every record. The Thorough check
+additionally gets a **Model / deployment** picker, listing every name in
+`AZURE_OPENAI_DEPLOYMENT`, so switching between configured deployments does not
+mean editing `.env` and restarting.
 
 **Step 4 · Run.** A labelled summary restates what is about to run — the check,
 how many papers, Crossref, the two lists, and what comes back — and the button

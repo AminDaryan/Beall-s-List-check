@@ -73,14 +73,18 @@ _TUTORIAL_MD = _UI_DIR / "TUTORIAL.md"          # rendered by the Tutorial page
 
 @st.cache_data(show_spinner=False)
 def llm_status():
-    """Whether the configured LLM provider is usable: ``(ok, message, model)``.
+    """Whether the configured LLM provider is usable: ``(ok, message, models)``.
 
     Answered by the same ``validate_provider_config()`` the checks call, so the
     thorough check cannot be reported as ready and then fail on the first
     request.  ``ok is None`` means the question could not be answered — the
-    caller stays quiet rather than guessing.  *model* is the deployment the
-    check will actually use, which is the **first** name when several are
-    configured.
+    caller stays quiet rather than guessing.
+
+    *models* is every deployment name ``.env`` configures, in order, taken from
+    ``openai_client`` rather than re-parsed here: ``AZURE_OPENAI_DEPLOYMENT``
+    accepts a bare name, a comma-separated list or a JSON array, and one parser
+    for that is enough.  Step 3 offers the list as a choice; the check itself
+    reads whichever single name the UI puts back into its environment.
 
     Deliberately not called on every page load: it imports litellm, which costs
     a few seconds, and only the thorough check needs the answer.
@@ -88,12 +92,13 @@ def llm_status():
     try:
         import openai_client
     except Exception as exc:
-        return None, str(exc), ""
+        return None, str(exc), []
+    models = list(openai_client.AZURE_OPENAI_DEPLOYMENTS)
     try:
         openai_client.validate_provider_config()
-        return True, "", openai_client.AZURE_OPENAI_DEPLOYMENT
+        return True, "", models
     except Exception as exc:
-        return False, str(exc), openai_client.AZURE_OPENAI_DEPLOYMENT
+        return False, str(exc), models
 
 
 def sidebar():
@@ -121,11 +126,9 @@ def sidebar():
     prov = os.getenv("LLM_PROVIDER", "azure")
     with st.sidebar.expander(f"⚙️ Environment · `{prov}`", expanded=False):
         st.write(f"**LLM provider:** `{prov}`")
-        model = os.getenv("AZURE_OPENAI_DEPLOYMENT", "(unset)")
-        st.write(f"**Model / deployment:** `{model}`")
-        if model.lstrip().startswith("["):
-            st.caption("Several names are configured; the check uses the first.")
-        st.caption("Used by the **thorough** check only — the fast and batch checks need no "
+        st.write(f"**Model / deployment:** `{os.getenv('AZURE_OPENAI_DEPLOYMENT', '(unset)')}`")
+        st.caption("Whichever of these the run uses is chosen in **Step 3**, and only the "
+                   "**thorough** check uses one at all — the fast and batch checks need no "
                    "keys. Read from the repo's `.env` at startup; restart the app after "
                    "editing it.")
 
@@ -223,9 +226,21 @@ def show_input_quality(items, key):
     except Exception as exc:
         st.caption(f"(input validation unavailable: {exc})")
         return
+    # Collapsed, always.  This panel reports on the *metadata that was supplied*,
+    # not on anything the tool has done, and it is normal for a real corpus to
+    # have some — the example corpus is deliberately one of those, because record
+    # 6 carries no venue at all.  Opening itself and leading with a warning made
+    # a green "Loaded 8 paper(s) — ready to run" be immediately contradicted by
+    # what looked like an error.  The count is in the label, which is the part
+    # worth seeing; the detail is one click away for whoever wants it.
     icon = "⚠️" if flagged else "✅"
-    with st.expander(f"{icon} Input data quality (Semantic Scholar venue metadata) — "
-                     f"{len(flagged)} of {len(items)} paper(s) flagged", expanded=bool(flagged)):
+    label = (f"{icon} Input data quality — {len(flagged)} of {len(items)} record(s) flagged"
+             if flagged else
+             f"✅ Input data quality — nothing flagged in {len(items)} record(s)")
+    with st.expander(label, expanded=False):
+        st.caption("An offline look at the Semantic Scholar metadata *before* the check runs. "
+                   "A flag means a record is missing something the venue match relies on, so "
+                   "its verdict may be weaker — it does not stop the run and is not an error.")
         st.download_button("⬇️ Download report (.xlsx)",
                            data=runners.build_input_quality_xlsx(items, flagged),
                            file_name="input_data_quality.xlsx", key=f"dqdl_{key}",
@@ -450,75 +465,145 @@ _ROW_TINT_CSS = """
 
 
 # ── Design tokens ────────────────────────────────────────────────────────────
-# Every colour the page paints itself comes from the Tailwind CSS palette
+# Every colour the page paints itself is declared once, here, as a CSS custom
+# property, so the step headers, the comparison table, the chips and the run
+# summary cannot drift apart.  Hues come from the Tailwind CSS palette
 # (https://tailwindcss.com/docs/colors) — an established, systematically
-# generated, contrast-tested ramp — and is declared once, here, as a CSS custom
-# property with a light and a dark value.  The step headers, the comparison
-# table, the chips and the run summary therefore cannot drift apart, and none of
-# them carries a hex that only works against one background.
+# generated, contrast-tested ramp.  Neutrals are *slate*, the accent is *blue*;
+# red appears nowhere in the chrome, because red is a verdict here (`on_list`)
+# and an accent that was also red made the page read as "flagged" where it only
+# meant "selected".
 #
-# The same values are Streamlit's own theme in .streamlit/config.toml, which is
-# what recolours the widgets this stylesheet does not reach — the buttons, the
-# progress bar, links and focus rings.  Neutrals are *slate*, the accent is
-# *blue*; red appears nowhere in the chrome, because red is a verdict here
-# (`on_list`) and an accent that was also red made the page read as "flagged"
-# where it only meant "selected".
+# Nothing here branches on light versus dark, and that is the point.  Streamlit
+# has a theme switcher (⋮ → System / Light / Dark) that repaints the app without
+# touching `prefers-color-scheme`, and it exposes no attribute naming the active
+# theme.  An earlier version of this stylesheet keyed off the media query, so a
+# user whose browser preferred dark and who then chose **Light** in that menu got
+# Streamlit's white page with this file's dark-theme text on it — light grey on
+# white, barely readable.  There is no signal that would have fixed it.
 #
-# The media query is the only signal available: Streamlit exposes no attribute
-# for the active theme and switches on `prefers-color-scheme` itself, so keying
-# off the same thing keeps the two in step.
+# So the tokens are written not to need one:
+#
+#   * text is `currentColor` thinned by `color-mix`, which resolves against
+#     whatever colour the active theme is already using, so every level keeps its
+#     ratio to a background this file never has to know;
+#   * surfaces and borders are translucent overlays of that same colour — they
+#     darken a light page and lighten a dark one, by construction;
+#   * the semantic fills are a translucent wash of one hue with the theme's own
+#     text laid over them, so the hue carries the meaning and the theme carries
+#     the contrast;
+#   * the accent is a single opaque blue-500.  Being opaque, the page behind it
+#     is irrelevant: the fill clears 3:1 against both white and slate-900, and
+#     slate-900 on the fill clears 4.8:1 either way.
+#
+# Streamlit's own widgets are a separate matter and need no help — it knows which
+# theme is active, so the [theme] / [theme.dark] pair in .streamlit/config.toml
+# is applied correctly however the theme was chosen.
 _TOKENS = """
 :root {
-  --bl-accent:#2563eb;                        /* blue-600           */
-  --bl-on-accent:#ffffff;                     /* text on a solid accent fill */
-  --bl-accent-soft:rgba(37,99,235,.07);
-  --bl-accent-line:rgba(37,99,235,.55);
-  /* Three weights of text, each a step of the slate ramp.  They start one step
-     darker than the ramp's midpoint would suggest: the faintest of them has to
-     clear 4.5:1 not against white but against the selected row's blue tint,
-     and slate-500 there measured 4.32:1. */
-  --bl-fg:#0f172a;                            /* slate-900, headings */
-  --bl-fg-muted:#334155;                      /* slate-700, prose   */
-  --bl-fg-faint:#475569;                      /* slate-600, labels  */
-  --bl-surface:#f8fafc;                       /* slate-50           */
-  --bl-border:#e2e8f0;                        /* slate-200          */
-  --bl-ok-bg:#d1fae5;   --bl-ok-fg:#065f46;   /* emerald-100 / -800 */
-  --bl-warn-bg:#fef3c7; --bl-warn-fg:#92400e; /* amber-100 / -800   */
-  --bl-mute-bg:#e2e8f0; --bl-mute-fg:#334155; /* slate-200 / -700   */
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bl-accent:#60a5fa;                              /* blue-400   */
-    /* A blue light enough to carry a dark background needs dark text on it:
-       white on blue-400 is 2.5:1, well under the 4.5:1 that body-sized text
-       has to clear.  Slate-900 on the same blue is 6.7:1. */
-    --bl-on-accent:#0f172a;
-    --bl-accent-soft:rgba(96,165,250,.12);
-    --bl-accent-line:rgba(96,165,250,.60);
-    --bl-fg:#f8fafc;                                  /* slate-50   */
-    --bl-fg-muted:#cbd5e1;                            /* slate-300  */
-    --bl-fg-faint:#94a3b8;                            /* slate-400  */
-    --bl-surface:#1e293b;                             /* slate-800  */
-    --bl-border:#334155;                              /* slate-700  */
-    --bl-ok-bg:rgba(16,185,129,.18);   --bl-ok-fg:#6ee7b7;
-    --bl-warn-bg:rgba(245,158,11,.18); --bl-warn-fg:#fcd34d;
-    --bl-mute-bg:rgba(148,163,184,.18); --bl-mute-fg:#e2e8f0;
-  }
+  /* One accent, opaque, valid on any background (see above). */
+  --bl-accent:#3b82f6;                 /* blue-500 */
+  --bl-on-accent:#0f172a;              /* slate-900, 4.8:1 on the fill */
+  --bl-accent-soft:rgba(59,130,246,.13);
+  --bl-accent-line:rgba(59,130,246,.60);
+
+  /* Three weights of the theme's own text.  The percentages are chosen so the
+     faintest still clears 4.5:1 in both of Streamlit's themes. */
+  --bl-fg:currentColor;
+  --bl-fg-muted:color-mix(in srgb, currentColor 82%, transparent);
+  --bl-fg-faint:color-mix(in srgb, currentColor 66%, transparent);
+
+  /* Overlays of the text colour: a tint on a light page, a lift on a dark one. */
+  --bl-surface:color-mix(in srgb, currentColor 5%, transparent);
+  --bl-border:color-mix(in srgb, currentColor 20%, transparent);
+
+  /* Hue carries the meaning; the theme's text carries the contrast. */
+  --bl-ok-bg:rgba(16,185,129,.22);     /* emerald-500 */
+  --bl-warn-bg:rgba(245,158,11,.25);   /* amber-500   */
+  --bl-mute-bg:color-mix(in srgb, currentColor 13%, transparent);
+
+  /* A gear, as a mask rather than an <img>, so it inherits the toolbar's colour
+     and therefore needs no light/dark pair either. Material Symbols "settings". */
+  --bl-gear:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg'\
+ viewBox='0 -960 960 960'%3E%3Cpath d='m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0\
+-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7\
+ 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm112-260q58 0 99-41t41-99q0-58-41-99t-99\
+-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Z'/%3E%3C/svg%3E");
 }
 """
 
 
+# Corrections to Streamlit's own chrome, on every page of the app.
+#
+# The code blocks are the substantial one.  Streamlit paints its syntax
+# highlighting in the *same* colours whichever theme is active — measured, they
+# are identical — and against its light code background those colours land at
+# 2.5:1 to 2.9:1, far under the 4.5:1 body text has to clear.  Numbers, strings
+# and JSON keys were the least readable text in the app, which matters here
+# because the tutorial and the expected-format panel are mostly JSON.
+#
+# They cannot be fixed by choosing better colours alone: a colour that clears
+# 4.5:1 against white needs a luminance at or below 0.183, and one that clears it
+# against slate-900 needs 0.228 or above, so no single value can do both, and the
+# active theme is not knowable here (see _TOKENS).  Pinning the code background
+# dark resolves it — a dark code block on a light page is ordinary in
+# documentation — after which one set of light token colours serves both themes.
+_CHROME_CSS = """
+/* Code blocks: always dark, so the token colours below have one background to
+   be legible against. Ratios are on #0f172a. */
+[data-testid="stCode"] pre, .stCode pre, .stMarkdown pre {
+    background:#0f172a !important; border:1px solid #1e293b; border-radius:8px;}
+[data-testid="stCode"] pre code, .stMarkdown pre code {color:#e2e8f0 !important;}
+[data-testid="stCode"] pre .token, .stMarkdown pre .token {background:none !important;}
+.stMarkdown pre .token.property,    [data-testid="stCode"] pre .token.property,
+.stMarkdown pre .token.attr-name,   [data-testid="stCode"] pre .token.attr-name
+    {color:#7dd3fc !important;}     /* sky-300      — 10.4:1 */
+.stMarkdown pre .token.string,      [data-testid="stCode"] pre .token.string,
+.stMarkdown pre .token.attr-value,  [data-testid="stCode"] pre .token.attr-value
+    {color:#6ee7b7 !important;}     /* emerald-300  — 11.2:1 */
+.stMarkdown pre .token.number,      [data-testid="stCode"] pre .token.number,
+.stMarkdown pre .token.boolean,     [data-testid="stCode"] pre .token.boolean
+    {color:#5eead4 !important;}     /* teal-300     — 11.8:1 */
+.stMarkdown pre .token.keyword,     [data-testid="stCode"] pre .token.keyword,
+.stMarkdown pre .token.function,    [data-testid="stCode"] pre .token.function
+    {color:#93c5fd !important;}     /* blue-300     —  9.0:1 */
+.stMarkdown pre .token.comment,     [data-testid="stCode"] pre .token.comment
+    {color:#94a3b8 !important; font-style:italic;}
+.stMarkdown pre .token.operator,    [data-testid="stCode"] pre .token.operator,
+.stMarkdown pre .token.punctuation, [data-testid="stCode"] pre .token.punctuation
+    {color:#cbd5e1 !important;}     /* slate-300    — 12.4:1 */
+
+/* Inline `code` was Streamlit's green, which belongs to no palette here and is
+   the same green in both themes.  A wash of the theme's own text needs neither. */
+.stMarkdown code:not(pre code), [data-testid="stCaptionContainer"] code,
+[data-testid="stMarkdownContainer"] code:not(pre code) {
+    color:inherit !important;
+    background:color-mix(in srgb, currentColor 11%, transparent) !important;
+    padding:1px 5px; border-radius:5px;}
+
+/* The toolbar's only remaining control opens Settings (the light/dark override),
+   Print and About -- so it is drawn as a gear rather than as an overflow "⋮",
+   which promised a menu of actions there is no longer one of.  The Deploy button
+   that sat beside it is removed in .streamlit/config.toml, not here. */
+[data-testid="stMainMenuButton"] svg {display:none;}
+[data-testid="stMainMenuButton"]::after {
+    content:""; width:1.25rem; height:1.25rem; display:block;
+    background:currentColor;
+    -webkit-mask:var(--bl-gear) center/contain no-repeat;
+            mask:var(--bl-gear) center/contain no-repeat;}
+"""
+
 # The rest of the page's styling, emitted once per render.  What is here is what
 # Streamlit's own arguments cannot reach: the step headers, the comparison grid,
 # the run summary, the upload dropzone, and one correction to Streamlit itself.
-_PAGE_CSS = "<style>" + _TOKENS + """
+_PAGE_CSS = "<style>" + _TOKENS + _CHROME_CSS + """
 /* ── Step headers ──────────────────────────────────────────────────────────
    A numbered badge, the title, an optional hint, and a status pill pushed
    right.  The title is deliberately large: these four bars are the page's
    structure, and at body size they read as captions rather than as headings.
-   Colours are explicit rather than an opacity on the body colour — an opacity
-   dims the text against whatever is behind it, which is how the hint ended up
-   too faint to read comfortably. */
+   The hint is thinned from the theme's own text rather than dimmed by opacity:
+   an opacity fades toward whatever happens to be behind, which is how it ended
+   up too faint to read comfortably. */
 .bl-step {display:flex; align-items:center; gap:.75rem; flex-wrap:wrap;
           padding:.75rem 1.05rem; border-radius:10px;
           background:var(--bl-surface);
@@ -533,6 +618,13 @@ _PAGE_CSS = "<style>" + _TOKENS + """
 .bl-step-h {font-size:.92rem; color:var(--bl-fg-muted);}
 .bl-step-s {margin-left:auto; font-size:.82rem; font-weight:600;
             padding:3px 12px; border-radius:999px; white-space:nowrap;}
+/* The ⓘ into the Tutorial. Sized as a target rather than as a glyph, and kept
+   quiet until hovered so it does not compete with the step's own title. */
+.bl-info {flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+          width:1.5rem; height:1.5rem; margin-left:-.35rem; border-radius:50%;
+          font-size:1.05rem; line-height:1; text-decoration:none !important;
+          color:var(--bl-fg-faint); transition:color .15s ease, background-color .15s ease;}
+.bl-info:hover {color:var(--bl-accent); background:var(--bl-accent-soft);}
 
 /* Each step header is rendered into its own keyed container, so the rhythm
    around it -- clear air above, a small gap to the step's own controls -- can be
@@ -541,26 +633,33 @@ div[class*="st-key-blstep"] {margin:2rem 0 .75rem;}
 div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0;}
 
 /* ── Chips ─────────────────────────────────────────────────────────────────
-   Tones, not colours, so each picks up its light or dark value from the tokens.
-   The status chips are the exception and carry their own inline fill: it is the
-   workbook's, and is the same in both themes (see _status_chip). */
+   A tone is a wash, not a text colour: the fill carries the meaning and the
+   theme's own text is laid over it, which is what lets one rule serve both
+   themes.  The status chips are the exception and carry an inline fill — the
+   workbook's canonical colour, with its text picked by luminance
+   (see _status_chip). */
 .bl-chip {display:inline-block; padding:3px 11px; border-radius:999px;
           font-size:.8rem; font-weight:600; line-height:1.45;}
 .bl-flow {margin:0 6px 6px 0;}
 .bl-help {cursor:help;}
-.bl-ok     {background:var(--bl-ok-bg);   color:var(--bl-ok-fg);}
-.bl-warn   {background:var(--bl-warn-bg); color:var(--bl-warn-fg);}
-.bl-mute, .bl-idle {background:var(--bl-mute-bg); color:var(--bl-mute-fg);}
-.bl-wait   {background:var(--bl-warn-bg); color:var(--bl-warn-fg);}
+.bl-ok     {background:var(--bl-ok-bg);}
+.bl-warn, .bl-wait {background:var(--bl-warn-bg);}
+.bl-mute, .bl-idle {background:var(--bl-mute-bg);}
 
 /* ── The Step 1 comparison grid ────────────────────────────────────────────
    The header row and every check row are handed the same column template, so
-   they line up without either knowing the other. */
+   they line up without either knowing the other.
+
+   The thinned text colours are applied to leaves only, never to a cell that
+   contains another one.  They are fractions of `currentColor`, so nesting them
+   multiplies: 82% inside 82% is 67%, and the tagline under each check name — a
+   .bl-sub inside a muted cell — came out at 3.3:1 that way. */
 .bl-grid {display:grid; gap:0 1rem; align-items:center;}
-.bl-grid > div {font-size:.88rem; line-height:1.45; color:var(--bl-fg-muted);}
-.bl-grid > div b {color:var(--bl-fg);}
+.bl-grid > div {font-size:.88rem; line-height:1.45;}
+.bl-grid > div:nth-child(2) {color:var(--bl-fg-muted);}   /* "What it does" only */
 .bl-head > div {font-size:.72rem; font-weight:700; letter-spacing:.06em;
                 text-transform:uppercase; color:var(--bl-fg-faint);}
+.bl-head > div:nth-child(2) {color:var(--bl-fg-faint);}
 .bl-sub {font-size:.79rem; color:var(--bl-fg-faint);}
 /* The header sits in a bordered container purely so its padding matches the
    rows' and the columns therefore align.  Only its bottom edge is wanted, and
@@ -584,7 +683,11 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
 /* A fixed height, not a minimum: the "ready" message carries <code> spans, and
    their taller line box would otherwise still nudge the page by a pixel or two. */
 .bl-llm code {line-height:1; font-size:.92em; padding:1px 5px;}
-.bl-llm-bad {color:var(--bl-warn-fg); font-weight:600; cursor:help;}
+/* Marked by a wash and the ⚠, not by a coloured text: no single amber clears
+   4.5:1 on both Streamlit's white and its slate-900 -- the two requirements are
+   arithmetically incompatible -- so the theme's own text is used instead. */
+.bl-llm-bad {background:var(--bl-warn-bg); border-radius:6px;
+             padding:1px 8px; font-weight:600; cursor:help;}
 
 /* ── Step 4's run summary ──────────────────────────────────────────────────
    A labelled cell per decision rather than a row of bare pills: "Fast check"
@@ -598,7 +701,8 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
            text-transform:uppercase; color:var(--bl-fg-faint); margin-bottom:.2rem;}
 .bl-sum-v {display:block; font-size:.95rem; font-weight:600; color:var(--bl-fg);}
 .bl-sum-v.bl-sum-off {color:var(--bl-fg-faint); font-weight:500;}
-.bl-sum-v.bl-sum-todo {color:var(--bl-warn-fg);}
+.bl-sum-v.bl-sum-todo {display:inline-block; background:var(--bl-warn-bg);
+                       border-radius:6px; padding:0 8px;}
 .st-key-runsummary [data-testid="stMarkdownContainer"] {margin-bottom:0;}
 
 /* ── The upload dropzone ───────────────────────────────────────────────────
@@ -631,13 +735,25 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
     font-size:.85rem; color:var(--bl-fg-muted);}
 [data-testid="stFileUploaderDropzoneInstructions"] > div {
     order:3; margin-top:.35rem; font-size:.75rem; color:var(--bl-fg-faint);}
+/* `inherit`, not the token again: the token is a fraction of currentColor, so
+   re-applying it to the descendants would thin an already-thinned colour. */
+[data-testid="stFileUploaderDropzoneInstructions"] > div * {color:inherit;}
 
-/* The same point for Streamlit's own filled buttons -- Run, and the selected
-   Select -- whose label it paints white against whatever primaryColor is.  In
-   the dark theme that colour is blue-400, so the label is corrected here. */
-@media (prefers-color-scheme: dark) {
-  [data-testid="stBaseButton-primary"]:not(:disabled) {color:var(--bl-on-accent);}
-}
+/* Streamlit fades a disabled button's label to 40% of the theme's text colour,
+   which left "▶ Run check" at 2.4:1 for as long as it waits for papers.
+   Inactive controls are exempt from the contrast rules, but the label is what
+   names the action that is waiting, so it is lifted.
+   Slate-500, flat.  It cannot be a fraction of currentColor like the rest of
+   this stylesheet, because the colour it would take a fraction OF is Streamlit's
+   already-faded one, applied to the button itself — and the label sits four
+   elements below that, so every level would thin it again.  4.8:1 on
+   Streamlit's white and 3.6:1 on its slate-900, against 2.4:1 and 2.1:1. */
+[data-testid="stBaseButton-primary"]:disabled,
+[data-testid="stBaseButton-primary"]:disabled * {color:#64748b !important;}
+
+/* Streamlit paints its filled buttons' labels white on whatever primaryColor is.
+   White on blue-500 is 3.5:1; slate-900 on it is 4.8:1. */
+[data-testid="stBaseButton-primary"]:not(:disabled) {color:var(--bl-on-accent);}
 
 /* ── A correction to Streamlit ─────────────────────────────────────────────
    Every stMarkdownContainer carries margin-bottom:-16px, to cancel the 16px gap
@@ -660,18 +776,167 @@ div[class*="st-key-pickrow-"] [data-testid="stMarkdownContainer"],
 # shout over the words they illustrate.  Both are capped here: the column to a
 # comfortable measure, the images to something nearer their natural size, with
 # a frame so a screenshot of a page reads as a picture of a page.
-_TUTORIAL_CSS = "<style>" + _TOKENS + """
+_TUTORIAL_CSS = "<style>" + _TOKENS + _CHROME_CSS + """
 .st-key-tutorial {max-width:58rem; margin:0 auto;}
-.st-key-tutorial [data-testid="stImage"] {max-width:40rem; margin:.4rem auto 1rem;}
-.st-key-tutorial [data-testid="stImage"] img {border:1px solid var(--bl-border);
-                                              border-radius:10px;}
-.st-key-tutorial [data-testid="stImageCaption"] {color:var(--bl-fg-faint);
-                                                 text-align:center;}
+
+/* ── Section headings ──────────────────────────────────────────────────────
+   The numbers are the walkthrough's spine, so they are given the same filled
+   badge the flow's own steps carry rather than being left as the first two
+   characters of a heading.
+
+   The flex sits on the span *inside* the heading, not on the heading: Streamlit
+   rewraps a heading's content in a span of its own and appends the little
+   link-to-heading anchor as a sibling, so laying the heading out as a flex row
+   would put that anchor in the row too. */
+.st-key-tutorial .bl-h {margin:2.4rem 0 .9rem; scroll-margin-top:4rem;}
+.st-key-tutorial .bl-h > span:first-child {display:inline-flex; align-items:center;
+                                           gap:.7rem;}
+.st-key-tutorial h3.bl-h {margin:1.8rem 0 .7rem;}
+.st-key-tutorial .bl-h-n {flex:0 0 auto; width:2.1rem; height:2.1rem; border-radius:50%;
+                          display:inline-flex; align-items:center; justify-content:center;
+                          background:var(--bl-accent); color:var(--bl-on-accent);
+                          font-size:1.05rem; font-weight:700;}
+.st-key-tutorial h3.bl-h .bl-h-n {width:1.7rem; height:1.7rem; font-size:.9rem;}
+.st-key-tutorial .bl-h-plain {display:block; scroll-margin-top:4rem;}
+
+/* ── Contents ──────────────────────────────────────────────────────────────
+   A strip rather than a bulleted list: nine sections read as a row of chips at
+   a glance, and as a list they would be a screenful before the first word. */
+.bl-toc {display:flex; flex-wrap:wrap; align-items:center; gap:.4rem;
+         padding:.85rem 1rem; margin:0 0 1.5rem;
+         border:1px solid var(--bl-border); border-radius:10px;
+         background:var(--bl-surface);}
+.bl-toc-k {font-size:.7rem; font-weight:700; letter-spacing:.06em;
+           text-transform:uppercase; color:var(--bl-fg-faint); margin-right:.4rem;}
+.bl-toc a {display:inline-flex; align-items:center; gap:.4rem;
+           padding:.25rem .7rem .25rem .3rem; border-radius:999px;
+           font-size:.84rem; color:inherit !important; text-decoration:none !important;
+           background:var(--bl-mute-bg); transition:background-color .15s ease;}
+.bl-toc a:hover {background:var(--bl-accent-soft);
+                 box-shadow:inset 0 0 0 1px var(--bl-accent-line);}
+.bl-toc-n {display:inline-flex; align-items:center; justify-content:center;
+           width:1.3rem; height:1.3rem; border-radius:50%; flex:0 0 auto;
+           background:var(--bl-accent); color:var(--bl-on-accent);
+           font-size:.72rem; font-weight:700;}
+
+/* ── Screenshots ───────────────────────────────────────────────────────────
+   Centred, framed, and capped well below the column width — these illustrate
+   the prose rather than replace it.  Every one is a 3000px capture shown at
+   about 640, so it is also a link to itself at full size. */
+.bl-shot {display:block; width:max-content; max-width:100%; margin:.6rem auto .2rem;
+          position:relative; border-radius:10px; overflow:hidden;
+          border:1px solid var(--bl-border); line-height:0;
+          text-decoration:none !important; cursor:zoom-in;}
+.bl-shot img {display:block; width:40rem; max-width:100%; height:auto;}
+.bl-shot-zoom {position:absolute; right:.5rem; bottom:.5rem;
+               padding:3px 10px; border-radius:999px;
+               background:rgba(15,23,42,.78); color:#f8fafc;
+               font-size:.72rem; font-weight:600; line-height:1.5;
+               opacity:0; transition:opacity .15s ease;}
+.bl-shot:hover .bl-shot-zoom {opacity:1;}
+.bl-shot:hover {border-color:var(--bl-accent-line);}
+.bl-shot-cap {text-align:center; font-size:.82rem; color:var(--bl-fg-faint);
+              margin:0 0 1.4rem;}
+
+/* The overlay. Opened by :target -- the anchor above sets the fragment -- and
+   closed by any other fragment, so it needs no script; Streamlit strips those
+   out of markdown anyway.  Shown at natural size and scrollable, because
+   shrinking a full-page capture to fit the window is what made it illegible.
+
+   The stacking order has to clear Streamlit's own chrome, which sits at 999990
+   for the header and 999991 for the sidebar; below those, the overlay covered
+   the page but left the header on top of it and its own close button
+   unclickable. */
+.bl-lightbox {display:none;}
+.bl-lightbox:target {display:block; position:fixed; inset:0; z-index:1000000;
+                     background:rgba(15,23,42,.92); overflow:auto; padding:2.5rem 1rem;
+                     line-height:0; cursor:zoom-out;}
+.bl-lightbox-bg {position:fixed; inset:0; z-index:0;}
+.bl-lightbox img {position:relative; z-index:1; display:block; margin:0 auto;
+                  width:auto; max-width:none; border-radius:6px;}
+.bl-lightbox-close {position:fixed; top:.75rem; right:1.25rem; z-index:2;
+                    width:2.5rem; height:2.5rem; border-radius:50%;
+                    display:flex; align-items:center; justify-content:center;
+                    background:rgba(248,250,252,.14); color:#f8fafc !important;
+                    font-size:1.7rem; line-height:1; text-decoration:none !important;}
+.bl-lightbox-close:hover {background:rgba(248,250,252,.28);}
 </style>
 """
 
 
-def step_header(num, title, hint="", state="", tone="idle", into=None):
+def _slug(text: str) -> str:
+    """The anchor Streamlit (and GitHub) give a heading of this text.
+
+    Lower-cased, punctuation dropped, runs of anything else collapsed to single
+    hyphens — "3 · A first run, on the example corpus" becomes
+    "3-a-first-run-on-the-example-corpus".  Reimplemented rather than guessed at:
+    the ids it produces are what both the in-app links and TUTORIAL.md's own
+    cross-references resolve against.
+    """
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+@st.cache_data(show_spinner=False)
+def _tutorial_sections():
+    """``[(level, number, title, anchor)]`` for every heading in TUTORIAL.md.
+
+    Read from the file rather than listed here, so renaming or renumbering a
+    section cannot leave the Tutorial's contents, or the ⓘ links that point into
+    it from the flow, aimed at a heading that no longer exists.
+    """
+    try:
+        text = _TUTORIAL_MD.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    out = []
+    for hashes, title in re.findall(r"^(#{2,3})[ \t]+(.+?)[ \t]*$", text, re.M):
+        num, _, rest = title.partition(" · ")
+        numbered = num.isdigit()
+        out.append((len(hashes), num if numbered else "",
+                    rest if numbered else title, _slug(title)))
+    return out
+
+
+def tutorial_href(phrase: str) -> str:
+    """Link to the Tutorial section whose title contains *phrase*.
+
+    Matched on a phrase rather than on a slug so that the caller does not have to
+    know the section's number — the numbers move when the walkthrough is
+    reordered, and a stale ``#4-...`` would land silently on the wrong section.
+    Falls back to the top of the page when nothing matches.
+    """
+    want = phrase.lower()
+    for _level, _num, title, anchor in _tutorial_sections():
+        if want in title.lower():
+            return f"/tutorial#{anchor}"
+    return "/tutorial"
+
+
+def _check_css_comments():
+    """Fail loudly on an unbalanced ``/* */`` in any stylesheet above.
+
+    A stray ``*/`` does not raise anything — the browser silently discards the
+    rules that follow it, and the page comes back looking like a stylesheet that
+    was never written.  It has happened twice to the block comments in these
+    literals, each time collapsing Step 1's comparison table without a word in
+    any log, so the app refuses to start on one instead.
+    """
+    for name, css in (("_TOKENS", _TOKENS), ("_CHROME_CSS", _CHROME_CSS),
+                      ("_PAGE_CSS", _PAGE_CSS), ("_TUTORIAL_CSS", _TUTORIAL_CSS),
+                      ("_ROW_TINT_CSS", _ROW_TINT_CSS)):
+        depth = 0
+        for token in re.findall(r"/\*|\*/", css):
+            depth += 1 if token == "/*" else -1
+            if depth < 0 or depth > 1:
+                raise AssertionError(f"{name}: unbalanced CSS comment ({token})")
+        if depth:
+            raise AssertionError(f"{name}: unterminated CSS comment")
+
+
+_check_css_comments()
+
+
+def step_header(num, title, hint="", state="", tone="idle", into=None, learn=""):
     """The header bar for one step of the flow.
 
     *state* is the step's live answer — the check chosen, the papers loaded, the
@@ -684,11 +949,21 @@ def step_header(num, title, hint="", state="", tone="idle", into=None):
 
     The header goes into a container keyed ``blstep<num>`` so the stylesheet can
     give it the air it needs above and below; *into* must be such a container.
+
+    *learn* is the phrase naming the Tutorial section that explains this step.
+    It becomes an ⓘ beside the title, linking straight to that heading — the
+    walkthrough is on another page, and without a way in from here it only helps
+    the people who thought to go and read it first.  The link opens in a tab of
+    its own (a named one, so repeated clicks reuse it rather than pile up):
+    following it in place would reload the app and lose the loaded papers.
     """
     st_ = into if into is not None else st.container(key=f"blstep{num}")
+    href = tutorial_href(learn) if learn else ""
+    info = (f"<a class='bl-info' href='{href}' target='bl-tutorial' "
+            f"title='Read about this step in the Tutorial'>&#9432;</a>") if href else ""
     st_.markdown(
         f"<div class='bl-step'><span class='bl-step-n'>{num}</span>"
-        f"<span class='bl-step-t'>{title}</span>"
+        f"<span class='bl-step-t'>{title}</span>{info}"
         + (f"<span class='bl-step-h'>{hint}</span>" if hint else "")
         + (f"<span class='bl-step-s bl-{tone}'>{state}</span>" if state else "")
         + "</div>", unsafe_allow_html=True)
@@ -701,7 +976,10 @@ def _options_state(checker):
     header is drawn above the expander that holds them.  Streamlit has already
     written this rerun's values there, so the pill is never a run behind.
     """
-    bits = ["Crossref on" if st.session_state.get("cr", True) else "Crossref off"]
+    bits = []
+    if checker.needs_llm and st.session_state.get("model"):
+        bits.append(st.session_state["model"])
+    bits.append("Crossref on" if st.session_state.get("cr", True) else "Crossref off")
     if checker.kind != "csv":                 # batch mode ignores both lists
         bits += [name for name, key in (("whitelist", "wl"), ("blacklist", "bl"))
                  if (st.session_state.get(key) or "").strip()]
@@ -733,7 +1011,7 @@ def page_check():
     # three are meant to be weighed against each other, and a dropdown shows only
     # the option already chosen.
     step_header(1, "Choose a check", "what to run over your papers",
-                f"{checker.icon} {checker.title}", "ok")
+                f"{checker.icon} {checker.title}", "ok", learn="A first run")
     st.caption("All three run the same deterministic engine. They differ in what they add "
                "on top of it, what they cost, and what you get back. "
                "Hover a **Cost**, **Records** or **Returns** pill for the detail.")
@@ -774,14 +1052,17 @@ def page_check():
     # once to say the check is running, once with its answer — so the notice
     # never appears or disappears, only changes its text.
     llm_slot = st.empty()
-    llm_html = "&nbsp;"
+    llm_html, llm_models = "&nbsp;", []
     if checker.needs_llm:
         llm_slot.markdown("<div class='bl-llm'>⏳ Checking the LLM configuration…</div>",
                           unsafe_allow_html=True)
-        llm_ok, llm_msg, llm_model = llm_status()
+        llm_ok, llm_msg, llm_models = llm_status()
         if llm_ok:
+            # The model named is the one Step 3 has selected, not simply the first
+            # configured, so this line and the run it describes cannot disagree.
+            chosen = st.session_state.get("model") or (llm_models[0] if llm_models else "?")
             llm_html = (f"🔑 LLM ready — <code>{html.escape(os.getenv('LLM_PROVIDER', 'azure'))}"
-                        f"</code> / <code>{html.escape(llm_model)}</code>.")
+                        f"</code> / <code>{html.escape(chosen)}</code>.")
         else:
             lead = "LLM not configured" if llm_ok is False else "LLM configuration unverified"
             llm_html = (f"<span class='bl-llm-bad' title='{html.escape(llm_msg, quote=True)}'>"
@@ -795,7 +1076,7 @@ def page_check():
     items = get_papers()
     step_header(2, "Provide the papers", "Semantic Scholar records, as JSON",
                 f"✅ {len(items)} paper(s)" if items else "waiting for papers",
-                "ok" if items else "wait", into=head2)
+                "ok" if items else "wait", into=head2, learn="real papers")
     if items is not None:
         st.success(f"✅ Loaded {len(items)} paper(s) — ready to run.")
         show_input_quality(items, key="input")
@@ -809,7 +1090,28 @@ def page_check():
     # worth a line of the page.  The venue lists are genuinely advanced, are
     # empty on almost every run, and cost two text areas to show, so they stay
     # folded away.
-    step_header(3, "Options", "all optional", _options_state(checker))
+    step_header(3, "Options", "all optional", _options_state(checker),
+                learn="Narrowing or extending")
+
+    # The model is a run setting, so it is chosen here rather than only reported
+    # in the sidebar.  Editing .env and restarting the app was the previous way to
+    # change it, which is a lot of ceremony for picking between deployments that
+    # are already configured.  Offered as a choice among those, not as free text:
+    # a name that is not configured cannot be validated before the run, and the
+    # readiness line above would be answering about a different model.
+    model = ""
+    if checker.needs_llm:
+        if llm_models:
+            model = st.selectbox(
+                "Model / deployment", llm_models, key="model",
+                help="Which of the deployments configured in `.env`'s "
+                     "`AZURE_OPENAI_DEPLOYMENT` this run uses. That variable takes a bare "
+                     "name, a comma-separated list or a JSON array; every name in it appears "
+                     "here. Add more to the list in `.env` and restart the app to see them.")
+        else:
+            st.caption("No model is configured — set `AZURE_OPENAI_DEPLOYMENT` in `.env` and "
+                       "restart the app.")
+
     crossref = st.checkbox(
         "Cross-check every venue against Crossref",
         value=True,
@@ -852,7 +1154,8 @@ def page_check():
     # without scrolling back up — and without having to work out what a bare
     # "Merged" or "8 paper(s)" was answering.
     step_header(4, "Run", "everything above, in one go",
-                "ready" if items else "add papers first", "ok" if items else "wait")
+                "ready" if items else "add papers first", "ok" if items else "wait",
+                learn="Reading what comes back")
     lists_na = checker.kind == "csv"
     summary = [
         ("Check", f"{checker.icon} {checker.title}", ""),
@@ -867,6 +1170,10 @@ def page_check():
          "bl-sum-off" if lists_na or not bl else ""),
         ("You get back", checker.output_label, ""),
     ]
+    if checker.needs_llm:
+        # Only the check that spends tokens has a model, so only it is asked about.
+        summary.insert(1, ("Model", model or "not configured",
+                           "" if model else "bl-sum-todo"))
     # Keyed so that the screenshot script can wait on this summary — the one place
     # that states which check a press of Run would actually start.
     with st.container(key="runsummary"):
@@ -902,8 +1209,13 @@ def page_check():
                 if checker.kind == "csv":
                     res = runners.run_batch_csv(items, crossref=crossref, on_line=on_line)
                 else:
-                    res = runners.run_checker(checker, items, aux_lists=aux_lists,
-                                              extra_args=extra_args, on_line=on_line)
+                    # The chosen model reaches the check the way the check already
+                    # looks for it: openai_client reads AZURE_OPENAI_DEPLOYMENT from
+                    # the environment, so the subprocess is given that one name.
+                    res = runners.run_checker(
+                        checker, items, aux_lists=aux_lists, extra_args=extra_args,
+                        env_overrides={"AZURE_OPENAI_DEPLOYMENT": model} if model else None,
+                        on_line=on_line)
         except Exception as e:
             progress.empty(); log_line.empty()
             st.session_state["res"] = None
@@ -954,33 +1266,115 @@ def page_check():
                 render_csv_result(addon)
 
 
-# A markdown image on a line of its own — Streamlit's markdown cannot load a
-# local file, so these are rendered with st.image instead.
+# A markdown image on a line of its own.
 _MD_IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$", re.M)
 # A link to a file in the repository. It resolves on GitHub but not in the app,
 # where it is shown as the path it points at.
 _MD_REL_LINK = re.compile(r"\[([^\]]+)\]\((?!https?://|#)([^)]+)\)")
+# A section heading, optionally "N · Title".
+_MD_HEADING = re.compile(r"^(#{2,3})[ \t]+(.+?)[ \t]*$", re.M)
+# What the app leaves out. The block between these markers is written for someone
+# reading TUTORIAL.md on GitHub before they have the app; inside the app it is
+# instructions for something already done.
+_MD_SKIP = re.compile(r"[ \t]*<!--[ \t]*app:skip-start[ \t]*-->.*?"
+                      r"<!--[ \t]*app:skip-end[ \t]*-->[ \t]*\n?", re.S)
 
 
-def _render_markdown_file(path):
-    """Render a repository markdown file as a page, images and all."""
+def _shot_html(src: str, alt: str, ident: str) -> str:
+    """A screenshot, and the full-size copy a click on it opens.
+
+    Not ``st.image``: that re-encodes a PNG as JPEG — visibly lossy on a picture
+    of text, which every one of these is — and offers no way through to the
+    original.  Served instead from ``ui/static`` (see .streamlit/config.toml) as
+    the PNG it is.
+
+    The overlay is opened by the anchor's fragment and closed by another, so no
+    script is involved: Streamlit strips ``<script>`` out of markdown, and this
+    needs none.  The full-size copy is shown at its natural width and scrolls,
+    because these are 3000px captures of a whole page and fitting one to the
+    window is what made it unreadable in the first place.
+    """
+    alt_a = html.escape(alt, quote=True)
+    return (
+        f"<a class='bl-shot' href='#{ident}' title='Click to see it full size'>"
+        f"<img src='{src}' alt='{alt_a}'>"
+        f"<span class='bl-shot-zoom'>Click to enlarge</span></a>"
+        + (f"<div class='bl-shot-cap'>{html.escape(alt)}</div>" if alt else "")
+        + f"<div class='bl-lightbox' id='{ident}'>"
+          f"<a class='bl-lightbox-close' href='#bl-closed' aria-label='Close'>&times;</a>"
+          f"<a class='bl-lightbox-bg' href='#bl-closed' tabindex='-1'></a>"
+          f"<img src='{src}' alt='{alt_a}'></div>")
+
+
+def _heading_html(hashes: str, title: str) -> str:
+    """One section heading, as its own HTML so it can carry a numbered badge.
+
+    The numbers are the walkthrough's spine, and as plain markdown they were just
+    the first characters of a line of prose.  Rendered here the way the flow's own
+    steps are — a filled circle, then the title — so the two pages read as one
+    piece of software.
+
+    The ``id`` is the slug Streamlit would have generated, so the links into these
+    sections keep working and so ``TUTORIAL.md``'s own cross-references resolve to
+    the same anchors on GitHub.
+    """
+    tag = "h2" if len(hashes) == 2 else "h3"
+    anchor = _slug(title)
+    num, _, rest = title.partition(" · ")
+    if not num.isdigit():
+        return (f"<{tag} id='{anchor}' class='bl-h bl-h-plain'>"
+                f"{html.escape(title)}</{tag}>")
+    return (f"<{tag} id='{anchor}' class='bl-h'>"
+            f"<span class='bl-h-n'>{html.escape(num)}</span>"
+            f"<span>{html.escape(rest)}</span></{tag}>")
+
+
+def _contents_html() -> str:
+    """The numbered sections, as a strip of links at the top of the page."""
+    items = [(num, title, anchor) for level, num, title, anchor in _tutorial_sections()
+             if level == 2 and num]
+    if not items:
+        return ""
+    return ("<div class='bl-toc'><span class='bl-toc-k'>Contents</span>"
+            + "".join(f"<a href='#{a}'><span class='bl-toc-n'>{n}</span>"
+                      f"{html.escape(t)}</a>" for n, t, a in items)
+            + "</div>")
+
+
+def _render_markdown_file(path, *, skip_app_only=False, static_url="", before_sections=""):
+    """Render a repository markdown file as a page, images and headings and all.
+
+    *skip_app_only* drops the block the file fences off as not worth showing in
+    the app.  *static_url* is the prefix under which the file's images are served,
+    which is what lets them be plain ``<img>`` tags.  *before_sections* is HTML to
+    place immediately above the first section heading — after the title and the
+    file's opening note, which is where a table of contents belongs.
+    """
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
         st.error(f"Could not read `{path.name}`: {exc}")
         return
+    if skip_app_only:
+        text = _MD_SKIP.sub("", text)
+    if before_sections:
+        first = _MD_HEADING.search(text)
+        if first:
+            text = text[:first.start()] + before_sections + "\n\n" + text[first.start():]
 
     def chunk(md):
         md = md.strip()
         if md:
-            st.markdown(_MD_REL_LINK.sub(r"\1 (`\2`)", md))
+            md = _MD_HEADING.sub(lambda m: _heading_html(m.group(1), m.group(2)), md)
+            st.markdown(_MD_REL_LINK.sub(r"\1 (`\2`)", md), unsafe_allow_html=True)
 
     pos = 0
-    for m in _MD_IMAGE.finditer(text):
+    for i, m in enumerate(_MD_IMAGE.finditer(text)):
         chunk(text[pos:m.start()])
-        img = (path.parent / m.group(2)).resolve()
-        if img.is_file():
-            st.image(str(img), caption=m.group(1) or None, width="stretch")
+        name = Path(m.group(2)).name
+        if static_url and (path.parent / m.group(2)).is_file():
+            st.markdown(_shot_html(static_url + name, m.group(1), f"bl-shot-{i}"),
+                        unsafe_allow_html=True)
         pos = m.end()
     chunk(text[pos:])
 
@@ -989,12 +1383,16 @@ def page_tutorial():
     """The walkthrough, rendered from ui/TUTORIAL.md so there is one copy of it.
 
     Rendered into a keyed container so the stylesheet can hold the text to a
-    readable measure and the screenshots to something near their natural size,
-    instead of letting both run the full width of a `wide` layout.
+    readable measure, and with the file's install-and-launch block dropped: the
+    app is demonstrably running by the time anyone reads this page, so telling
+    them how to start it is the one section that cannot apply.  It stays in the
+    file for the GitHub reader, who has not started it yet.
     """
     st.markdown(_TUTORIAL_CSS, unsafe_allow_html=True)
     with st.container(key="tutorial"):
-        _render_markdown_file(_TUTORIAL_MD)
+        _render_markdown_file(_TUTORIAL_MD, skip_app_only=True,
+                              static_url="/app/static/",
+                              before_sections=_contents_html())
 
 
 # ── Navigation ──────────────────────────────────────────────────────────────

@@ -1,12 +1,13 @@
 # Tutorial — the web app, end to end
 
-> A guided path through the app: install it, run it once on the bundled example
-> corpus where the expected answer is known, then run it on real papers. Every
-> step states what should appear on screen, so a run can be verified rather than
-> assumed.
+> A guided path through the app: run it once on the bundled example corpus where
+> the expected answer is known, then run it on real papers. Every step states
+> what should appear on screen, so a run can be verified rather than assumed.
 >
 > This walkthrough is also the app's **Tutorial** page — the file is rendered
-> there, so the two cannot drift apart. The reference companion is
+> there, so the two cannot drift apart. Installing and launching the app are
+> prerequisites rather than steps, so they are unnumbered below and the app's own
+> copy leaves them out. The reference companion is
 > [ui/README.md](README.md), which documents every control and every difference
 > from the command line; the project as a whole is described in the main
 > [README](../README.md).
@@ -27,7 +28,15 @@ Three things follow from that, and they are worth stating before the first run:
 - The input is **Semantic Scholar paper records** — JSON objects carrying a
   `publicationVenue` — not links, titles or PDFs.
 
-## 1 · Install, once
+<!-- app:skip-start -->
+## Before you start
+
+Installing the app and launching it are prerequisites rather than steps of the
+walkthrough, which is why they are not numbered — and why the app's own Tutorial
+page leaves them out. If you are reading this inside the app, you are already
+past both.
+
+### Install, once
 
 Requires **Python 3.9 or newer** and, for setup only, an internet connection.
 From the repository root:
@@ -42,13 +51,13 @@ bash ./setup.sh
 
 The script creates `.venv`, installs the dependencies, and copies `.env.example`
 to `.env`. **No API keys are required** for anything in this tutorial except
-[the thorough check](#6--the-thorough-check-optional). Re-running it is safe: an
+[the thorough check](#4-the-thorough-check-optional). Re-running it is safe: an
 existing `.env` is never overwritten.
 
 If PowerShell refuses to run the script (*"running scripts is disabled on this
 system"*), use `powershell -ExecutionPolicy Bypass -File .\setup.ps1`.
 
-## 2 · Start the app
+### Start the app
 
 ```powershell
 .\run_ui.ps1
@@ -67,26 +76,26 @@ The app is a **local, single-user** interface: no server, no authentication, no
 accounts. It runs the same scripts the command line runs, so both produce
 identical reports. Stopping the launcher (Ctrl+C) stops the app; closing the
 browser tab does not.
+<!-- app:skip-end -->
 
-![The app after startup, with the example corpus loaded](screenshots/ui-main.png)
-
-The sidebar holds the page links — **Run a check** and **Tutorial** — one
-sentence on what the tool answers, and an **Environment** panel whose heading
-names the configured LLM provider. That panel matters only for the thorough
-check, so it stays collapsed until it is needed; the model name is inside it.
-
-The app follows the browser's light or dark setting.
-
-## 3 · A first run, on the example corpus
+## 1 · A first run, on the example corpus
 
 The repository ships an eight-record corpus whose expected result is published,
 so a fresh installation can be verified without supplying real data. It exercises
 every verdict except `out_of_scope`.
 
-Every step carries a header bar — a numbered badge, the title, and a pill on the
-right naming that step's live answer. The pill is green when the step is settled
-and amber when it is what holds the run up, so the four of them read as a
-checklist of what still has to be decided.
+![The app after startup, with the example corpus loaded](static/ui-main.png)
+
+The sidebar holds the page links — **Run a check** and **Tutorial** — one
+sentence on what the tool answers, and an **Environment** panel whose heading
+names the configured LLM provider. That panel matters only for the thorough
+check, so it stays collapsed until it is needed. The app follows the browser's
+light or dark setting, and the **⚙** in the top right corner overrides it.
+
+Every step carries a header bar — a numbered badge, the title, an ⓘ linking back
+into this walkthrough, and a pill on the right naming that step's live answer.
+The pill is green when the step is settled and amber when it is what holds the
+run up, so the four of them read as a checklist of what still has to be decided.
 
 **Step 1 · Choose a check.** The three checks are laid out as a comparison table,
 one row each, with a column per attribute they differ on: **Cost**, **Records**
@@ -100,14 +109,17 @@ choice.
 *Upload a file* and *Paste JSON*. Below them is **📦 Load the example corpus**,
 which is not a third source: it fills the paste box with the bundled records, so
 what is about to be checked is on screen and editable. Press it. The app confirms
-`✅ Loaded 8 paper(s) — ready to run` and opens the **Input data quality** panel,
-which reports **1 of 8 paper(s) flagged** — record 6, which deliberately carries
-no venue information at all. That panel is an offline inspection of the metadata
-*before* anything runs, and it is downloadable as `input_data_quality.xlsx`.
+`✅ Loaded 8 paper(s) — ready to run`, and below that a collapsed **Input data
+quality** panel reads **1 of 8 record(s) flagged** — record 6, which deliberately
+carries no venue information at all. That panel is an offline inspection of the
+metadata *before* anything runs; it does not block the run, and it is
+downloadable as `input_data_quality.xlsx`. Open it to see which record and why.
 
 **Step 3 · Options.** Leave them alone. The one control in the open is
 **Crossref**, on by default, which is the recommended setting; the whitelist and
-blacklist are folded into **Advanced** and are empty.
+blacklist are folded into **Advanced** and are empty. (Selecting the thorough
+check adds a **Model / deployment** picker here — see
+[§4](#4-the-thorough-check-optional).)
 
 **Step 4 · Run.** A labelled summary restates what is about to run — the check,
 how many papers, whether Crossref is on, which lists are in force, and what will
@@ -138,9 +150,9 @@ numbers are the installation check — if they match, the pipeline works end to
 end, Crossref included. The full commentary is in
 [examples/README.md](../examples/README.md).
 
-## 4 · Reading what comes back
+## 2 · Reading what comes back
 
-![A finished run, with the workbook preview](screenshots/ui-report.png)
+![A finished run, with the workbook preview](static/ui-report.png)
 
 The preview shows the **first 40 rows of the first sheet**; the workbook itself
 carries five sheets, and the download button hands over the whole file.
@@ -172,7 +184,7 @@ because the Crossref audit trail is written there as well.
 Below the result, a **Run log** expander holds the check's console output. It
 opens automatically when a run fails.
 
-## 5 · Running the check on real papers
+## 3 · Running the check on real papers
 
 Real input is a JSON file of Semantic Scholar records, obtained from the
 [Semantic Scholar API](https://api.semanticscholar.org) or exported from a
@@ -214,7 +226,7 @@ Expect a real run to take **minutes rather than seconds**: with Crossref enabled
 the check contacts the registry once per distinct DOI. Setting `CROSSREF_MAILTO`
 in `.env` moves those lookups into Crossref's faster "polite pool".
 
-## 6 · The thorough check (optional)
+## 4 · The thorough check (optional)
 
 The thorough check runs the fast check, then asks an LLM for a **keep / exclude /
 uncertain** recommendation on each `review` venue. It never overrides a
@@ -231,19 +243,25 @@ costs money. Before using it:
    variable name is historical.
 3. Restart the app. `.env` is read once, at startup.
 
+`AZURE_OPENAI_DEPLOYMENT` takes a bare name, a comma-separated list or a JSON
+array. **Every name in it appears in Step 3's Model / deployment picker**, and
+the run uses whichever is selected there — so switching between configured
+deployments no longer means editing `.env` and restarting. Step 4's summary and
+the readiness line under Step 1 both name the model that will actually be used.
+
 Selecting the check verifies that configuration and reports a missing key or
 endpoint by name, *before* a run is paid for. The verdict is a configuration
 check, not a live call: it confirms that the values are present, not that they
-are valid.
+are valid — and it says nothing about whether the selected deployment exists.
 
 Cost scales with the number of **distinct `review` venues**, not papers — the
 pass groups the rows by venue and makes one call per group. The app assesses
 every one of them; there is no `--limit` in the browser. For a capped trial run,
 use the command line: `python src/bealls_list_check/bealls_llm_check.py --limit 50`.
 
-## 7 · Batch CSV, for scripts and servers
+## 5 · Batch CSV, for scripts and servers
 
-![Batch CSV mode, with colour-coded statuses](screenshots/ui-batch.png)
+![Batch CSV mode, with colour-coded statuses](static/ui-batch.png)
 
 The third check returns `SS-ID, DOI, Status` — **one row per input record, in
 input order, with no deduplication** — plus a colour-coded Excel twin, since a
@@ -256,7 +274,7 @@ automatic by-product because the CSV cannot be derived from the workbook: the
 workbook is deduplicated while the CSV keeps every record, so producing it means
 running the deterministic pass — and its Crossref lookups — a second time.
 
-## 8 · Narrowing or extending the list
+## 6 · Narrowing or extending the list
 
 Step 3's control in the open is the **Crossref** checkbox, on by default.
 Clearing it forces a fully offline run — faster, and measurably less certain:
@@ -281,7 +299,7 @@ A plain string is matched by name; an object may carry `name` and/or `domain`.
 The format is documented in full in
 [user_lists/README.md](../src/bealls_list_check/user_lists/README.md).
 
-## 9 · Troubleshooting
+## 7 · Troubleshooting
 
 | Symptom | Cause and remedy |
 |---|---|

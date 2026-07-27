@@ -1,4 +1,4 @@
-"""Retake the screenshots in this folder from a live app.
+"""Retake ui/static's screenshots from a live app.
 
 Not part of the check. It exists so that the images in the READMEs can be
 regenerated after a UI change instead of drifting out of date. Playwright is a
@@ -11,7 +11,7 @@ deployment name is not baked into a committed image, then point this at it::
 
     AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini \\
         python -m streamlit run ui/app.py --server.port 8505 --server.headless true
-    python ui/screenshots/shoot.py http://localhost:8505 ui/screenshots
+    python ui/shoot_screenshots.py http://localhost:8505 ui/static
 
 Captured at deviceScaleFactor=2, so a 1500-wide viewport yields a 3000-wide
 file. Captured light: the app follows the browser's colour scheme, and a
@@ -25,7 +25,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8503"
-OUT = Path(sys.argv[2] if len(sys.argv) > 2 else "ui/screenshots").resolve()
+OUT = Path(sys.argv[2] if len(sys.argv) > 2 else "ui/static").resolve()
 RUN_TIMEOUT = 180_000          # a check with Crossref lookups is not fast
 TOAST = 6_000                  # long enough for the "Check complete" toast to go
 
