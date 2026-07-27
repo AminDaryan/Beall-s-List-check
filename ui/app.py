@@ -75,9 +75,9 @@ _TUTORIAL_MD = _UI_DIR / "TUTORIAL.md"          # rendered by the Tutorial page
 # for a single run, so it is a default rather than the answer.
 ENV_PROVIDER = os.getenv("LLM_PROVIDER", "azure").lower()
 
-# Step 3's escape hatch from the configured names. A model this machine has not
-# been told about cannot be offered in a list, but that is no reason to refuse
-# to run it — see `model_input`.
+# The last entry of Step 3's model list, and its escape hatch. A model this
+# machine's .env has not been told about cannot be offered in a list, but that is
+# no reason to refuse to run it: choosing this reveals a text box instead.
 _OTHER_MODEL = "Other — type a name…"
 
 
