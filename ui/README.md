@@ -35,8 +35,11 @@ what they add and what they return.
 | **Thorough check** — rules, then an LLM pass | [`bealls_llm_check.py`](../src/bealls_list_check/bealls_llm_check.py) | `bealls_llm_results.xlsx` — the same workbook plus an **LLM review** column on *Flagged only* | tokens; requires keys in `.env` |
 | **Batch CSV** — one row per paper | [`batch_check.py`](../src/bealls_list_check/batch_check/batch_check.py) | `bealls_status.csv` **and** a colour-coded `bealls_status.xlsx` | none |
 
-The sidebar shows which LLM provider and model are configured, and a short
-reminder that only the thorough check needs them.
+The sidebar states what the tool answers and lists the two pages — **Run a
+check**, documented below, and **Tutorial**, which renders
+[`TUTORIAL.md`](TUTORIAL.md) so the walkthrough has one copy, readable both in
+the app and on GitHub. Which LLM provider and model are configured is a detail of
+one check, so it sits in a collapsed **Environment** expander.
 
 ## The page, step by step
 
@@ -52,8 +55,11 @@ differ on:
 
 The attributes therefore line up vertically, so comparing them is a scan down a
 column rather than a reading of three separate blocks. The leftmost column holds
-the **Select** button; the selected row is marked by a red accent on its name and
-a disabled **✓ Selected** button.
+the **Select** button. The selected row is tinted and its button turns solid —
+marking it by colour rather than by an accent in the margin, which would have to
+reserve space in every row. The button stays enabled, because a disabled control
+greys out and grey should not mark the active choice; re-clicking it does
+nothing.
 
 Selecting the thorough check additionally verifies the LLM configuration, using
 the same `validate_provider_config()` the check itself calls. A missing key or
