@@ -324,7 +324,12 @@ form skips input validation entirely.
 
 ### Step 3 · Options
 
-All optional, but not all equally rare, so they are not all folded away together.
+Every control here already has a value, so a run can be started without touching
+any of them. The header says so — *already set — change what this run needs* —
+rather than the *all optional* it used to say. Both are true, but every other
+step's hint names what the step is **about**, while that one described its
+obligation level, in a word that reads as *ignorable*. One of these settings
+decides what the run spends money on.
 
 - **LLM provider** and **Model / deployment** — shown for the **thorough** check
   only, since it is the only one that uses an LLM. Offered as a pair because

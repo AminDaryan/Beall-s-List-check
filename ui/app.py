@@ -1246,16 +1246,23 @@ def page_check():
         st.success(f"✅ Loaded {len(items)} paper(s) — ready to run.")
         show_input_quality(items, key="input")
 
-    # Step 3 — options.  All optional, so the pill states what is in force rather
-    # than whether anything was touched.
+    # Step 3 — options.  Nothing here has to be touched, so the pill states what
+    # is in force rather than whether anything was.
+    #
+    # The hint used to read "all optional", which was true and unhelpful in the
+    # same breath.  Every other step's hint says what the step is *about*; this
+    # one described its obligation level instead, and did it in a word that reads
+    # as "ignorable" — which one of these settings, the one that decides what the
+    # run spends money on, is not.  It now says what the others say: these have
+    # values already, and you change the ones this run needs.
     #
     # Nothing in this step is folded away any more.  Every control here changes
     # what the run does — Crossref moves two of the example corpus's eight
     # records between verdicts on its own — and a step whose header claims to
     # summarise the settings in force cannot do that while some of them are
     # behind a click.
-    step_header(3, "Options", "all optional", _options_state(checker),
-                learn="venue lists")
+    step_header(3, "Options", "already set — change what this run needs",
+                _options_state(checker), learn="venue lists")
 
     # Which LLM answers is a run setting, so it is decided here rather than only
     # reported in the sidebar.  Editing .env and restarting the app was the
