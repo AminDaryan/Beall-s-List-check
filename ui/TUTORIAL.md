@@ -266,7 +266,8 @@ use the command line: `python src/bealls_list_check/bealls_llm_check.py --limit 
 The third check returns `SS-ID, DOI, Status` — **one row per input record, in
 input order, with no deduplication** — plus a colour-coded Excel twin, since a
 CSV cannot carry colour. It classifies every record and therefore takes no
-whitelist or blacklist.
+whitelist or blacklist — Step 3 shows it no **Advanced** section at all, and
+Step 4's summary reads `not used here` against both, with the reason on hover.
 
 A workbook result is followed by **Also produce the batch CSV**, which produces
 the same file without returning to Step 1. It is a button rather than an

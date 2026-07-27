@@ -330,8 +330,17 @@ Both take the same JSON the CLI flags take as a *file*, pasted directly:
 ```
 
 The format is documented in
-[`user_lists/README.md`](../src/bealls_list_check/user_lists/README.md). Neither
-box is shown for **Batch CSV**, which classifies every record.
+[`user_lists/README.md`](../src/bealls_list_check/user_lists/README.md).
+
+**Batch CSV shows no Advanced expander at all.** It takes neither list — there is
+no `--whitelist` or `--blacklist` on
+[`batch_check.py`](../src/bealls_list_check/batch_check/batch_check.py) to hand
+them to; it classifies every record it is given. The expander used to be
+rendered anyway, holding a note saying so, which made a control labelled
+*"narrow the run, or add venues of your own"* promise two things and then
+apologise for having neither. The fact is not lost: Step 4's summary reports
+`Whitelist: not used here` with the reason as hover text, which states it as a
+property of the run rather than as a dead end, and costs no click to find.
 
 Because the lists are collapsed, the step's pill names the options actually in
 force — read from `st.session_state` rather than from the widgets, since the
@@ -342,12 +351,15 @@ written the current rerun's values there.
 
 A labelled cell per decision made above — **Check**, **Papers**, **Crossref**,
 **Whitelist**, **Blacklist**, **You get back**, and **Model** on the thorough
-check — so what is about to run can be checked without scrolling back up. It was a row of bare pills, which failed on
-the values that do not name their own field: `Fast check` and `Crossref on` say
-what they are, but `8 paper(s)` and a lone list name do not, and nothing said
-what would come back at all. The whitelist and blacklist cells read
-`not used here` under Batch CSV rather than being dropped, so their absence is
-stated rather than left to be noticed.
+check — so what is about to run can be checked without scrolling back up. It was
+a row of bare pills, which failed on the values that do not name their own field:
+`Fast check` and `Crossref on` say what they are, but `8 paper(s)` and a lone
+list name do not, and nothing said what would come back at all.
+
+The whitelist and blacklist cells read `not used here` under Batch CSV rather
+than being dropped, so their absence is stated rather than left to be noticed —
+and, since Step 3 no longer offers that check an expander it cannot fill, this is
+the only place the flow mentions them. Hovering either gives the reason.
 
 The **Run check** button stays disabled until papers are loaded. During the run a
 progress bar and the latest log line are shown. The bar is a true percentage only

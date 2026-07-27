@@ -1125,12 +1125,16 @@ def page_check():
     st.caption("Recommended. Confirms each venue against the official registry using the paper's "
                "DOI, which resolves matches the metadata alone leaves uncertain. Adds one lookup "
                "per paper, and is skipped automatically when there is no internet.")
-    with st.expander("🎯 Advanced — narrow the run, or add venues of your own"):
-        if checker.kind == "csv":
-            wl = bl = None
-            st.caption("Batch CSV classifies **every** record, so it takes neither list. "
-                       "Both are available on the fast and thorough checks.")
-        else:
+    # Not shown at all for Batch CSV, which takes neither list — batch_check.py
+    # has no --whitelist or --blacklist to give them to.  It used to be shown
+    # anyway, holding a note that said so, which made "Advanced — narrow the run,
+    # or add venues of your own" a control that promised two things and then
+    # apologised for having neither.  Step 4's summary already reports the same
+    # fact as a property of the run rather than as a dead end, which is where it
+    # belongs and where it does not cost a click to find.
+    wl = bl = None
+    if checker.kind != "csv":
+        with st.expander("🎯 Advanced — narrow the run, or add venues of your own"):
             # Named by what they do, with the familiar term kept as a secondary
             # identifier.  "Whitelist" alone is ambiguous here: it reads just as
             # easily as "venues I consider safe", which is the opposite of what
@@ -1157,30 +1161,41 @@ def page_check():
                 "ready" if items else "add papers first", "ok" if items else "wait",
                 learn="Reading what comes back")
     lists_na = checker.kind == "csv"
+    # Batch CSV's two "not used here" cells carry the reason as hover text. They
+    # are the only place the flow still mentions the lists for that check, now
+    # that Step 3 does not offer an expander it cannot fill.
+    na_why = (f"{checker.title} classifies every record it is given, so it has no scope "
+              "filter and no way to extend the list — batch_check.py takes neither. "
+              "Both are available on the fast and thorough checks.")
     summary = [
-        ("Check", f"{checker.icon} {checker.title}", ""),
+        ("Check", f"{checker.icon} {checker.title}", "", ""),
         ("Papers", f"{len(items)} loaded" if items else "none yet",
-         "" if items else "bl-sum-todo"),
-        ("Crossref", "On" if crossref else "Off", "" if crossref else "bl-sum-off"),
+         "" if items else "bl-sum-todo", ""),
+        ("Crossref", "On" if crossref else "Off", "" if crossref else "bl-sum-off", ""),
         ("Whitelist", "not used here" if lists_na else
          (f"{len(wl)} venue(s)" if wl else "—"),
-         "bl-sum-off" if lists_na or not wl else ""),
+         "bl-sum-off" if lists_na or not wl else "", na_why if lists_na else ""),
         ("Blacklist", "not used here" if lists_na else
          (f"{len(bl)} venue(s)" if bl else "—"),
-         "bl-sum-off" if lists_na or not bl else ""),
-        ("You get back", checker.output_label, ""),
+         "bl-sum-off" if lists_na or not bl else "", na_why if lists_na else ""),
+        ("You get back", checker.output_label, "", checker.output_note),
     ]
     if checker.needs_llm:
         # Only the check that spends tokens has a model, so only it is asked about.
         summary.insert(1, ("Model", model or "not configured",
-                           "" if model else "bl-sum-todo"))
+                           "" if model else "bl-sum-todo", ""))
+
+    def _cell(k, v, cls, why):
+        attrs = (f" class='bl-sum-v {cls} bl-help' title='{html.escape(why, quote=True)}'"
+                 if why else f" class='bl-sum-v {cls}'")
+        return f"<div><span class='bl-sum-k'>{k}</span><span{attrs}>{v}</span></div>"
+
     # Keyed so that the screenshot script can wait on this summary — the one place
     # that states which check a press of Run would actually start.
     with st.container(key="runsummary"):
-        st.markdown("<div class='bl-sum'>" + "".join(
-            f"<div><span class='bl-sum-k'>{k}</span>"
-            f"<span class='bl-sum-v {cls}'>{v}</span></div>"
-            for k, v, cls in summary) + "</div>", unsafe_allow_html=True)
+        st.markdown("<div class='bl-sum'>"
+                    + "".join(_cell(*row) for row in summary)
+                    + "</div>", unsafe_allow_html=True)
     run = st.button("▶ Run check", type="primary", key="run",
                     disabled=items is None,
                     help=None if items is not None else "Add papers in Step 2 first.")
