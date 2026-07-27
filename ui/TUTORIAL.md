@@ -1,45 +1,46 @@
-# Tutorial — the web app, end to end
+# Tutorial — how to use the web app
 
-> A guided path through the app: run it once on the bundled example corpus where
-> the expected answer is known, then run it on real papers. Every step states
-> what should appear on screen, so a run can be verified rather than assumed.
+> This guide goes through the app one step at a time.
 >
-> This walkthrough is also the app's **Tutorial** page — the file is rendered
-> there, so the two cannot drift apart. Installing and launching the app are
-> prerequisites rather than steps, so they are unnumbered below and the app's own
-> copy leaves them out. The reference companion is
-> [ui/README.md](README.md), which documents every control and every difference
-> from the command line; the project as a whole is described in the main
-> [README](../README.md).
+> It starts with the eight example papers included in the project. Their correct
+> result is already known, so a first run shows whether the installation works.
+> Your own papers come after that. Every step says what should appear on screen,
+> so a run can be checked instead of assumed.
+>
+> Every control is described in [ui/README.md](README.md). The project as a whole
+> is described in the main [README](../README.md).
 
-## What the tool answers
+## What this tool checks
 
-For each paper, one question: **is the journal or publisher it was published in
-listed on [Beall's List](https://beallslist.net) of potentially predatory
-venues?**
+For every paper, the app answers one question: **is the paper's journal or
+publisher on [Beall's List](https://beallslist.net)?**
 
-Three things follow from that, and they are worth stating before the first run:
+Beall's List names journals and publishers that may be *predatory* — they charge
+a publication fee but skip the quality checks a real journal carries out.
+Throughout this guide and in the report, the journal or publisher of a paper is
+called its **venue**.
 
-- The tool judges the **venue**, never the paper. A match means *"this venue
-  appears on the list"* — not that the research is bad.
-- Beall's List is unofficial, archived and contested, so a match is an
-  **allegation as of the snapshot date**. Uncertain matches are flagged for a
-  human instead of being asserted.
-- The input is **Semantic Scholar paper records** — JSON objects carrying a
-  `publicationVenue` — not links, titles or PDFs.
+Three points are worth knowing before the first run:
+
+- The app judges the **venue, not the paper**. A match means *this venue is on
+  the list*. It does not mean the research is bad.
+- Beall's List is unofficial and disputed, and the app uses a copy of it made on
+  one fixed date. A match is therefore **a claim, not proof**. Matches that are
+  not certain are marked for a person to look at, never stated as fact.
+- The input is **Semantic Scholar paper records** — JSON data with a
+  `publicationVenue` field. Links, titles and PDF files are not accepted.
 
 <!-- app:skip-start -->
 ## Before you start
 
-Installing the app and launching it are prerequisites rather than steps of the
-walkthrough, which is why they are not numbered — and why the app's own Tutorial
-page leaves them out. If you are reading this inside the app, you are already
-past both.
+Installing the app and starting it are not steps of the guide. That is why these
+two sections carry no number, and why the app's own Tutorial page leaves them
+out: anyone reading this page inside the app has already done both.
 
 ### Install, once
 
-Requires **Python 3.9 or newer** and, for setup only, an internet connection.
-From the repository root:
+You need **Python 3.9 or newer**, and an internet connection for the setup only.
+In the project folder, run one of these:
 
 ```powershell
 .\setup.ps1
@@ -49,13 +50,14 @@ From the repository root:
 bash ./setup.sh
 ```
 
-The script creates `.venv`, installs the dependencies, and copies `.env.example`
-to `.env`. **No API keys are required** for anything in this tutorial except
-[the thorough check](#4-the-thorough-check-optional). Re-running it is safe: an
-existing `.env` is never overwritten.
+The script creates `.venv`, installs everything the app needs, and copies
+`.env.example` to `.env`. **No API keys are needed** for any part of this guide
+except [the thorough check](#4-the-thorough-check-optional). Running the script
+again is safe: an existing `.env` is never overwritten.
 
-If PowerShell refuses to run the script (*"running scripts is disabled on this
-system"*), use `powershell -ExecutionPolicy Bypass -File .\setup.ps1`.
+If PowerShell refuses to run the script and says *"running scripts is disabled on
+this system"*, use this command instead:
+`powershell -ExecutionPolicy Bypass -File .\setup.ps1`.
 
 ### Start the app
 
@@ -67,139 +69,146 @@ system"*), use `powershell -ExecutionPolicy Bypass -File .\setup.ps1`.
 bash ./run_ui.sh
 ```
 
-The launcher installs Streamlit into the existing `.venv` on first use, then
-prints a URL — `http://localhost:8501`, unless that port is taken, in which case
-Streamlit selects the next free one. Open the URL that was printed, not the one
-in this sentence.
+The first time, this also installs Streamlit into `.venv`. It then prints a web
+address, usually `http://localhost:8501`. If that port is already in use,
+Streamlit takes the next free one — so open the address that was printed, not the
+one written here.
 
-The app is a **local, single-user** interface: no server, no authentication, no
-accounts. It runs the same scripts the command line runs, so both produce
-identical reports. Stopping the launcher (Ctrl+C) stops the app; closing the
-browser tab does not.
+The app runs **on one computer, for one person**: no server, no login, no
+accounts. It runs the same scripts as the command line, so both produce the same
+report. Pressing Ctrl+C in the terminal stops the app. Closing the browser tab
+does not.
 <!-- app:skip-end -->
 
-## 1 · A first run, on the example corpus
+## 1 · First run, with the example papers
 
-The repository ships an eight-record corpus whose expected result is published,
-so a fresh installation can be verified without supplying real data. It exercises
-every verdict except `out_of_scope`.
+The project includes eight example papers whose correct result is written down in
+advance, so a new installation can be tested without any real data. Together they
+produce every verdict except `out_of_scope`.
 
-![The app after startup, with the example corpus loaded](static/ui-main.png)
+![The app after startup, with the example papers loaded](static/ui-main.png)
 
-The sidebar holds the page links — **Run a check** and **Tutorial** — one
-sentence on what the tool answers, and an **Environment** panel whose heading
-names the configured LLM provider. That panel matters only for the thorough
-check, so it stays collapsed until it is needed. The app follows the browser's
-light or dark setting, and the **⚙** in the top right corner overrides it.
+The sidebar holds three things: the links to the two pages (**Run a check** and
+**Tutorial**), one line on what the app does, and an **Environment** panel. The
+title of that panel names the configured LLM provider. It only matters for the
+thorough check, so it stays closed until then. The app follows the light or dark
+setting of the browser, and the **⚙** button in the top right corner overrides
+it.
 
-Every step carries a header bar — a numbered badge, the title, an ⓘ linking back
-into this walkthrough, and a pill on the right naming that step's live answer.
-The pill is green when the step is settled and amber when it is what holds the
-run up, so the four of them read as a checklist of what still has to be decided.
+Every step has a header bar: a number, the title, an ⓘ that links to the matching
+section of this guide, and a label on the right with that step's current answer.
+The label is green when the step is finished, and orange when the step is what
+the run is still waiting for. Reading the four labels from top to bottom shows
+what still has to be decided.
 
-**Step 1 · Choose a check.** The three checks are laid out as a comparison table,
-one row each, with a column per attribute they differ on: **Cost**, **Records**
-and **Returns**. Hover any of those pills for the detail behind it — which file
-comes back, what a run is charged for, whether repeated records are merged.
-Select **⚡ Fast check** — rules only, no API keys, no cost. The selected row is
-tinted and its button turns solid; the rest of the page is unaffected by the
-choice.
+**Step 1 · Choose a check.** The three checks are shown as a comparison table,
+one per row, with a column for each thing they differ in: **Cost**, **Records**
+and **Returns**. Hold the mouse over any of those labels for the detail behind it
+— which file comes back, what a run costs, and whether repeated papers are
+merged. Select **⚡ Fast check**: rules only, no API key, no cost. The selected
+row is highlighted and its button becomes solid. Nothing else on the page
+changes.
 
-**Step 2 · Provide the papers.** The two ways of supplying your own papers are
-*Upload a file* and *Paste JSON*. Below them is **📦 Load the example corpus**,
-which is not a third source: it fills the paste box with the bundled records, so
-what is about to be checked is on screen and editable. Press it. The app confirms
-`✅ Loaded 8 paper(s) — ready to run`, and below that a collapsed **Input data
-quality** panel reads **1 of 8 record(s) flagged** — record 6, which deliberately
-carries no venue information at all. That panel is an offline inspection of the
-metadata *before* anything runs; it does not block the run, and it is
-downloadable as `input_data_quality.xlsx`. Open it to see which record and why.
+**Step 2 · Provide the papers.** There are two ways to supply your own papers:
+*Upload a file* and *Paste JSON*. Below them is **📦 Load the example corpus**.
+This is not a third way — it fills the paste box with the eight example papers,
+so what is about to be checked is on screen and can be edited. Press it. The app
+answers `✅ Loaded 8 paper(s) — ready to run`. Under that, a closed **Input data
+quality** panel reads **1 of 8 record(s) flagged**. That is paper 6, which has no
+venue information at all, on purpose. The panel inspects the data *before*
+anything runs, without using the internet. It does not stop the run, and it can
+be downloaded as `input_data_quality.xlsx`. Open it to see which paper was
+flagged and why.
 
-**Step 3 · Options.** Leave them alone. The one control in the open is
-**Crossref**, on by default, which is the recommended setting; the whitelist and
-blacklist are folded into **Advanced** and are empty. (Selecting the thorough
-check adds a **Model / deployment** picker here — see
-[§4](#4-the-thorough-check-optional).)
+**Step 3 · Options.** Change nothing here. The only option shown directly is
+**Crossref**, which is on by default and should stay on. The whitelist and the
+blacklist are inside **Advanced**, and both are empty. (Choosing the thorough
+check adds a **Model / deployment** list here as well — see
+[section 4](#4-the-thorough-check-optional).)
 
-**Step 4 · Run.** A labelled summary restates what is about to run — the check,
-how many papers, whether Crossref is on, which lists are in force, and what will
-come back. Press **▶ Run check**. A progress bar and the latest log line appear;
-the fast check has no per-item counter, so the bar pulses rather than filling.
-Eight records complete in a few seconds.
+**Step 4 · Run.** A labelled summary repeats what is about to happen: which
+check, how many papers, whether Crossref is on, which extra lists are used, and
+what file comes back. Press **▶ Run check**. A progress bar and the newest log
+line appear. The fast check does not count items one by one, so the bar moves
+back and forth instead of filling up. Eight papers finish in a few seconds.
 
-### What should come back
+### What you should see
 
-A success banner, a **download button** for `bealls_list_results.xlsx`, and a
-preview of the workbook's first sheet. Verified against the snapshot scraped
-2026-06-10 — later snapshots may reclassify individual venues — the eight records
-resolve as:
+A green success message appears, together with a **download button** for
+`bealls_list_results.xlsx` and a preview of the workbook's first sheet. The eight
+papers come out as follows. These results were checked against the list copy made
+on 2026-06-10; a newer copy may give a different answer for some venues.
 
-| # | What the record demonstrates | Crossref on (default) | Crossref off |
+| # | What this paper shows | Crossref on (default) | Crossref off |
 |---|---|---|---|
-| 1 | The venue's own website is a listed site — the strongest signal. | `on_list` | `on_list` |
-| 2 | A mainstream journal that is not on the list. | `clean` | `clean` |
-| 3 | A preprint: no journal publisher to check. | `no_venue` | `no_venue` |
-| 4 | The venue *name* matches, but the paper's own website does not corroborate it. | `on_list` | `review` |
-| 5 | An established journal whose DOI confirms the venue. | `clean` | `clean` |
+| 1 | The venue's own website is a listed site. This is the strongest signal. | `on_list` | `on_list` |
+| 2 | A well-known journal that is not on the list. | `clean` | `clean` |
+| 3 | A preprint: there is no journal publisher to check. | `no_venue` | `no_venue` |
+| 4 | The venue *name* matches, but the paper's own website does not confirm it. | `on_list` | `review` |
+| 5 | A well-established journal whose DOI confirms the venue. | `clean` | `clean` |
 | 6 | No venue information at all. | `no_venue` | `no_venue` |
-| 7 | A vanity-press match — a weak list, so never asserted. | `review` | `review` |
-| 8 | An alternate web link points at a listed site; the canonical one does not. | `on_list` | `review` |
+| 7 | A match on the vanity-press list (publishers that print whatever an author pays for). That list is weak evidence, so the result is never certain. | `review` | `review` |
+| 8 | A second web address points to a listed site; the main one does not. | `on_list` | `review` |
 
-Totals with Crossref: 3 `on_list`, 1 `review`, 2 `clean`, 2 `no_venue`. Those
-numbers are the installation check — if they match, the pipeline works end to
-end, Crossref included. The full commentary is in
-[examples/README.md](../examples/README.md).
+With Crossref on, the totals are 3 `on_list`, 1 `review`, 2 `clean` and 2
+`no_venue`. Those numbers are the installation test: if they match, the whole
+process works from end to end, Crossref included. Each paper is explained in full
+in [examples/README.md](../examples/README.md).
 
-## 2 · Reading what comes back
+## 2 · Understanding the report
 
 ![A finished run, with the workbook preview](static/ui-report.png)
 
-The preview shows the **first 40 rows of the first sheet**; the workbook itself
-carries five sheets, and the download button hands over the whole file.
+The preview on screen shows the **first 40 rows of the first sheet**. The
+workbook itself has five sheets, and the download button gives you the whole
+file.
 
-| Sheet | Contents |
+| Sheet | What is in it |
 |---|---|
-| **Results** | Every paper, in corpus order, coloured by status, with the evidence behind each verdict. |
-| **Flagged only** | Just the `on_list` and `review` rows, `on_list` first. The thorough check adds its column here. |
-| **Data quality** | Papers whose record warranted a warning. Absent entirely when nothing was flagged — that is a clean result, not a fault. |
-| **Summary** | Counts per status, per match signal and per list, plus run metadata. |
-| **Legend** | A plain-language data dictionary for every column and value. |
+| **Results** | Every paper, in the order supplied, coloured by status, with the evidence behind each verdict. |
+| **Flagged only** | Only the `on_list` and `review` papers, `on_list` first. The thorough check adds its column here. |
+| **Data quality** | Papers whose data caused a warning. The sheet is missing when nothing was flagged, which means the data was fine, not that something went wrong. |
+| **Summary** | How many papers per status, per kind of match and per list, plus details of the run. |
+| **Legend** | An explanation of every column and every value, in plain words. |
 
-Every paper has exactly one **status**:
+Every paper gets exactly one **status**:
 
-| Status | Colour | Meaning |
+| Status | Colour | What it means |
 |---|---|---|
-| `on_list` | 🔴 red | Strong match — the venue's own website, an exact ISSN, or a corroborated exact name, on a core list. |
-| `review` | 🟠 orange | Weak or uncertain match. Needs a human; not an accusation. |
+| `on_list` | 🔴 red | Strong match: the venue's own website, an exact ISSN, or an exact name confirmed by the website, on one of the main lists. |
+| `review` | 🟠 orange | Weak or unclear match. A person has to decide. This is not an accusation. |
 | `clean` | 🟢 green | The venue was identified and is **not** on the list. |
-| `no_venue` | ⚪ grey | A preprint or a record with no venue — nothing to check. |
-| `out_of_scope` | 🔵 blue | Only with a whitelist: the venue was not in it, so it was skipped. |
-| `error` | ⚫ dark | The record could not be processed; the row states why. |
+| `no_venue` | ⚪ grey | A preprint, or a record with no venue. There is nothing to check. |
+| `out_of_scope` | 🔵 blue | Happens only with a whitelist: the venue was not in it, so the paper was skipped. |
+| `error` | ⚫ black | The paper could not be processed. The row says why. |
 
-Two properties of the workbook regularly surprise a first reader: **each paper
-occupies a four-row merged block** under a two-row header, so the row count is
-not the paper count; and `clean` papers can appear on the *Data quality* sheet,
-because the Crossref audit trail is written there as well.
+Two things about the workbook surprise most people the first time:
 
-Below the result, a **Run log** expander holds the check's console output. It
-opens automatically when a run fails.
+- **One paper takes four rows**, joined into a single block, below a header of
+  two rows. The number of rows is therefore not the number of papers.
+- **`clean` papers can appear on the *Data quality* sheet**, because the record
+  of what Crossref answered is written there as well.
 
-## 3 · Running the check on real papers
+Below the result, a **Run log** section holds the text output of the check. It
+opens by itself when a run fails.
 
-Real input is a JSON file of Semantic Scholar records, obtained from the
-[Semantic Scholar API](https://api.semanticscholar.org) or exported from a
-literature-search pipeline. In Step 2, select **Upload a file** and drop the
-`.json` onto the box (or use its Browse button), or select **Paste JSON** and
-paste it directly. Accepted shapes:
+## 3 · Checking your own papers
+
+Your own papers go in as a JSON file of Semantic Scholar records. Such a file can
+come from the [Semantic Scholar API](https://api.semanticscholar.org), or be
+exported from a literature-search tool. In Step 2, choose **Upload a file** and drag the `.json`
+file onto the box (or use its Browse button), or choose **Paste JSON** and paste
+the text directly. Two shapes are accepted:
 
 - a **JSON list** of paper objects, or
-- a **single** paper object, which is wrapped into a list automatically.
+- a **single** paper object, which the app puts into a list by itself.
 
-`.jsonl` is **not** accepted in the app — convert it to an array first, or use
-`batch_check.py` on the command line, which reads `.jsonl`, `.ndjson` and `.json`.
-Streamlit's upload limit is 200 MB per file.
+`.jsonl` files are **not** accepted in the app. Convert such a file into a JSON
+list first, or use `batch_check.py` on the command line, which reads `.jsonl`,
+`.ndjson` and `.json`. Streamlit accepts uploads of up to 200 MB per file.
 
-The fields that drive the check are the venue ones. A minimal record:
+The check only uses the fields that describe the venue. A record with the minimum
+needed:
 
 ```json
 {
@@ -217,113 +226,125 @@ The fields that drive the check are the venue ones. A minimal record:
 }
 ```
 
-Records repeated across a corpus are counted once — deduplicated on `paperId`,
-falling back to `title`. Verdicts are only as good as this metadata, which is why
-the **Input data quality** panel appears before the run and why Crossref
-cross-checking is on by default.
+A paper that appears more than once is counted once. Repeats are recognised by
+`paperId`, or by `title` when there is no `paperId`. A verdict can only be as
+good as this data, which is why the **Input data quality** panel appears before
+the run, and why the Crossref check is on by default.
 
-Expect a real run to take **minutes rather than seconds**: with Crossref enabled
-the check contacts the registry once per distinct DOI. Setting `CROSSREF_MAILTO`
-in `.env` moves those lookups into Crossref's faster "polite pool".
+A real run takes **minutes rather than seconds**. With Crossref on, the app
+contacts the registry once for each different DOI. Setting `CROSSREF_MAILTO` in
+`.env` moves those requests into Crossref's faster "polite pool".
 
 ## 4 · The thorough check (optional)
 
-The thorough check runs the fast check, then asks an LLM for a **keep / exclude /
-uncertain** recommendation on each `review` venue. It never overrides a
-deterministic verdict; the recommendation appears as an **LLM review** column on
-the *Flagged only* sheet of a second workbook, `bealls_llm_results.xlsx`.
+The thorough check first runs the fast check. It then asks an LLM (a large
+language model, of the kind behind ChatGPT) for a **keep / exclude / uncertain**
+recommendation on every venue with the status `review`. It never overrides a
+verdict the rules produced. The recommendation appears as an **LLM review**
+column on the *Flagged only* sheet of a second workbook,
+`bealls_llm_results.xlsx`.
 
-It is the only part of the tool that needs credentials and the only part that
-costs money. Before using it:
+This is the only part of the app that needs an account with an LLM provider, and
+the only part that costs money. Before using it:
 
-1. Set `LLM_PROVIDER` in `.env` — `azure` (the default), `openai`, `anthropic`,
-   `mistral`, `gemini` or `ollama` (a local server: no key, no cost).
-2. Fill in that provider's key, and put the model name in
-   `AZURE_OPENAI_DEPLOYMENT` — for **every** provider, not just Azure. The
-   variable name is historical.
+1. Set `LLM_PROVIDER` in `.env` to `azure` (the default), `openai`, `anthropic`,
+   `mistral`, `gemini`, or `ollama` (a model running on your own machine: no key,
+   no cost).
+2. Fill in the key for that provider, and put the model name in
+   `AZURE_OPENAI_DEPLOYMENT` — for **every** provider, not only Azure. The name
+   of that setting is historical.
 3. Restart the app. `.env` is read once, at startup.
 
-`AZURE_OPENAI_DEPLOYMENT` takes a bare name, a comma-separated list or a JSON
-array. **Every name in it appears in Step 3's Model / deployment picker**, and
-the run uses whichever is selected there — so switching between configured
-deployments no longer means editing `.env` and restarting. Step 4's summary and
-the readiness line under Step 1 both name the model that will actually be used.
+`AZURE_OPENAI_DEPLOYMENT` accepts one name, several names separated by commas, or
+a JSON list. **Every name in it appears in Step 3's Model / deployment list**, and
+the run uses the one selected there. Switching between configured models
+therefore does not mean editing `.env` and restarting the app. Step 4's summary
+and the line under Step 1 both name the model that will actually be used.
 
-Selecting the check verifies that configuration and reports a missing key or
-endpoint by name, *before* a run is paid for. The verdict is a configuration
-check, not a live call: it confirms that the values are present, not that they
-are valid — and it says nothing about whether the selected deployment exists.
+Selecting this check tests the configuration and names any key or web address
+that is missing, *before* any money is spent. The test only confirms that the
+values are filled in. It does not confirm that they are correct, and it says
+nothing about whether the selected model exists.
 
-Cost scales with the number of **distinct `review` venues**, not papers — the
-pass groups the rows by venue and makes one call per group. The app assesses
-every one of them; there is no `--limit` in the browser. For a capped trial run,
-use the command line: `python src/bealls_list_check/bealls_llm_check.py --limit 50`.
+The cost depends on the number of **different venues with the status `review`**,
+not on the number of papers: the rows are grouped by venue, and each group costs
+one request. The app checks all of them; there is no limit setting in the
+browser. For a small trial run, use the command line:
+`python src/bealls_list_check/bealls_llm_check.py --limit 50`.
 
 ## 5 · Batch CSV, for scripts and servers
 
 ![Batch CSV mode, with colour-coded statuses](static/ui-batch.png)
 
-The third check returns `SS-ID, DOI, Status` — **one row per input record, in
-input order, with no deduplication** — plus a colour-coded Excel twin, since a
-CSV cannot carry colour. It classifies every record and therefore takes no
-whitelist or blacklist — Step 3 shows it no **Advanced** section at all, and
-Step 4's summary reads `not used here` against both, with the reason on hover.
+The third check returns three columns: `SS-ID`, `DOI` and `Status`. There is
+**one row per supplied record, in the order supplied, and nothing is merged**.
+The same table also comes back as an Excel file with colours, because a CSV file
+cannot hold colour.
 
-A workbook result is followed by **Also produce the batch CSV**, which produces
-the same file without returning to Step 1. It is a button rather than an
-automatic by-product because the CSV cannot be derived from the workbook: the
-workbook is deduplicated while the CSV keeps every record, so producing it means
-running the deterministic pass — and its Crossref lookups — a second time.
+This check classifies every record, so it takes neither a whitelist nor a
+blacklist. Step 3 therefore shows no **Advanced** section for it, and Step 4's
+summary reads `not used here` for both. The reason appears when the mouse is over
+those words.
 
-## 6 · Narrowing or extending the list
+After a run that produced a workbook, a button **Also produce the batch CSV**
+appears. It makes the same CSV file without going back to Step 1. It is a button
+rather than something automatic because the CSV cannot be made from the workbook:
+the workbook merges repeated papers, while the CSV keeps every record. Producing
+it therefore means running the rule-based check — and its Crossref lookups — a
+second time.
 
-Step 3's control in the open is the **Crossref** checkbox, on by default.
-Clearing it forces a fully offline run — faster, and measurably less certain:
-records 4 and 8 of the example corpus fall back from `on_list` to `review`
-without it.
+## 6 · Crossref, and your own venue lists
 
-Under **Advanced** are two optional boxes, available on the fast and thorough
-checks:
+The one option shown directly in Step 3 is the **Crossref** checkbox, on by
+default. Crossref is the official registry of published articles; the app looks
+each paper up there by its DOI to confirm the venue. Switching it off forces a
+fully offline run: faster, but the results are less certain. Example papers 4 and
+8 fall back from `on_list` to `review` without it.
 
-- **Only check these venues** *(whitelist)* — restricts the run. A paper from any
-  venue not listed is reported as `out_of_scope` rather than checked.
-- **Also treat these venues as predatory** *(blacklist)* — extends the list, for
-  this run only.
+Under **Advanced** are two optional boxes, available on the fast check and the
+thorough check:
 
-Both take the same JSON the command line takes as a file, pasted directly:
+- **Only check these venues** *(whitelist)* — narrows the run. A paper from a
+  venue that is not in the box is reported as `out_of_scope` instead of being
+  checked.
+- **Also treat these venues as predatory** *(blacklist)* — adds venues to the
+  list, for this run only.
+
+Both boxes take the same JSON that the command line reads from a file, pasted
+directly:
 
 ```json
 [{ "name": "IEEE", "domain": "ieee.org" }, "Nature"]
 ```
 
-A plain string is matched by name; an object may carry `name` and/or `domain`.
-The format is documented in full in
+A plain text entry is matched by name. An object can carry a `name`, a `domain`,
+or both. The format is described in full in
 [user_lists/README.md](../src/bealls_list_check/user_lists/README.md).
 
-## 7 · Troubleshooting
+## 7 · Common problems
 
-| Symptom | Cause and remedy |
+| Problem | Cause and solution |
 |---|---|
-| `.\setup.ps1` reports *"running scripts is disabled"* | PowerShell blocks unsigned scripts. Run `powershell -ExecutionPolicy Bypass -File .\setup.ps1`. |
-| The launcher reports *"Virtual env not found"* | `run_ui` uses the `.venv` that `setup` creates. Run the setup script first. |
-| The browser shows nothing at `localhost:8501` | The port was taken and Streamlit chose another. Use the URL the launcher printed. |
-| **▶ Run check** stays greyed out | No papers are loaded. Complete Step 2; the button enables once the app confirms the count. |
-| An upload is rejected as invalid JSON | The file must be a JSON list or a single object. `.jsonl` — one object per line — is not accepted here. |
-| The thorough check warns about configuration | The named `.env` values are empty. Fill them in and **restart the app**; `.env` is read once, at startup. |
-| A run appears to hang | There is no cancel and no timeout, and the deterministic pass reports only after each corpus file completes. A large corpus with Crossref on is slow, not stuck. |
-| The report is written to a timestamped file | The default workbook was locked, usually because it is open in Excel. The run saves to `bealls_list_results_YYYYMMDD_HHMMSS.xlsx` instead, so nothing is lost. |
-| A result belongs to a different check than the one selected | Results survive a change of selection and stay labelled with the check that produced it. Run again to refresh it. |
-| Two runs return each other's workbook | Results go to one shared folder under a fixed name. Run one check at a time — one tab, and not alongside the command line. |
-| The status preview has no colour | The coloured table needs pandas, which arrives as a Streamlit dependency. The table still renders without it. |
+| `.\setup.ps1` says *"running scripts is disabled"* | PowerShell blocks scripts that are not signed. Run `powershell -ExecutionPolicy Bypass -File .\setup.ps1` instead. |
+| The start script says *"Virtual env not found"* | `run_ui` uses the `.venv` folder that `setup` creates. Run the setup script first. |
+| The browser shows nothing at `localhost:8501` | The port was already in use, so Streamlit took another one. Use the address the launcher printed. |
+| **▶ Run check** stays grey | No papers are loaded. Finish Step 2; the button switches on once the app confirms how many papers there are. |
+| An upload is refused as invalid JSON | The file has to be a JSON list or a single object. `.jsonl` — one object per line — is not accepted here. |
+| The thorough check warns about the configuration | The `.env` values it names are empty. Fill them in and **restart the app**: `.env` is read once, at startup. |
+| A run looks stuck | There is no cancel button and no time limit, and the rule-based check reports only after each input file is finished. Checking many papers with Crossref on is slow, not stuck. |
+| The report file name ends in a date and time | The normal file was locked, usually because it is open in Excel. The run saves to `bealls_list_results_YYYYMMDD_HHMMSS.xlsx` instead, so nothing is lost. |
+| The result belongs to a different check than the selected one | A result stays on screen when the selection changes, and keeps the name of the check that produced it. Run again to replace it. |
+| Two runs return each other's file | Results go to one shared folder under fixed names. Run one check at a time — one browser tab, and not alongside the command line. |
+| The status preview has no colour | The coloured table needs pandas, which is normally installed together with Streamlit. Without it the table still works, only without colour. |
 
 ## Where to go next
 
 - [ui/README.md](README.md) — the reference: every control, both downloads, and
   the table of differences between the app and the command line.
-- [README.md](../README.md) — the project: verdicts, the workbook, the snapshot,
-  and the limitations that govern responsible use.
-- [examples/README.md](../examples/README.md) — the example corpus and the rules
-  each of its records demonstrates.
+- [README.md](../README.md) — the project: the verdicts, the workbook, the list
+  copy, and the limits to keep in mind when using the results.
+- [examples/README.md](../examples/README.md) — the example papers, and the rule
+  each one demonstrates.
 - [match/README.md](../src/bealls_list_check/match/README.md) and
   [resolve/README.md](../src/bealls_list_check/resolve/README.md) — how a verdict
   is actually reached.

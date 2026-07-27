@@ -153,7 +153,7 @@ readable in the app and on GitHub. It is not rendered verbatim:
   for navigation: a contents list is read down a column rather than across a
   wrapped line, the chips re-flowed at every window width, and each entry's
   target was only as big as its text. It lists **every** level-2 section, not
-  just the numbered ones; *What the tool answers* and *Where to go next* are as
+  just the numbered ones; *What this tool checks* and *Where to go next* are as
   jumpable as the seven steps between them, and they carry a dot in the number's
   place so the column still lines up. Sections inside the skipped block are
   excluded, so no row can point at a heading the app does not render.
