@@ -136,9 +136,6 @@ already taken, in which case Streamlit picks the next free one.
 
 ![The web app, with papers loaded and the input data-quality panel open](ui/screenshots/ui-main.png)
 
-> This screenshot predates the Step 1 comparison table described below, and is
-> due to be retaken.
-
 **Step 1 · Choose a check.** The three are laid out as a comparison table — one
 row each, one column per attribute they differ on — so that they can be weighed
 against each other before one is selected:
