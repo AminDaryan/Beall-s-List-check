@@ -14,8 +14,9 @@ deployment name is not baked into a committed image, then point this at it::
     python ui/screenshots/shoot.py http://localhost:8505 ui/screenshots
 
 Captured at deviceScaleFactor=2, so a 1500-wide viewport yields a 3000-wide
-file. Only the free checks are exercised -- the thorough check costs tokens and
-is never run here.
+file. Captured light: the app follows the browser's colour scheme, and a
+screenshot has to pick one. Only the free checks are exercised -- the thorough
+check costs tokens and is never run here.
 """
 
 import sys
@@ -49,14 +50,18 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 1500, "height": 1320},
+        # Tall enough for the whole form -- the check table down to the input
+        # data-quality panel -- which is what ui-main.png is captioned as showing.
+        page = browser.new_page(viewport={"width": 1500, "height": 1750},
                                 device_scale_factor=2, color_scheme="light")
         page.goto(BASE, wait_until="networkidle")
         page.wait_for_selector("text=Choose a check", timeout=60_000)
         settle(page)
 
         # ── 1. The whole form: the check table, papers loaded, quality panel ──
-        page.get_by_text("Example corpus", exact=True).click()
+        # The example corpus is not one of the input sources; it is a button that
+        # fills the paste box, which is what the app then reads.
+        page.get_by_role("button", name="Load the example corpus").click()
         page.wait_for_selector("text=Loaded 8 paper(s)", timeout=60_000)
         settle(page)
         page.screenshot(path=str(OUT / "ui-main.png"))

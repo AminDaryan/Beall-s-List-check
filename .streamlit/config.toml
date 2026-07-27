@@ -1,0 +1,38 @@
+# Theme for the Beall's List check app.
+#
+# Colours are taken from the Tailwind CSS palette (https://tailwindcss.com/docs/colors):
+# an established, systematically generated, contrast-tested ramp, rather than
+# hand-picked hexes.  Neutrals are *slate*; the accent is *blue*.  The app's own
+# stylesheet (ui/app.py, _TOKENS) restates the same values as CSS variables and
+# uses nothing outside them, so the widgets Streamlit paints and the ones the app
+# paints belong to one palette.
+#
+# The accent is blue rather than Streamlit's default red (#FF4B4B), and that is a
+# correctness point rather than a preference: red is a *verdict* in this tool.
+# `on_list` — the venue appears on Beall's List — is red in the workbook, in the
+# status chips and in the result preview.  An accent that was also red made the
+# page read as "flagged" in places where it only meant "selected".  Blue carries
+# no verdict here, so the two can never be confused.
+#
+# Both themes are declared, so the app keeps following the browser's
+# `prefers-color-scheme` — the same signal the app's CSS variables key off.  A
+# `[theme]` block with no `[theme.dark]` would pin the app to light.
+
+[theme]
+base                      = "light"
+primaryColor              = "#2563EB"   # blue-600
+backgroundColor           = "#FFFFFF"
+secondaryBackgroundColor  = "#F1F5F9"   # slate-100
+textColor                 = "#1E293B"   # slate-800
+linkColor                 = "#1D4ED8"   # blue-700
+borderColor               = "#E2E8F0"   # slate-200
+baseRadius                = "medium"
+
+[theme.dark]
+primaryColor              = "#60A5FA"   # blue-400 — lifted for a dark background
+backgroundColor           = "#0F172A"   # slate-900
+secondaryBackgroundColor  = "#1E293B"   # slate-800
+textColor                 = "#F1F5F9"   # slate-100
+linkColor                 = "#93C5FD"   # blue-300
+borderColor               = "#334155"   # slate-700
+baseRadius                = "medium"

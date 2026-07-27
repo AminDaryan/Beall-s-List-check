@@ -162,20 +162,23 @@ against each other before one is selected:
 supplied, in the order supplied. In the app, each of those cells is a pill whose
 hover text carries the detail.
 
-**Step 2 · Provide the papers.** Upload a `.json` file — a list of Semantic
-Scholar records, or a single record — or paste the JSON directly, or select the
-bundled [example corpus](examples/README.md) to try the app without supplying
-data. (`.jsonl` is not accepted here; convert it to an array, or use the batch
-command line.) An **Input data quality** panel appears as soon as the papers
+**Step 2 · Provide the papers.** Drop a `.json` file on the upload box — a list
+of Semantic Scholar records, or a single record — or paste the JSON directly.
+(`.jsonl` is not accepted here; convert it to an array, or use the batch command
+line.) **📦 Load the example corpus** below the box fills the paste area with the
+bundled [example corpus](examples/README.md), for trying the app without
+supplying data. An **Input data quality** panel appears as soon as the papers
 load: an offline check of the metadata *before* anything runs, downloadable as
 `input_data_quality.xlsx`.
 
-**Step 3 · Options.** The whitelist and blacklist are pasted as JSON here rather
-than passed as file paths, and apply to the Fast and Thorough checks only —
-Batch CSV classifies every record. One checkbox controls Crossref; clearing it is
-equivalent to `--crossref off`.
+**Step 3 · Options.** One checkbox controls **Crossref**; clearing it is
+equivalent to `--crossref off`. Under **Advanced**, a whitelist (*only check
+these venues*) and a blacklist (*also treat these venues as predatory*) are
+pasted as JSON rather than passed as file paths, and apply to the Fast and
+Thorough checks only — Batch CSV classifies every record.
 
-**Step 4 · Run.** A row of pills restates what is about to run, and the button
+**Step 4 · Run.** A labelled summary restates what is about to run — the check,
+how many papers, Crossref, the two lists, and what comes back — and the button
 stays disabled until papers are loaded. A workbook result is followed by **Also
 produce the batch CSV**, which adds the machine-readable file without a second
 trip through Step 1 — it re-runs the deterministic pass, because the CSV keeps

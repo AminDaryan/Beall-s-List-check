@@ -97,25 +97,29 @@ def llm_status():
 
 
 def sidebar():
-    """Sidebar content, below the page links: orientation first, settings last.
+    """Sidebar content, below the page links: what this is, then the environment.
 
-    What the tool does is the one thing every visitor needs, so it is stated
-    outright.  The LLM configuration is a detail of a single check — and is
-    reported again, in context, when that check is selected — so it is demoted to
-    a collapsed expander rather than given the sidebar's headline.
+    Kept short on purpose.  The sidebar is on every page, so it holds only what
+    is true on every page: what the tool answers, where the instructions are, and
+    what the machine is configured with.  What used to be here besides — how the
+    three checks differ, what shape the input takes — now lives where it is
+    acted on, in Step 1's comparison table and Step 2's caption, rather than
+    being said twice.
+
+    The **Environment** panel comes before Step 1 simply by being in the sidebar,
+    and its heading names the provider so the common question is answered without
+    opening it.  It is not promoted into the flow itself: it applies to one of
+    the three checks, and that check reports its own readiness in Step 1 the
+    moment it is selected.
     """
-    st.sidebar.markdown("**What this tool does**")
+    st.sidebar.markdown("### Beall's List check")
     st.sidebar.caption(
-        "Checks whether each paper's **journal or publisher is on Beall's List** of "
-        "*potentially* predatory venues. A match means *appears on the list* — "
-        "**not** that the paper is bad. Input is **Semantic Scholar paper records** "
-        "(each with a `publicationVenue`), not GitHub links.")
-    st.sidebar.caption("**Fast** = rules only (no LLM). **Thorough** = the fast check plus an "
-                       "LLM recommendation for each `review` paper. **Batch CSV** = a "
-                       "machine-readable CSV, one row per input record, for scripts.")
-    st.sidebar.caption("First time here? Open the **Tutorial** page above.")
-    with st.sidebar.expander("⚙️ Environment", expanded=False):
-        prov = os.getenv("LLM_PROVIDER", "azure")
+        "Is a paper's **journal or publisher** on Beall's List of *potentially* "
+        "predatory venues? A match means the **venue appears on the list** — not "
+        "that the paper is bad.")
+    st.sidebar.caption("📘 New here? Open the **Tutorial** page above.")
+    prov = os.getenv("LLM_PROVIDER", "azure")
+    with st.sidebar.expander(f"⚙️ Environment · `{prov}`", expanded=False):
         st.write(f"**LLM provider:** `{prov}`")
         model = os.getenv("AZURE_OPENAI_DEPLOYMENT", "(unset)")
         st.write(f"**Model / deployment:** `{model}`")
@@ -126,37 +130,59 @@ def sidebar():
                    "editing it.")
 
 
+def _load_example_corpus():
+    """Put the bundled example corpus into the paste box (an ``on_click``).
+
+    The example is not a way of *providing* papers, so it is not offered
+    alongside "Upload a file" and "Paste JSON" — those two are your data, and it
+    is not.  It fills the paste box instead, which needs no extra state, leaves
+    the flow in a shape the user could have reached by hand, and has the side
+    benefit of showing exactly what a corpus looks like.
+
+    Widget state may be assigned from a callback: this runs before the rerun that
+    rebuilds the widgets.
+    """
+    try:
+        st.session_state["paste"] = _EXAMPLE_CORPUS.read_text(encoding="utf-8")
+    except OSError as exc:
+        notify(f"Could not read the example corpus: {exc}", icon="🛑")
+        return
+    st.session_state["mode"] = "Paste JSON"
+
+
 def get_papers():
     """Render the input widgets and return a parsed list of papers, or None.
 
     The widget keys are deliberately independent of the selected check, so
-    switching between the three cards in Step 1 keeps the loaded papers.
+    switching between the three rows in Step 1 keeps the loaded papers.
     """
-    st.caption("Input format: Semantic Scholar **paper records** (with `publicationVenue`). "
-               "Upload a JSON **list**, or a **single** paper object.")
+    st.caption("Input format: Semantic Scholar **paper records** — JSON objects carrying a "
+               "`publicationVenue`, not links or titles. A **list** of them, or a "
+               "**single** one.")
     with st.expander("See expected format"):
         st.code(_S2_EXAMPLE, language="json")
-    sources = ["Upload file", "Paste JSON"]
-    if _EXAMPLE_CORPUS.is_file():
-        sources.append("Example corpus")
-    mode = st.radio("Provide papers via", sources, horizontal=True, key="mode")
+    mode = st.radio("Provide papers via", ["Upload a file", "Paste JSON"],
+                    horizontal=True, key="mode")
     raw = None
-    if mode == "Upload file":
-        up = st.file_uploader("papers.json", type=["json"], key="file")
+    if mode == "Upload a file":
+        up = st.file_uploader("Papers file (.json)", type=["json"], key="file",
+                              label_visibility="collapsed")
         if up is not None:
             raw = up.getvalue().decode("utf-8")
-    elif mode == "Paste JSON":
-        raw = st.text_area("Paste JSON here", height=160, key="paste",
-                           placeholder=_S2_EXAMPLE)
     else:
-        st.caption(f"Using the bundled `examples/{_EXAMPLE_CORPUS.name}` — eight synthetic "
-                   "records, exercising every verdict except `out_of_scope`. The expected "
-                   "result is tabulated in `examples/README.md`.")
-        try:
-            raw = _EXAMPLE_CORPUS.read_text(encoding="utf-8")
-        except OSError as e:
-            st.error(f"Could not read the example corpus: {e}")
-            return None
+        raw = st.text_area("Paste JSON here", height=180, key="paste",
+                           placeholder=_S2_EXAMPLE, label_visibility="collapsed")
+
+    # The demo, kept clearly apart from the two real sources above.
+    if _EXAMPLE_CORPUS.is_file():
+        left, right = st.columns([2.4, 7.6], vertical_alignment="center")
+        left.button("📦 Load the example corpus", key="loadexample", width="stretch",
+                    on_click=_load_example_corpus)
+        right.caption(f"No data to hand? Fills the paste box with `examples/"
+                      f"{_EXAMPLE_CORPUS.name}` — eight synthetic records exercising every "
+                      "verdict except `out_of_scope`, whose expected result is tabulated in "
+                      "`examples/README.md`.")
+
     if not raw or not raw.strip():
         return None
     try:
@@ -169,9 +195,9 @@ def get_papers():
         return None
 
 
-def venue_list_input(label: str, key: str):
+def venue_list_input(label: str, key: str, hint: str = ""):
     """Optional JSON list of venues for whitelist/blacklist. Returns list or None."""
-    raw = st.text_area(label, height=90, key=key,
+    raw = st.text_area(label, height=90, key=key, help=hint or None,
                        placeholder='[{"name": "IEEE", "domain": "ieee.org"}, "Nature"]')
     if not raw or not raw.strip():
         return None
@@ -254,8 +280,12 @@ def render_result(res: runners.RunResult, checker: runners.Checker):
             st.text(res.stderr[-4000:])
 
 
-def _chip(text, bg, *, title=None, flow=False):
-    """A small pill. Dark text on a light fill, so it reads in either theme.
+def _chip(text, tone="mute", *, title=None, flow=False):
+    """A small pill in one of the palette's tones.
+
+    *tone* is ``mute``, ``ok`` or ``warn`` — a class rather than a colour, so the
+    pill picks up the light or dark value of that tone from :data:`_TOKENS`
+    instead of carrying a hex that only works against one background.
 
     *title* becomes the browser's hover text — the sentence of detail that does
     not fit inside a pill — and marks the pill with the help cursor so there is
@@ -263,14 +293,42 @@ def _chip(text, bg, *, title=None, flow=False):
     several pills wrap across a line; a pill alone in a table cell wants none,
     because the margin would push it off the cell's vertical centre.
     """
-    style = (f"background:{bg};color:#111;padding:2px 10px;border-radius:12px;"
-             f"display:inline-block;font-size:0.8rem;line-height:1.5;")
-    if flow:
-        style += "margin:0 6px 6px 0;"
+    cls = f"bl-chip bl-{tone}" + (" bl-flow" if flow else "")
     if not title:
-        return f"<span style='{style}'>{text}</span>"
-    return (f"<span style='{style}cursor:help;' "
+        return f"<span class='{cls}'>{text}</span>"
+    return (f"<span class='{cls} bl-help' "
             f"title='{html.escape(title, quote=True)}'>{text}</span>")
+
+
+def readable_on(fill: str) -> str:
+    """Slate-900 or white — whichever reads on the ``RRGGBB`` *fill*.
+
+    The status fills are Excel's and are not ours to re-tone, but they are not
+    uniform either: most are pale and want dark text, while ``error`` is a deep
+    red that wants white.  Decided by WCAG relative luminance rather than by a
+    hand-kept list, so a change to ``STATUS_FILL_COLORS`` cannot leave a chip
+    unreadable.  The threshold is where the two contrast ratios meet.
+    """
+    def channel(c):
+        c /= 255
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+    r, g, b = (channel(int(fill[i:i + 2], 16)) for i in (0, 2, 4))
+    return "#0f172a" if 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.204 else "#ffffff"
+
+
+def _status_chip(text, status, *, flow=False):
+    """A pill in a *status*'s canonical colour, from ``STATUS_FILL_COLORS``.
+
+    Separate from :func:`_chip` on purpose.  Those colours are the workbook's —
+    the single source of truth is ``config.py`` — so they must not be re-toned
+    for a dark background, or the chips would stop matching the file they
+    describe.  Only the text on them is chosen here.
+    """
+    fill = runners.STATUS_FILL_COLORS.get(status, "FFFFFF")
+    cls = "bl-chip" + (" bl-flow" if flow else "")
+    return (f"<span class='{cls}' style='background:#{fill};"
+            f"color:{readable_on(fill)};'>{text}</span>")
 
 
 _STATUS_ORDER = ("on_list", "review", "clean", "no_venue", "error")
@@ -283,8 +341,7 @@ def _status_summary(rows):
         counts[r["Status"]] = counts.get(r["Status"], 0) + 1
     ordered = [s for s in _STATUS_ORDER if s in counts] + \
               [s for s in counts if s not in _STATUS_ORDER]
-    st.markdown("".join(_chip(f"{s}: <b>{counts[s]}</b>",
-                              "#" + runners.STATUS_FILL_COLORS.get(s, "FFFFFF"), flow=True)
+    st.markdown("".join(_status_chip(f"{s}: <b>{counts[s]}</b>", s, flow=True)
                         for s in ordered), unsafe_allow_html=True)
 
 
@@ -297,7 +354,11 @@ def _csv_status_preview(rows, max_rows=100):
 
         def _bg(val):
             hexc = runners.STATUS_FILL_COLORS.get(val)
-            return f"background-color: #{hexc}" if hexc else ""
+            # The text colour has to be set alongside the fill.  These are pale
+            # Excel fills, and the dark theme's own table text is near-white on
+            # them; `error` is the mirror case, a deep red under dark text.
+            return (f"background-color: #{hexc}; color: {readable_on(hexc)}"
+                    if hexc else "")
 
         styler = df.style
         # pandas >= 2.1 renamed Styler.applymap -> Styler.map.
@@ -373,68 +434,239 @@ def _row_key(checker_id: str) -> str:
 # the tint can be applied to the row container itself, the gaps between its
 # columns included; the rule is re-emitted for the selected row on every rerun.
 #
-# The colour is the theme's primary red, translucent: strong enough to be
-# unmistakable, light enough to leave the text at full contrast.  The dark
-# background needs a higher alpha to show the same amount of colour, and the
-# media query follows the browser preference exactly as Streamlit's own default
-# theme does.
+# The colour is the accent blue, translucent: strong enough to be unmistakable,
+# light enough to leave the text at full contrast.  It is deliberately not red —
+# red means `on_list` everywhere else in this tool, and a tinted row means
+# "chosen", not "flagged".  The alphas come from the tokens, so the dark theme's
+# stronger tint is defined in one place.
 _ROW_TINT_CSS = """
 <style>
 .st-key-{key} {{
-    background-color: rgba(255, 75, 75, 0.10);
-    border-color: rgba(255, 75, 75, 0.55);
-}}
-@media (prefers-color-scheme: dark) {{
-    .st-key-{key} {{
-        background-color: rgba(255, 75, 75, 0.18);
-        border-color: rgba(255, 75, 75, 0.70);
-    }}
+    background-color: var(--bl-accent-soft);
+    border-color: var(--bl-accent-line) !important;
 }}
 </style>
 """
 
 
-# The rest of the page's styling, emitted once per render.  Three things are not
-# reachable through Streamlit's own arguments: the step headers, the comparison
-# grid, and one correction to Streamlit itself.
-_PAGE_CSS = """
-<style>
-/* Step headers: a numbered badge, the title, and a status pill pushed right. */
-.bl-step {display:flex; align-items:center; gap:.6rem; flex-wrap:wrap;
-          padding:.5rem .85rem; border-radius:8px;
-          background:rgba(128,128,128,.10); border-left:3px solid #ff4b4b;}
-.bl-step-n {flex:0 0 auto; width:1.6rem; height:1.6rem; border-radius:50%;
+# ── Design tokens ────────────────────────────────────────────────────────────
+# Every colour the page paints itself comes from the Tailwind CSS palette
+# (https://tailwindcss.com/docs/colors) — an established, systematically
+# generated, contrast-tested ramp — and is declared once, here, as a CSS custom
+# property with a light and a dark value.  The step headers, the comparison
+# table, the chips and the run summary therefore cannot drift apart, and none of
+# them carries a hex that only works against one background.
+#
+# The same values are Streamlit's own theme in .streamlit/config.toml, which is
+# what recolours the widgets this stylesheet does not reach — the buttons, the
+# progress bar, links and focus rings.  Neutrals are *slate*, the accent is
+# *blue*; red appears nowhere in the chrome, because red is a verdict here
+# (`on_list`) and an accent that was also red made the page read as "flagged"
+# where it only meant "selected".
+#
+# The media query is the only signal available: Streamlit exposes no attribute
+# for the active theme and switches on `prefers-color-scheme` itself, so keying
+# off the same thing keeps the two in step.
+_TOKENS = """
+:root {
+  --bl-accent:#2563eb;                        /* blue-600           */
+  --bl-on-accent:#ffffff;                     /* text on a solid accent fill */
+  --bl-accent-soft:rgba(37,99,235,.07);
+  --bl-accent-line:rgba(37,99,235,.55);
+  /* Three weights of text, each a step of the slate ramp.  They start one step
+     darker than the ramp's midpoint would suggest: the faintest of them has to
+     clear 4.5:1 not against white but against the selected row's blue tint,
+     and slate-500 there measured 4.32:1. */
+  --bl-fg:#0f172a;                            /* slate-900, headings */
+  --bl-fg-muted:#334155;                      /* slate-700, prose   */
+  --bl-fg-faint:#475569;                      /* slate-600, labels  */
+  --bl-surface:#f8fafc;                       /* slate-50           */
+  --bl-border:#e2e8f0;                        /* slate-200          */
+  --bl-ok-bg:#d1fae5;   --bl-ok-fg:#065f46;   /* emerald-100 / -800 */
+  --bl-warn-bg:#fef3c7; --bl-warn-fg:#92400e; /* amber-100 / -800   */
+  --bl-mute-bg:#e2e8f0; --bl-mute-fg:#334155; /* slate-200 / -700   */
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bl-accent:#60a5fa;                              /* blue-400   */
+    /* A blue light enough to carry a dark background needs dark text on it:
+       white on blue-400 is 2.5:1, well under the 4.5:1 that body-sized text
+       has to clear.  Slate-900 on the same blue is 6.7:1. */
+    --bl-on-accent:#0f172a;
+    --bl-accent-soft:rgba(96,165,250,.12);
+    --bl-accent-line:rgba(96,165,250,.60);
+    --bl-fg:#f8fafc;                                  /* slate-50   */
+    --bl-fg-muted:#cbd5e1;                            /* slate-300  */
+    --bl-fg-faint:#94a3b8;                            /* slate-400  */
+    --bl-surface:#1e293b;                             /* slate-800  */
+    --bl-border:#334155;                              /* slate-700  */
+    --bl-ok-bg:rgba(16,185,129,.18);   --bl-ok-fg:#6ee7b7;
+    --bl-warn-bg:rgba(245,158,11,.18); --bl-warn-fg:#fcd34d;
+    --bl-mute-bg:rgba(148,163,184,.18); --bl-mute-fg:#e2e8f0;
+  }
+}
+"""
+
+
+# The rest of the page's styling, emitted once per render.  What is here is what
+# Streamlit's own arguments cannot reach: the step headers, the comparison grid,
+# the run summary, the upload dropzone, and one correction to Streamlit itself.
+_PAGE_CSS = "<style>" + _TOKENS + """
+/* ── Step headers ──────────────────────────────────────────────────────────
+   A numbered badge, the title, an optional hint, and a status pill pushed
+   right.  The title is deliberately large: these four bars are the page's
+   structure, and at body size they read as captions rather than as headings.
+   Colours are explicit rather than an opacity on the body colour — an opacity
+   dims the text against whatever is behind it, which is how the hint ended up
+   too faint to read comfortably. */
+.bl-step {display:flex; align-items:center; gap:.75rem; flex-wrap:wrap;
+          padding:.75rem 1.05rem; border-radius:10px;
+          background:var(--bl-surface);
+          border:1px solid var(--bl-border);
+          border-left:4px solid var(--bl-accent);}
+.bl-step-n {flex:0 0 auto; width:2rem; height:2rem; border-radius:50%;
             display:inline-flex; align-items:center; justify-content:center;
-            background:#ff4b4b; color:#fff; font-size:.82rem; font-weight:700;}
-.bl-step-t {font-size:1rem; font-weight:600;}
-.bl-step-h {font-size:.82rem; opacity:.65;}
-.bl-step-s {margin-left:auto; font-size:.78rem; font-weight:600; color:#111;
-            padding:2px 10px; border-radius:12px; white-space:nowrap;}
-.bl-ok   {background:#C6EFCE;}
-.bl-wait {background:#FFD79A;}
-.bl-idle {background:#E4E8EE;}
+            background:var(--bl-accent); color:var(--bl-on-accent);
+            font-size:1rem; font-weight:700;}
+.bl-step-t {font-size:1.3rem; font-weight:700; letter-spacing:-.01em;
+            color:var(--bl-fg);}
+.bl-step-h {font-size:.92rem; color:var(--bl-fg-muted);}
+.bl-step-s {margin-left:auto; font-size:.82rem; font-weight:600;
+            padding:3px 12px; border-radius:999px; white-space:nowrap;}
 
-/* The Step 1 comparison grid.  The header row and every check row are handed
-   the same column template, so they line up without either knowing the other. */
+/* Each step header is rendered into its own keyed container, so the rhythm
+   around it -- clear air above, a small gap to the step's own controls -- can be
+   set here instead of relying on Streamlit's uniform 1rem block gap. */
+div[class*="st-key-blstep"] {margin:2rem 0 .75rem;}
+div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0;}
+
+/* ── Chips ─────────────────────────────────────────────────────────────────
+   Tones, not colours, so each picks up its light or dark value from the tokens.
+   The status chips are the exception and carry their own inline fill: it is the
+   workbook's, and is the same in both themes (see _status_chip). */
+.bl-chip {display:inline-block; padding:3px 11px; border-radius:999px;
+          font-size:.8rem; font-weight:600; line-height:1.45;}
+.bl-flow {margin:0 6px 6px 0;}
+.bl-help {cursor:help;}
+.bl-ok     {background:var(--bl-ok-bg);   color:var(--bl-ok-fg);}
+.bl-warn   {background:var(--bl-warn-bg); color:var(--bl-warn-fg);}
+.bl-mute, .bl-idle {background:var(--bl-mute-bg); color:var(--bl-mute-fg);}
+.bl-wait   {background:var(--bl-warn-bg); color:var(--bl-warn-fg);}
+
+/* ── The Step 1 comparison grid ────────────────────────────────────────────
+   The header row and every check row are handed the same column template, so
+   they line up without either knowing the other. */
 .bl-grid {display:grid; gap:0 1rem; align-items:center;}
-.bl-grid > div {font-size:.86rem; line-height:1.4;}
-.bl-head > div {font-size:.72rem; font-weight:600; letter-spacing:.05em;
-                text-transform:uppercase; opacity:.6;}
-.bl-sub {font-size:.78rem; opacity:.7;}
+.bl-grid > div {font-size:.88rem; line-height:1.45; color:var(--bl-fg-muted);}
+.bl-grid > div b {color:var(--bl-fg);}
+.bl-head > div {font-size:.72rem; font-weight:700; letter-spacing:.06em;
+                text-transform:uppercase; color:var(--bl-fg-faint);}
+.bl-sub {font-size:.79rem; color:var(--bl-fg-faint);}
 /* The header sits in a bordered container purely so its padding matches the
-   rows' and the columns therefore align; its border is not wanted. */
-.st-key-pickhead {border-color:transparent !important; padding-bottom:0 !important;}
+   rows' and the columns therefore align.  Only its bottom edge is wanted, and
+   it is wanted: without a rule under them, "Check" and "What it does" float
+   free of the rows they label instead of reading as a table head. */
+.st-key-pickhead {border-color:transparent !important;
+                  border-bottom:1px solid var(--bl-border) !important;
+                  border-radius:0 !important;
+                  padding-top:0 !important; padding-bottom:.45rem !important;
+                  margin-bottom:-.4rem;}
 
-/* A correction to Streamlit.  Every stMarkdownContainer carries
-   margin-bottom:-16px, to cancel the 16px gap between the elements of a vertical
-   block.  A column holding one markdown element has no gap to cancel, but the
-   negative margin still shortens the column's layout box by 16px while the text
-   keeps its full height and quietly overflows it.  Streamlit then centres that
-   too-short box, leaving the visible text 8px below the middle of the row --
-   beside a Select button that IS centred, so the row reads as misaligned.  Zero
-   it out inside Step 1, where the two have to line up. */
+/* ── The LLM-readiness slot ────────────────────────────────────────────────
+   Always rendered, always one line high, whichever check is selected.  It used
+   to appear only under the thorough check, which pushed Steps 2 to 4 down the
+   moment that check was chosen.  Reserving the line costs 24px and removes the
+   jump; a message too long for the line is clipped and carries the full text as
+   hover text. */
+.bl-llm {height:1.6rem; line-height:1.6rem; font-size:.85rem;
+         color:var(--bl-fg-faint); margin-top:.35rem;
+         white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+/* A fixed height, not a minimum: the "ready" message carries <code> spans, and
+   their taller line box would otherwise still nudge the page by a pixel or two. */
+.bl-llm code {line-height:1; font-size:.92em; padding:1px 5px;}
+.bl-llm-bad {color:var(--bl-warn-fg); font-weight:600; cursor:help;}
+
+/* ── Step 4's run summary ──────────────────────────────────────────────────
+   A labelled cell per decision rather than a row of bare pills: "Fast check"
+   and "Crossref on" say what they are, but "8 paper(s)" and a lone list name
+   did not, and nothing said what would come back. */
+.bl-sum {display:grid; grid-template-columns:repeat(auto-fit, minmax(8.5rem, 1fr));
+         gap:.9rem 1.4rem; padding:.95rem 1.15rem;
+         border:1px solid var(--bl-border); border-radius:10px;
+         background:var(--bl-surface);}
+.bl-sum-k {display:block; font-size:.7rem; font-weight:700; letter-spacing:.06em;
+           text-transform:uppercase; color:var(--bl-fg-faint); margin-bottom:.2rem;}
+.bl-sum-v {display:block; font-size:.95rem; font-weight:600; color:var(--bl-fg);}
+.bl-sum-v.bl-sum-off {color:var(--bl-fg-faint); font-weight:500;}
+.bl-sum-v.bl-sum-todo {color:var(--bl-warn-fg);}
+.st-key-runsummary [data-testid="stMarkdownContainer"] {margin-bottom:0;}
+
+/* ── The upload dropzone ───────────────────────────────────────────────────
+   Streamlit's own is a 68px strip with a Browse button and a size limit, which
+   does not say that a file can be dropped on it.  Turned here into a target
+   worth aiming at: full width, tall, dashed, and captioned.  `column-reverse`
+   is what puts the caption above the button -- the button comes first in the
+   DOM -- and the caption's text has to be supplied by CSS because this version
+   of Streamlit renders only the "200MB per file" line. */
+[data-testid="stFileUploaderDropzone"] {
+    flex-direction:column-reverse; align-items:center; justify-content:center;
+    gap:.55rem; min-height:9.5rem; padding:1.5rem 1rem;
+    border:2px dashed var(--bl-border) !important; border-radius:12px;
+    background:var(--bl-surface);
+    cursor:pointer; transition:border-color .15s ease, background-color .15s ease;}
+[data-testid="stFileUploaderDropzone"]:hover {
+    border-color:var(--bl-accent) !important; background:var(--bl-accent-soft);}
+[data-testid="stFileUploaderDropzone"]:focus-within {
+    border-color:var(--bl-accent) !important;}
+/* The two captions are pseudo-elements, so `order` is what puts them, the size
+   limit and the button into a sensible reading order -- the DOM has the button
+   first and the limit last, which is not the order they should be read in. */
+[data-testid="stFileUploaderDropzoneInstructions"] {
+    flex:0 0 auto; flex-direction:column; align-items:center; text-align:center;}
+[data-testid="stFileUploaderDropzoneInstructions"]::before {
+    order:1; content:"\\2b06\\fe0f  Drag and drop your papers .json here";
+    font-size:1.05rem; font-weight:600; color:var(--bl-fg); margin-bottom:.1rem;}
+[data-testid="stFileUploaderDropzoneInstructions"]::after {
+    order:2; content:"or use the button below to browse";
+    font-size:.85rem; color:var(--bl-fg-muted);}
+[data-testid="stFileUploaderDropzoneInstructions"] > div {
+    order:3; margin-top:.35rem; font-size:.75rem; color:var(--bl-fg-faint);}
+
+/* The same point for Streamlit's own filled buttons -- Run, and the selected
+   Select -- whose label it paints white against whatever primaryColor is.  In
+   the dark theme that colour is blue-400, so the label is corrected here. */
+@media (prefers-color-scheme: dark) {
+  [data-testid="stBaseButton-primary"]:not(:disabled) {color:var(--bl-on-accent);}
+}
+
+/* ── A correction to Streamlit ─────────────────────────────────────────────
+   Every stMarkdownContainer carries margin-bottom:-16px, to cancel the 16px gap
+   between the elements of a vertical block.  A column holding one markdown
+   element has no gap to cancel, but the negative margin still shortens the
+   column's layout box by 16px while the text keeps its full height and quietly
+   overflows it.  Streamlit then centres that too-short box, leaving the visible
+   text 8px below the middle of the row -- beside a Select button that IS
+   centred, so the row reads as misaligned.  Zero it out inside Step 1, where
+   the two have to line up. */
 div[class*="st-key-pickrow-"] [data-testid="stMarkdownContainer"],
 .st-key-pickhead [data-testid="stMarkdownContainer"] {margin-bottom:0;}
+</style>
+"""
+
+
+# The Tutorial page is long-form prose with full-width screenshots, and the app
+# runs in Streamlit's `wide` layout.  Left alone, a line of text ran the whole
+# window and a 3000px screenshot was scaled up to fill it, which made the images
+# shout over the words they illustrate.  Both are capped here: the column to a
+# comfortable measure, the images to something nearer their natural size, with
+# a frame so a screenshot of a page reads as a picture of a page.
+_TUTORIAL_CSS = "<style>" + _TOKENS + """
+.st-key-tutorial {max-width:58rem; margin:0 auto;}
+.st-key-tutorial [data-testid="stImage"] {max-width:40rem; margin:.4rem auto 1rem;}
+.st-key-tutorial [data-testid="stImage"] img {border:1px solid var(--bl-border);
+                                              border-radius:10px;}
+.st-key-tutorial [data-testid="stImageCaption"] {color:var(--bl-fg-faint);
+                                                 text-align:center;}
 </style>
 """
 
@@ -447,10 +679,13 @@ def step_header(num, title, hint="", state="", tone="idle", into=None):
     flow can be read while scrolling past it.  *tone* colours that pill: ``ok``
     green when the step is settled, ``wait`` amber when it is what holds the run
     up, ``idle`` grey when there is nothing to settle.  *into* renders into a
-    placeholder reserved earlier, for the steps whose state is only known once
+    container reserved earlier, for the steps whose state is only known once
     their own widgets have run.
+
+    The header goes into a container keyed ``blstep<num>`` so the stylesheet can
+    give it the air it needs above and below; *into* must be such a container.
     """
-    st_ = into if into is not None else st
+    st_ = into if into is not None else st.container(key=f"blstep{num}")
     st_.markdown(
         f"<div class='bl-step'><span class='bl-step-n'>{num}</span>"
         f"<span class='bl-step-t'>{title}</span>"
@@ -528,24 +763,35 @@ def page_check():
             row[1].markdown(_grid((
                 f"<b>{c.icon} {c.title}</b><br><span class='bl-sub'>{c.tagline}</span>",
                 c.description,
-                _chip(c.cost_label, "#FFD79A" if c.needs_llm else "#C6EFCE",
-                      title=c.cost_note),
-                _chip(c.records_label, "#E4E8EE", title=c.records_note),
-                _chip(c.output_label, "#E4E8EE", title=c.output_note),
+                _chip(c.cost_label, "warn" if c.needs_llm else "ok", title=c.cost_note),
+                _chip(c.records_label, "mute", title=c.records_note),
+                _chip(c.output_label, "mute", title=c.output_note),
             )), unsafe_allow_html=True)
 
+    # The LLM-readiness line.  Its slot is rendered whatever is selected and is
+    # always exactly one line high, so choosing the thorough check no longer
+    # shoves Steps 2 to 4 down the page.  Written twice into the same element —
+    # once to say the check is running, once with its answer — so the notice
+    # never appears or disappears, only changes its text.
+    llm_slot = st.empty()
+    llm_html = "&nbsp;"
     if checker.needs_llm:
-        with st.spinner("Checking the LLM configuration…"):
-            llm_ok, llm_msg, llm_model = llm_status()
-        if llm_ok is False:
-            st.warning(f"⚠️ {llm_msg}")
-        elif llm_ok:
-            st.caption(f"🔑 LLM ready — `{os.getenv('LLM_PROVIDER', 'azure')}` / `{llm_model}`.")
+        llm_slot.markdown("<div class='bl-llm'>⏳ Checking the LLM configuration…</div>",
+                          unsafe_allow_html=True)
+        llm_ok, llm_msg, llm_model = llm_status()
+        if llm_ok:
+            llm_html = (f"🔑 LLM ready — <code>{html.escape(os.getenv('LLM_PROVIDER', 'azure'))}"
+                        f"</code> / <code>{html.escape(llm_model)}</code>.")
+        else:
+            lead = "LLM not configured" if llm_ok is False else "LLM configuration unverified"
+            llm_html = (f"<span class='bl-llm-bad' title='{html.escape(llm_msg, quote=True)}'>"
+                        f"⚠️ {lead} — {html.escape(llm_msg)}</span>")
+    llm_slot.markdown(f"<div class='bl-llm'>{llm_html}</div>", unsafe_allow_html=True)
 
-    # Step 2 — provide the papers.  The header is reserved first and written
-    # afterwards: how many papers there are is only known once the widgets below
-    # it have run, and the pill would otherwise report the previous rerun.
-    head2 = st.empty()
+    # Step 2 — provide the papers.  The header's container is reserved first and
+    # written afterwards: how many papers there are is only known once the widgets
+    # below it have run, and the pill would otherwise report the previous rerun.
+    head2 = st.container(key="blstep2")
     items = get_papers()
     step_header(2, "Provide the papers", "Semantic Scholar records, as JSON",
                 f"✅ {len(items)} paper(s)" if items else "waiting for papers",
@@ -556,47 +802,78 @@ def page_check():
 
     # Step 3 — options.  All optional, so the pill states what is in force rather
     # than whether anything was touched.
-    step_header(3, "Options", "optional", _options_state(checker))
-    with st.expander("⚙️ Whitelist, blacklist and Crossref"):
+    #
+    # Crossref is not in the expander with the other two.  It is one checkbox, it
+    # is on by default, and it changes verdicts — two of the example corpus's
+    # eight records fall back from `on_list` to `review` without it — so it is
+    # worth a line of the page.  The venue lists are genuinely advanced, are
+    # empty on almost every run, and cost two text areas to show, so they stay
+    # folded away.
+    step_header(3, "Options", "all optional", _options_state(checker))
+    crossref = st.checkbox(
+        "Cross-check every venue against Crossref",
+        value=True,
+        key="cr",
+        help="Crossref is the official registry of published articles (looked up by each "
+             "paper's DOI). When on (the default), the journal name and ISSN that Semantic "
+             "Scholar reports are compared against Crossref's official record, and DOIs are "
+             "used to resolve uncertain matches — catching papers where Semantic Scholar has "
+             "the wrong venue. It contacts Crossref once per paper (a little slower) and is "
+             "skipped automatically when there's no internet. Uncheck to force a fully offline run.")
+    st.caption("Recommended. Confirms each venue against the official registry using the paper's "
+               "DOI, which resolves matches the metadata alone leaves uncertain. Adds one lookup "
+               "per paper, and is skipped automatically when there is no internet.")
+    with st.expander("🎯 Advanced — narrow the run, or add venues of your own"):
         if checker.kind == "csv":
             wl = bl = None
-            st.caption("Batch CSV mode classifies **every** record — it has no whitelist/blacklist "
-                       "scope filter (those are available on the fast and thorough checks).")
+            st.caption("Batch CSV classifies **every** record, so it takes neither list. "
+                       "Both are available on the fast and thorough checks.")
         else:
-            st.markdown("**Scope — whitelist** (optional)")
-            wl = venue_list_input("Only check papers from these venues — leave empty to check all",
-                                  "wl")
-            st.markdown("**Extend the list — blacklist** (optional)")
-            bl = venue_list_input("Also treat papers from these venues as predatory", "bl")
-            st.caption('Format for both boxes: a JSON list like '
-                       '`[{"name": "IEEE", "domain": "ieee.org"}]` (a plain `"name"` string works too).')
-        crossref = st.checkbox(
-            "Cross-check each venue against Crossref (recommended; skipped automatically when offline)",
-            value=True,
-            key="cr",
-            help="Crossref is the official registry of published articles (looked up by each "
-                 "paper's DOI). When on (the default), the journal name and ISSN that Semantic "
-                 "Scholar reports are compared against Crossref's official record, and DOIs are "
-                 "used to resolve uncertain matches — catching papers where Semantic Scholar has "
-                 "the wrong venue. It contacts Crossref once per paper (a little slower) and is "
-                 "skipped automatically when there's no internet. Uncheck to force a fully offline run.")
+            # Named by what they do, with the familiar term kept as a secondary
+            # identifier.  "Whitelist" alone is ambiguous here: it reads just as
+            # easily as "venues I consider safe", which is the opposite of what
+            # it does.
+            wl = venue_list_input(
+                "Only check these venues  ·  **whitelist**", "wl",
+                hint="Restricts the run. A paper from any venue not listed here is reported as "
+                     "`out_of_scope` rather than checked. Leave empty to check every paper.")
+            bl = venue_list_input(
+                "Also treat these venues as predatory  ·  **blacklist**", "bl",
+                hint="Extends the list. These venues count as predatory for this run in "
+                     "addition to everything on Beall's List.")
+            st.caption('Both boxes take the same JSON: a list like '
+                       '`[{"name": "IEEE", "domain": "ieee.org"}]`, or just `"Nature"` to match '
+                       'by name.')
     aux_lists = {"--whitelist": wl, "--blacklist": bl}
     extra_args = None if crossref else ["--crossref", "off"]
 
-    # Step 4 — run.  The summary restates every decision made above as a row of
-    # pills, so what is about to run can be checked without scrolling back up.
+    # Step 4 — run.  The summary restates every decision made above, each under
+    # the name of the thing it decides, so what is about to run can be checked
+    # without scrolling back up — and without having to work out what a bare
+    # "Merged" or "8 paper(s)" was answering.
     step_header(4, "Run", "everything above, in one go",
                 "ready" if items else "add papers first", "ok" if items else "wait")
-    summary = [(f"{checker.icon} {checker.title}", "#E4E8EE"),
-               (f"{len(items)} paper(s)" if items else "no papers yet",
-                "#C6EFCE" if items else "#FFD79A"),
-               ("Crossref on" if crossref else "Crossref off", "#E4E8EE")]
-    summary += [(name, "#E4E8EE") for name, lst in (("whitelist", wl), ("blacklist", bl)) if lst]
+    lists_na = checker.kind == "csv"
+    summary = [
+        ("Check", f"{checker.icon} {checker.title}", ""),
+        ("Papers", f"{len(items)} loaded" if items else "none yet",
+         "" if items else "bl-sum-todo"),
+        ("Crossref", "On" if crossref else "Off", "" if crossref else "bl-sum-off"),
+        ("Whitelist", "not used here" if lists_na else
+         (f"{len(wl)} venue(s)" if wl else "—"),
+         "bl-sum-off" if lists_na or not wl else ""),
+        ("Blacklist", "not used here" if lists_na else
+         (f"{len(bl)} venue(s)" if bl else "—"),
+         "bl-sum-off" if lists_na or not bl else ""),
+        ("You get back", checker.output_label, ""),
+    ]
     # Keyed so that the screenshot script can wait on this summary — the one place
     # that states which check a press of Run would actually start.
     with st.container(key="runsummary"):
-        st.markdown("".join(_chip(t, bg, flow=True) for t, bg in summary),
-                    unsafe_allow_html=True)
+        st.markdown("<div class='bl-sum'>" + "".join(
+            f"<div><span class='bl-sum-k'>{k}</span>"
+            f"<span class='bl-sum-v {cls}'>{v}</span></div>"
+            for k, v, cls in summary) + "</div>", unsafe_allow_html=True)
     run = st.button("▶ Run check", type="primary", key="run",
                     disabled=items is None,
                     help=None if items is not None else "Add papers in Step 2 first.")
@@ -709,8 +986,15 @@ def _render_markdown_file(path):
 
 
 def page_tutorial():
-    """The walkthrough, rendered from ui/TUTORIAL.md so there is one copy of it."""
-    _render_markdown_file(_TUTORIAL_MD)
+    """The walkthrough, rendered from ui/TUTORIAL.md so there is one copy of it.
+
+    Rendered into a keyed container so the stylesheet can hold the text to a
+    readable measure and the screenshots to something near their natural size,
+    instead of letting both run the full width of a `wide` layout.
+    """
+    st.markdown(_TUTORIAL_CSS, unsafe_allow_html=True)
+    with st.container(key="tutorial"):
+        _render_markdown_file(_TUTORIAL_MD)
 
 
 # ── Navigation ──────────────────────────────────────────────────────────────

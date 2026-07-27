@@ -40,11 +40,36 @@ what they add and what they return.
 record supplied, in the order supplied, so a corpus that repeats a paper yields
 more rows than the workbook.
 
-The sidebar states what the tool answers and lists the two pages — **Run a
-check**, documented below, and **Tutorial**, which renders
+The sidebar states, in one sentence, what the tool answers, and lists the two
+pages — **Run a check**, documented below, and **Tutorial**, which renders
 [`TUTORIAL.md`](TUTORIAL.md) so the walkthrough has one copy, readable both in
-the app and on GitHub. Which LLM provider and model are configured is a detail of
-one check, so it sits in a collapsed **Environment** expander.
+the app and on GitHub. It is deliberately short: how the three checks differ is
+said by Step 1's comparison table and what shape the input takes by Step 2's
+caption, and neither is worth saying twice. Which LLM provider and model are
+configured is a detail of one check, so it sits in an **Environment** expander
+whose heading names the provider — enough to answer the usual question without
+opening it.
+
+## Colour
+
+Colours come from the [Tailwind CSS palette](https://tailwindcss.com/docs/colors)
+— neutrals from *slate*, the accent from *blue* — declared once as CSS variables
+in `_TOKENS` (light and dark) and again as Streamlit's own theme in
+[`.streamlit/config.toml`](../.streamlit/config.toml), so the widgets Streamlit
+paints and the ones the app paints belong to one palette. Both themes are
+declared, so the app follows the browser's `prefers-color-scheme`.
+
+The accent is **not** Streamlit's default red, and that is a correctness point
+rather than a preference: red is a *verdict* here. `on_list` is red in the
+workbook, in the status chips and in the result preview, so an accent that was
+also red made the page read as "flagged" where it only meant "selected".
+
+The one place a colour is not ours to choose is the **status** chips and the
+shaded Status cells of the CSV preview. Those take the workbook's canonical
+fills from `STATUS_FILL_COLORS`, so that the app and the file it produces cannot
+disagree; only the text laid over them is chosen here, by relative luminance
+(`readable_on`), which is what keeps `error` — a deep red among pale fills —
+legible.
 
 ## The page, step by step
 
@@ -101,14 +126,20 @@ endpoint is reported here, naming the empty `.env` values, rather than after a
 run has already been paid for. The model named is the one that will actually be
 used — the **first** entry when `AZURE_OPENAI_DEPLOYMENT` holds several.
 
+That verdict has a **line reserved for it under the table whichever check is
+selected**, and the line is a fixed height. It used to be rendered only for the
+thorough check, so choosing that check inserted an element and pushed Steps 2 to
+4 down the page; reserving the line costs 24px and removes the jump entirely. A
+message too long for one line is clipped, and carries the whole text as hover
+text.
+
 The selection does not disturb anything else on the page: loaded papers and
 options survive a change of check.
 
 ### Step 2 · Provide the papers
 
-Semantic Scholar **paper records**, from one of three sources: a `.json` upload,
-a paste box, or the bundled [example corpus](../examples/README.md). Accepted
-input:
+Semantic Scholar **paper records**, from one of two sources — a `.json` upload or
+a paste box. Accepted input:
 
 - a **JSON list** of paper objects, or
 - a **single** paper object (it is wrapped into a list automatically).
@@ -117,6 +148,18 @@ Anything else is rejected with a message rather than a traceback. **`.jsonl` is
 not accepted** — convert it to an array first, or use `batch_check.py` on the
 command line, which reads `.jsonl`, `.ndjson` and `.json`. Streamlit's upload
 limit is 200 MB per file. An expander shows the expected shape.
+
+The upload target is a full-width dashed dropzone that says a file can be dropped
+on it. Streamlit's own is a 68px strip with a Browse button, which does not; it
+is restyled rather than replaced, so it is still the same widget.
+
+The bundled [example corpus](../examples/README.md) is **not** a third source.
+Offering it as one made the input picker mix two different questions — *where is
+your data* and *I have none, show me* — so it is a button below the input,
+**📦 Load the example corpus**, which fills the paste box with the records. That
+needs no state of its own, leaves the page in a shape the user could have reached
+by hand, and puts the corpus on screen where it doubles as a worked example of
+the input format.
 
 #### The input data-quality panel
 
@@ -132,19 +175,27 @@ form skips input validation entirely.
 
 ### Step 3 · Options
 
-Collapsed by default; all optional. Because they are collapsed, the step's pill
-names the options actually in force — read from `st.session_state` rather than
-from the widgets, since the header is drawn above the expander that holds them,
-and Streamlit has already written the current rerun's values there.
+All optional, but not all equally rare, so they are not all folded away together.
 
-- **Whitelist** — restrict the run to these venues; everything else becomes
-  `out_of_scope`.
-- **Blacklist** — treat these venues as predatory in addition to Beall's List.
-- **Crossref** — a single checkbox, on by default. Clearing it is exactly
-  `--crossref off`. It is skipped automatically when there is no internet.
+- **Crossref** — a single checkbox, in the open, on by default. Clearing it is
+  exactly `--crossref off`. It is skipped automatically when there is no
+  internet. It sits on the page rather than in the expander because it is one
+  line, it is on by default, and it changes verdicts: two of the example
+  corpus's eight records fall back from `on_list` to `review` without it.
+- **Advanced** — an expander holding the two venue lists, which are empty on
+  almost every run and cost two text areas to show.
 
-Both venue boxes take the same JSON the CLI flags take as a *file*, pasted
-directly:
+The two lists are labelled by what they do, with the familiar term kept as a
+secondary identifier. "Whitelist" alone is ambiguous in this domain — it reads
+just as easily as *venues I consider safe*, which is the opposite of what it
+does:
+
+| Box | Effect | CLI |
+|---|---|---|
+| **Only check these venues** *(whitelist)* | Restricts the run. A paper from any venue not listed is reported as `out_of_scope` rather than checked. | `--whitelist` |
+| **Also treat these venues as predatory** *(blacklist)* | Extends the list, for this run only. | `--blacklist` |
+
+Both take the same JSON the CLI flags take as a *file*, pasted directly:
 
 ```json
 [{"name": "IEEE", "domain": "ieee.org"}, "Nature"]
@@ -154,12 +205,23 @@ The format is documented in
 [`user_lists/README.md`](../src/bealls_list_check/user_lists/README.md). Neither
 box is shown for **Batch CSV**, which classifies every record.
 
+Because the lists are collapsed, the step's pill names the options actually in
+force — read from `st.session_state` rather than from the widgets, since the
+header is drawn above the expander that holds them, and Streamlit has already
+written the current rerun's values there.
+
 ### Step 4 · Run
 
-A row of pills restates every decision made above — the check, the number of
-papers, whether Crossref is on, and whether a whitelist or blacklist is in force —
-so what is about to run can be checked without scrolling back up. The
-**Run check** button stays disabled until papers are loaded. During the run a
+A labelled cell per decision made above — **Check**, **Papers**, **Crossref**,
+**Whitelist**, **Blacklist**, **You get back** — so what is about to run can be
+checked without scrolling back up. It was a row of bare pills, which failed on
+the values that do not name their own field: `Fast check` and `Crossref on` say
+what they are, but `8 paper(s)` and a lone list name do not, and nothing said
+what would come back at all. The whitelist and blacklist cells read
+`not used here` under Batch CSV rather than being dropped, so their absence is
+stated rather than left to be noticed.
+
+The **Run check** button stays disabled until papers are loaded. During the run a
 progress bar and the latest log line are shown. The bar is a true percentage only
 for the thorough check, which prints a `[i/N]` counter per venue; the fast and
 batch checks have no per-item counter, so the bar pulses to show the run is
@@ -227,7 +289,7 @@ The most useful table here — the app is not a strict superset of the CLI.
 | `.jsonl` input | not accepted | `batch_check.py` only |
 | Input data-quality validation | always, for all three checks | main check yes, `batch_check.py` no |
 | Record handling | Fast/Thorough deduplicate on `paperId` → `title`; Batch CSV keeps every record | same |
-| Example corpus | selectable in Step 2 | `BEALLS_CORPUS_DIR=examples`, or pass the file |
+| Example corpus | **Load the example corpus** in Step 2 (fills the paste box) | `BEALLS_CORPUS_DIR=examples`, or pass the file |
 | Workbook **and** CSV | one run, then **Also produce the batch CSV** | two commands |
 
 ## Limits and gotchas

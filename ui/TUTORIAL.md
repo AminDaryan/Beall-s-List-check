@@ -70,10 +70,12 @@ browser tab does not.
 
 ![The app after startup, with the example corpus loaded](screenshots/ui-main.png)
 
-The sidebar holds the page links — **Run a check** and **Tutorial** — a summary
-of what the tool does, and an **Environment** panel naming the configured LLM
-provider and model. That panel matters only for the thorough check and stays
-collapsed until it is needed.
+The sidebar holds the page links — **Run a check** and **Tutorial** — one
+sentence on what the tool answers, and an **Environment** panel whose heading
+names the configured LLM provider. That panel matters only for the thorough
+check, so it stays collapsed until it is needed; the model name is inside it.
+
+The app follows the browser's light or dark setting.
 
 ## 3 · A first run, on the example corpus
 
@@ -94,20 +96,24 @@ Select **⚡ Fast check** — rules only, no API keys, no cost. The selected row
 tinted and its button turns solid; the rest of the page is unaffected by the
 choice.
 
-**Step 2 · Provide the papers.** Under *Provide papers via*, select **Example
-corpus**. The app confirms `✅ Loaded 8 paper(s) — ready to run` and opens the
-**Input data quality** panel, which reports **1 of 8 paper(s) flagged** — record
-6, which deliberately carries no venue information at all. That panel is an
-offline inspection of the metadata *before* anything runs, and it is downloadable
-as `input_data_quality.xlsx`.
+**Step 2 · Provide the papers.** The two ways of supplying your own papers are
+*Upload a file* and *Paste JSON*. Below them is **📦 Load the example corpus**,
+which is not a third source: it fills the paste box with the bundled records, so
+what is about to be checked is on screen and editable. Press it. The app confirms
+`✅ Loaded 8 paper(s) — ready to run` and opens the **Input data quality** panel,
+which reports **1 of 8 paper(s) flagged** — record 6, which deliberately carries
+no venue information at all. That panel is an offline inspection of the metadata
+*before* anything runs, and it is downloadable as `input_data_quality.xlsx`.
 
-**Step 3 · Options.** Leave them alone. Crossref is on by default, which is the
-recommended setting — and which the step's pill confirms without opening it.
+**Step 3 · Options.** Leave them alone. The one control in the open is
+**Crossref**, on by default, which is the recommended setting; the whitelist and
+blacklist are folded into **Advanced** and are empty.
 
-**Step 4 · Run.** A row of pills restates what is about to run — the check, the
-number of papers, whether Crossref is on. Press **▶ Run check**. A progress bar
-and the latest log line appear; the fast check has no per-item counter, so the
-bar pulses rather than filling. Eight records complete in a few seconds.
+**Step 4 · Run.** A labelled summary restates what is about to run — the check,
+how many papers, whether Crossref is on, which lists are in force, and what will
+come back. Press **▶ Run check**. A progress bar and the latest log line appear;
+the fast check has no per-item counter, so the bar pulses rather than filling.
+Eight records complete in a few seconds.
 
 ### What should come back
 
@@ -170,8 +176,9 @@ opens automatically when a run fails.
 
 Real input is a JSON file of Semantic Scholar records, obtained from the
 [Semantic Scholar API](https://api.semanticscholar.org) or exported from a
-literature-search pipeline. In Step 2, select **Upload file** and pick the `.json`,
-or **Paste JSON** and paste it directly. Accepted shapes:
+literature-search pipeline. In Step 2, select **Upload a file** and drop the
+`.json` onto the box (or use its Browse button), or select **Paste JSON** and
+paste it directly. Accepted shapes:
 
 - a **JSON list** of paper objects, or
 - a **single** paper object, which is wrapped into a list automatically.
@@ -251,11 +258,18 @@ running the deterministic pass — and its Crossref lookups — a second time.
 
 ## 8 · Narrowing or extending the list
 
-Step 3 holds two optional boxes, available on the fast and thorough checks:
+Step 3's control in the open is the **Crossref** checkbox, on by default.
+Clearing it forces a fully offline run — faster, and measurably less certain:
+records 4 and 8 of the example corpus fall back from `on_list` to `review`
+without it.
 
-- **Whitelist** — restrict the run to these venues. Everything else becomes
-  `out_of_scope`.
-- **Blacklist** — treat these venues as predatory in addition to Beall's List.
+Under **Advanced** are two optional boxes, available on the fast and thorough
+checks:
+
+- **Only check these venues** *(whitelist)* — restricts the run. A paper from any
+  venue not listed is reported as `out_of_scope` rather than checked.
+- **Also treat these venues as predatory** *(blacklist)* — extends the list, for
+  this run only.
 
 Both take the same JSON the command line takes as a file, pasted directly:
 
@@ -266,10 +280,6 @@ Both take the same JSON the command line takes as a file, pasted directly:
 A plain string is matched by name; an object may carry `name` and/or `domain`.
 The format is documented in full in
 [user_lists/README.md](../src/bealls_list_check/user_lists/README.md).
-
-The third control in Step 3 is the **Crossref** checkbox, on by default. Clearing
-it forces a fully offline run — faster, and measurably less certain: records 4
-and 8 of the example corpus fall back from `on_list` to `review` without it.
 
 ## 9 · Troubleshooting
 
