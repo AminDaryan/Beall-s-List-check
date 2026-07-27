@@ -71,18 +71,32 @@ _UI_DIR = Path(__file__).resolve().parent
 _TUTORIAL_MD = _UI_DIR / "TUTORIAL.md"          # rendered by the Tutorial page
 
 
+# The provider `.env` names. Step 3 starts from it and can be pointed elsewhere
+# for a single run, so it is a default rather than the answer.
+ENV_PROVIDER = os.getenv("LLM_PROVIDER", "azure").lower()
+
+# Step 3's escape hatch from the configured names. A model this machine has not
+# been told about cannot be offered in a list, but that is no reason to refuse
+# to run it — see `model_input`.
+_OTHER_MODEL = "Other — type a name…"
+
+
 @st.cache_data(show_spinner=False)
-def llm_status():
-    """Whether the configured LLM provider is usable: ``(ok, message, models)``.
+def llm_status(provider):
+    """Whether *provider* is usable: ``(ok, message, models)``.
 
     Answered by the same ``validate_provider_config()`` the checks call, so the
     thorough check cannot be reported as ready and then fail on the first
     request.  ``ok is None`` means the question could not be answered — the
     caller stays quiet rather than guessing.
 
-    *models* is every deployment name ``.env`` configures, in order, taken from
-    ``openai_client`` rather than re-parsed here: ``AZURE_OPENAI_DEPLOYMENT``
-    accepts a bare name, a comma-separated list or a JSON array, and one parser
+    Asked about a named provider rather than about "the" provider: Step 3
+    chooses one per run, and a readiness line that answered for ``.env``'s while
+    the run used another would be worse than none at all.
+
+    *models* is every model name that provider is configured with, in order,
+    taken from ``openai_client`` rather than re-parsed here: the variables
+    accept a bare name, a comma-separated list or a JSON array, and one parser
     for that is enough.  Step 3 offers the list as a choice; the check itself
     reads whichever single name the UI puts back into its environment.
 
@@ -93,12 +107,54 @@ def llm_status():
         import openai_client
     except Exception as exc:
         return None, str(exc), []
-    models = list(openai_client.AZURE_OPENAI_DEPLOYMENTS)
+    models = openai_client.provider_models(provider)
     try:
-        openai_client.validate_provider_config()
+        openai_client.validate_provider_config(provider)
         return True, "", models
     except Exception as exc:
         return False, str(exc), models
+
+
+@st.cache_data(show_spinner=False)
+def llm_providers():
+    """The providers Step 3 offers, in the order it offers them.
+
+    ``.env``'s own value is included even when it is not one of the documented
+    names: ``openai_client`` passes an unrecognised provider through to litellm
+    untouched, so a backend nobody here has written down still runs, and a
+    dropdown that dropped it would silently switch the run to something else.
+    """
+    try:
+        import openai_client
+        names = list(openai_client.SUPPORTED_PROVIDERS)
+    except Exception:
+        names = ["azure", "openai", "anthropic", "mistral", "gemini", "ollama"]
+    if ENV_PROVIDER not in names:
+        names.insert(0, ENV_PROVIDER)
+    return names
+
+
+def selected_provider():
+    """The provider Step 3 has selected, readable before Step 3 has rendered.
+
+    Read out of ``st.session_state`` for the same reason ``_options_state`` is:
+    Step 1's readiness line sits above the widget that decides this, and
+    Streamlit has already written this rerun's value there.
+    """
+    return st.session_state.get("provider") or ENV_PROVIDER
+
+
+def selected_model():
+    """The model Step 3 has selected — a configured name, or one typed in.
+
+    Empty when nothing is chosen, which is a state the flow reports rather than
+    hides: the run is started with whatever this returns, and with nothing it
+    falls back to what the environment already names.
+    """
+    name = st.session_state.get("model") or ""
+    if name == _OTHER_MODEL:
+        name = st.session_state.get("model_custom") or ""
+    return name.strip()
 
 
 def sidebar():
@@ -116,6 +172,10 @@ def sidebar():
     opening it.  It is not promoted into the flow itself: it applies to one of
     the three checks, and that check reports its own readiness in Step 1 the
     moment it is selected.
+
+    What it reports is what ``.env`` configures — the **defaults** a run starts
+    from, not what a run necessarily uses.  Both the provider and the model are
+    picked in Step 3, which is where they are decided and where they are shown.
     """
     st.sidebar.markdown("### Beall's List check")
     st.sidebar.caption(
@@ -123,14 +183,14 @@ def sidebar():
         "predatory venues? A match means the **venue appears on the list** — not "
         "that the paper is bad.")
     st.sidebar.caption("📘 New here? Open the **Tutorial** page above.")
-    prov = os.getenv("LLM_PROVIDER", "azure")
-    with st.sidebar.expander(f"⚙️ Environment · `{prov}`", expanded=False):
-        st.write(f"**LLM provider:** `{prov}`")
+    with st.sidebar.expander(f"⚙️ Environment · `{ENV_PROVIDER}`", expanded=False):
+        st.write(f"**LLM provider:** `{ENV_PROVIDER}`")
         st.write(f"**Model / deployment:** `{os.getenv('AZURE_OPENAI_DEPLOYMENT', '(unset)')}`")
-        st.caption("Whichever of these the run uses is chosen in **Step 3**, and only the "
-                   "**thorough** check uses one at all — the fast and batch checks need no "
-                   "keys. Read from the repo's `.env` at startup; restart the app after "
-                   "editing it.")
+        st.caption("The **defaults**. Both are chosen per run in **Step 3**, which can point a "
+                   "single run at another provider or another model without this changing — "
+                   "and only the **thorough** check uses either, the fast and batch checks "
+                   "needing no keys at all. Read from the repo's `.env` at startup; restart "
+                   "the app after editing it.")
 
 
 def _load_example_corpus():
@@ -849,8 +909,7 @@ _TUTORIAL_CSS = "<style>" + _TOKENS + _CHROME_CSS + """
 
 /* The overlay. Opened by :target -- the anchor above sets the fragment -- and
    closed by any other fragment, so it needs no script; Streamlit strips those
-   out of markdown anyway.  Shown at natural size and scrollable, because
-   shrinking a full-page capture to fit the window is what made it illegible.
+   out of markdown anyway.
 
    The stacking order has to clear Streamlit's own chrome, which sits at 999990
    for the header and 999991 for the sidebar; below those, the overlay covered
@@ -858,17 +917,53 @@ _TUTORIAL_CSS = "<style>" + _TOKENS + _CHROME_CSS + """
    unclickable. */
 .bl-lightbox {display:none;}
 .bl-lightbox:target {display:block; position:fixed; inset:0; z-index:1000000;
-                     background:rgba(15,23,42,.92); overflow:auto; padding:2.5rem 1rem;
-                     line-height:0; cursor:zoom-out;}
-.bl-lightbox-bg {position:fixed; inset:0; z-index:0;}
-.bl-lightbox img {position:relative; z-index:1; display:block; margin:0 auto;
-                  width:auto; max-width:none; border-radius:6px;}
-.bl-lightbox-close {position:fixed; top:.75rem; right:1.25rem; z-index:2;
-                    width:2.5rem; height:2.5rem; border-radius:50%;
-                    display:flex; align-items:center; justify-content:center;
-                    background:rgba(248,250,252,.14); color:#f8fafc !important;
-                    font-size:1.7rem; line-height:1; text-decoration:none !important;}
-.bl-lightbox-close:hover {background:rgba(248,250,252,.28);}
+                     background:rgba(15,23,42,.92); overflow:auto;
+                     overscroll-behavior:contain;   /* don't scroll the page underneath */
+                     padding:3.4rem 1rem 2rem; line-height:0;}
+.bl-lightbox-bg {position:fixed; inset:0; z-index:0; cursor:zoom-out;}
+
+/* Shown at the width it was *captured* at, not at its pixel width.  These are
+   deviceScaleFactor=2 captures of a 1500px-wide viewport (see
+   ui/shoot_screenshots.py), so a 3000px file is a 1500px picture at 2x --
+   displaying it at 3000 was showing the app at 200% zoom, which is why opening
+   one landed you inside a wall of letterforms.  1500 is therefore 1:1, sharp on
+   a 2x display, and still more than twice the 40rem thumbnail.
+
+   Capped at the window as well, so the overlay never scrolls sideways: a page
+   capture scrolls down, the way the page it is a picture of does.
+
+   The cap sits on the link rather than on the image inside it, so that the auto
+   margins have a box the picture's own size to centre.  On max-content the link
+   was as wide as the window and the image sat against its left edge. */
+.bl-lightbox-fig {display:block; position:relative; z-index:1;
+                  width:min(1500px, 100%); margin:0 auto; cursor:zoom-out;}
+.bl-lightbox img {display:block; width:100%; height:auto; border-radius:6px;}
+
+/* The bar. Closing used to be a 2.5rem x on top of a screenshot, which is a
+   target you have to find before you can leave -- and the pointer over the
+   image promised zoom-out while the image itself was inert, because the only
+   click-to-close surface was the backdrop and the image covered every pixel of
+   it.  Now the image is a close link too, the bar says so, and it stays fixed
+   over its own scrim so it is legible whatever it is sitting on.
+
+   "Open the original" is the way *up* in scale rather than another step here:
+   at 1:1 the browser's own image viewer has real zoom, which a :target overlay
+   cannot, and a tab of its own has a Back button. */
+.bl-lightbox-bar {position:fixed; top:0; left:0; right:0; z-index:2;
+                  display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
+                  padding:.5rem .9rem; line-height:1.5;
+                  background:linear-gradient(rgba(15,23,42,.96), rgba(15,23,42,.72));}
+.bl-lightbox-hint {margin-right:auto; color:#cbd5e1; font-size:.78rem;}
+.bl-lightbox-act {padding:.3rem .8rem; border-radius:999px;
+                  background:rgba(248,250,252,.14); color:#f8fafc !important;
+                  font-size:.78rem; font-weight:600; white-space:nowrap;
+                  text-decoration:none !important;}
+.bl-lightbox-act:hover {background:rgba(248,250,252,.3);}
+.bl-lightbox-close {background:rgba(248,250,252,.24);}
+/* On a narrow window the sentence wraps the bar onto a second row, and the bar
+   is what the overlay's top padding is sized to clear.  The two buttons say
+   enough on their own, and tapping the picture is the obvious gesture there. */
+@media (max-width:34rem) {.bl-lightbox-hint {display:none;}}
 </style>
 """
 
@@ -892,8 +987,8 @@ def _slug(text: str) -> str:
     """The anchor Streamlit (and GitHub) give a heading of this text.
 
     Lower-cased, punctuation dropped, runs of anything else collapsed to single
-    hyphens — "3 · A first run, on the example corpus" becomes
-    "3-a-first-run-on-the-example-corpus".  Reimplemented rather than guessed at:
+    hyphens — "1 · First run, with the example papers" becomes
+    "1-first-run-with-the-example-papers".  Reimplemented rather than guessed at:
     the ids it produces are what both the in-app links and TUTORIAL.md's own
     cross-references resolve against.
     """
@@ -1005,13 +1100,50 @@ def _options_state(checker):
     written this rerun's values there, so the pill is never a run behind.
     """
     bits = []
-    if checker.needs_llm and st.session_state.get("model"):
-        bits.append(st.session_state["model"])
+    if checker.needs_llm:
+        model = selected_model()
+        bits.append(f"{selected_provider()} / {model}" if model else selected_provider())
     bits.append("Crossref on" if st.session_state.get("cr", True) else "Crossref off")
     if checker.kind != "csv":                 # batch mode ignores both lists
         bits += [name for name, key in (("whitelist", "wl"), ("blacklist", "bl"))
                  if (st.session_state.get(key) or "").strip()]
     return " · ".join(bits)
+
+
+def _llm_env(checker, provider, model):
+    """The environment overrides Step 3's LLM choices amount to, or ``None``.
+
+    Nothing at all for the checks that use no LLM: they would ignore both names,
+    and setting them anyway would put a choice the user did not make into the
+    environment of a run that cannot act on it.
+    """
+    if not checker.needs_llm:
+        return None
+    env = {"LLM_PROVIDER": provider} if provider else {}
+    if model:
+        env["AZURE_OPENAI_DEPLOYMENT"] = model
+    return env or None
+
+
+def _provider_changed():
+    """Move the chosen model to the new provider's list (an ``on_change``).
+
+    The two are not independent: a deployment name from one backend rarely means
+    anything to another, so the model cannot simply be left as it was.
+
+    It is *reassigned* rather than deleted, which matters.  Deleting it left the
+    picker offering the new provider's names while still displaying the old
+    provider's — Streamlit rebuilds the option list, but a widget whose stored
+    value has vanished is not re-rendered with its new default, and the label a
+    dropdown shows is the one thing about it a user has to be able to trust.
+    Writing a value the new list actually contains settles it.
+
+    Callbacks run before the rerun that redraws the widgets, so what is written
+    here is what they come back holding.
+    """
+    st.session_state.pop("model_custom", None)
+    _ok, _msg, models = llm_status(selected_provider())
+    st.session_state["model"] = models[0] if models else _OTHER_MODEL
 
 
 def _pick_checker(checker_id: str):
@@ -1034,12 +1166,16 @@ def page_check():
     if st.session_state.get("checker_id") not in runners.CHECKERS_BY_ID:
         st.session_state["checker_id"] = runners.CHECKERS[0].id
     checker = runners.CHECKERS_BY_ID[st.session_state["checker_id"]]
+    # Step 3's provider starts at `.env`'s, not at whichever happens to head the
+    # list.  Set here rather than there because Step 1's readiness line, drawn
+    # first, has to be answering about the same one.
+    st.session_state.setdefault("provider", ENV_PROVIDER)
 
     # Step 1 — choose a check.  A comparison table rather than a dropdown: the
     # three are meant to be weighed against each other, and a dropdown shows only
     # the option already chosen.
     step_header(1, "Choose a check", "what to run over your papers",
-                f"{checker.icon} {checker.title}", "ok", learn="A first run")
+                f"{checker.icon} {checker.title}", "ok", learn="First run")
     st.caption("All three run the same deterministic engine. They differ in what they add "
                "on top of it, what they cost, and what you get back. "
                "Hover a **Cost**, **Records** or **Returns** pill for the detail.")
@@ -1084,13 +1220,24 @@ def page_check():
     if checker.needs_llm:
         llm_slot.markdown("<div class='bl-llm'>⏳ Checking the LLM configuration…</div>",
                           unsafe_allow_html=True)
-        llm_ok, llm_msg, llm_models = llm_status()
+        # Asked about the provider Step 3 has selected, not about `.env`'s: the
+        # two are the same until a run is pointed elsewhere, and after that a
+        # line answering for `.env` would be answering about a different run.
+        llm_ok, llm_msg, llm_models = llm_status(selected_provider())
+        # Step 3's picker would default to the first configured name anyway, but
+        # not until it has drawn — one rerun after this line and the status pill
+        # have already had to say which model the run would use.  Written down
+        # here instead, so all three read one value rather than each falling back
+        # to its own guess.
+        if llm_models:
+            st.session_state.setdefault("model", llm_models[0])
         if llm_ok:
-            # The model named is the one Step 3 has selected, not simply the first
-            # configured, so this line and the run it describes cannot disagree.
-            chosen = st.session_state.get("model") or (llm_models[0] if llm_models else "?")
-            llm_html = (f"🔑 LLM ready — <code>{html.escape(os.getenv('LLM_PROVIDER', 'azure'))}"
-                        f"</code> / <code>{html.escape(chosen)}</code>.")
+            # Likewise the model: the one Step 3 has selected, not simply the
+            # first configured, so this line and the run cannot disagree.
+            chosen = selected_model()
+            llm_html = (f"🔑 LLM ready — <code>{html.escape(selected_provider())}</code> / "
+                        + (f"<code>{html.escape(chosen)}</code>." if chosen
+                           else "<b>no model chosen yet</b> — name one in Step 3."))
         else:
             lead = "LLM not configured" if llm_ok is False else "LLM configuration unverified"
             llm_html = (f"<span class='bl-llm-bad' title='{html.escape(llm_msg, quote=True)}'>"
@@ -1104,7 +1251,7 @@ def page_check():
     items = get_papers()
     step_header(2, "Provide the papers", "Semantic Scholar records, as JSON",
                 f"✅ {len(items)} paper(s)" if items else "waiting for papers",
-                "ok" if items else "wait", into=head2, learn="real papers")
+                "ok" if items else "wait", into=head2, learn="your own papers")
     if items is not None:
         st.success(f"✅ Loaded {len(items)} paper(s) — ready to run.")
         show_input_quality(items, key="input")
@@ -1119,26 +1266,48 @@ def page_check():
     # empty on almost every run, and cost two text areas to show, so they stay
     # folded away.
     step_header(3, "Options", "all optional", _options_state(checker),
-                learn="Narrowing or extending")
+                learn="venue lists")
 
-    # The model is a run setting, so it is chosen here rather than only reported
-    # in the sidebar.  Editing .env and restarting the app was the previous way to
-    # change it, which is a lot of ceremony for picking between deployments that
-    # are already configured.  Offered as a choice among those, not as free text:
-    # a name that is not configured cannot be validated before the run, and the
-    # readiness line above would be answering about a different model.
-    model = ""
+    # Which LLM answers is a run setting, so it is decided here rather than only
+    # reported in the sidebar.  Editing .env and restarting the app was the
+    # previous way to change either half of it, which is a lot of ceremony for a
+    # decision taken per run — and it made trying a second provider a
+    # configuration exercise rather than a choice.
+    #
+    # Both halves are offered, because either alone is only half an answer: a
+    # model name means nothing without the backend that serves it, and picking a
+    # provider without saying which of its models to use just moves the question.
+    model = provider = ""
     if checker.needs_llm:
-        if llm_models:
-            model = st.selectbox(
-                "Model / deployment", llm_models, key="model",
-                help="Which of the deployments configured in `.env`'s "
-                     "`AZURE_OPENAI_DEPLOYMENT` this run uses. That variable takes a bare "
-                     "name, a comma-separated list or a JSON array; every name in it appears "
-                     "here. Add more to the list in `.env` and restart the app to see them.")
-        else:
-            st.caption("No model is configured — set `AZURE_OPENAI_DEPLOYMENT` in `.env` and "
-                       "restart the app.")
+        provider_col, model_col = st.columns(2)
+        provider = provider_col.selectbox(
+            "LLM provider", llm_providers(), key="provider", on_change=_provider_changed,
+            help="Which backend answers. Defaults to `.env`'s `LLM_PROVIDER`; choosing "
+                 "another here changes this run only, and leaves `.env` alone. Each "
+                 "provider needs its own credentials — the line under Step 1 says whether "
+                 "the one selected has them.")
+        # The configured names, and a way past them.  A list alone was a dead end
+        # on any machine whose .env happened not to name the wanted model: the
+        # advice was to edit .env and restart, which is exactly the ceremony this
+        # control exists to remove.  A typed name cannot be checked before the
+        # run — see the caption — but "cannot be verified" is not "must not be
+        # offered", and an unverified name that runs beats a verified one that
+        # is not the model the user meant.
+        model = model_col.selectbox(
+            "Model / deployment", llm_models + [_OTHER_MODEL], key="model",
+            help="Which model of that provider this run uses. The listed names come from "
+                 "`.env` — `AZURE_OPENAI_DEPLOYMENT` for the provider `.env` itself "
+                 "selects, `LLM_MODELS_<PROVIDER>` for any other — each of which takes a "
+                 "bare name, a comma-separated list or a JSON array. Not listed is not "
+                 "unavailable: choose *Other* and type any name the provider serves.")
+        if model == _OTHER_MODEL:
+            model = st.text_input(
+                "Model name", key="model_custom", placeholder="e.g. gpt-4o-mini",
+                help="Passed to the provider exactly as typed. For Azure this is the "
+                     "**deployment** name, which need not match the underlying model's.").strip()
+            st.caption("Typed names are not checked before the run: whether the provider "
+                       "serves this one is answered by the provider, on the first request. "
+                       "Add it to `.env` to have it offered in the list from now on.")
 
     crossref = st.checkbox(
         "Cross-check every venue against Crossref",
@@ -1187,7 +1356,7 @@ def page_check():
     # "Merged" or "8 paper(s)" was answering.
     step_header(4, "Run", "everything above, in one go",
                 "ready" if items else "add papers first", "ok" if items else "wait",
-                learn="Reading what comes back")
+                learn="Understanding the report")
     lists_na = checker.kind == "csv"
     # Batch CSV's two "not used here" cells carry the reason as hover text. They
     # are the only place the flow still mentions the lists for that check, now
@@ -1209,9 +1378,14 @@ def page_check():
         ("You get back", checker.output_label, "", checker.output_note),
     ]
     if checker.needs_llm:
-        # Only the check that spends tokens has a model, so only it is asked about.
-        summary.insert(1, ("Model", model or "not configured",
-                           "" if model else "bl-sum-todo", ""))
+        # Only the check that spends tokens has an LLM, so only it is asked
+        # about — and it is asked as one thing, because provider and model are
+        # only an answer together.
+        summary.insert(1, ("LLM", f"{provider} / {model}" if model
+                           else f"{provider} / no model chosen",
+                           "" if model else "bl-sum-todo",
+                           "" if model else "Name a model in Step 3. Without one the run "
+                                            "falls back to whatever .env configures."))
 
     def _cell(k, v, cls, why):
         attrs = (f" class='bl-sum-v {cls} bl-help' title='{html.escape(why, quote=True)}'"
@@ -1252,12 +1426,17 @@ def page_check():
                 if checker.kind == "csv":
                     res = runners.run_batch_csv(items, crossref=crossref, on_line=on_line)
                 else:
-                    # The chosen model reaches the check the way the check already
-                    # looks for it: openai_client reads AZURE_OPENAI_DEPLOYMENT from
-                    # the environment, so the subprocess is given that one name.
+                    # The choices reach the check the way the check already looks
+                    # for them: openai_client reads LLM_PROVIDER and
+                    # AZURE_OPENAI_DEPLOYMENT from the environment, so the
+                    # subprocess is simply started with those two set. An
+                    # environment variable beats the .env file, which python-dotenv
+                    # does not use to overwrite one, so no other file is touched
+                    # and nothing outlives the run. A model left unchosen is left
+                    # unset rather than sent as an empty name.
                     res = runners.run_checker(
                         checker, items, aux_lists=aux_lists, extra_args=extra_args,
-                        env_overrides={"AZURE_OPENAI_DEPLOYMENT": model} if model else None,
+                        env_overrides=_llm_env(checker, provider, model),
                         on_line=on_line)
         except Exception as e:
             progress.empty(); log_line.empty()
@@ -1319,9 +1498,15 @@ def _shot_html(src: str, alt: str, ident: str) -> str:
 
     The overlay is opened by the anchor's fragment and closed by another, so no
     script is involved: Streamlit strips ``<script>`` out of markdown, and this
-    needs none.  The full-size copy is shown at its natural width and scrolls,
-    because these are 3000px captures of a whole page and fitting one to the
-    window is what made it unreadable in the first place.
+    needs none.  That is also why every way out has to be a link, and why there
+    are three of them — the image, the backdrop around it, and the bar's own
+    button.  Closing was previously that button alone, hunted for on top of a
+    screenshot that had covered the window, and the image beneath the pointer
+    said zoom-out while doing nothing.
+
+    A link to the file itself is offered rather than a second magnification.  At
+    1:1 the browser's image viewer zooms both ways and its tab has a Back
+    button, neither of which a stylesheet can provide.
     """
     alt_a = html.escape(alt, quote=True)
     return (
@@ -1330,9 +1515,17 @@ def _shot_html(src: str, alt: str, ident: str) -> str:
         f"<span class='bl-shot-zoom'>Click to enlarge</span></a>"
         + (f"<div class='bl-shot-cap'>{html.escape(alt)}</div>" if alt else "")
         + f"<div class='bl-lightbox' id='{ident}'>"
-          f"<a class='bl-lightbox-close' href='#bl-closed' aria-label='Close'>&times;</a>"
-          f"<a class='bl-lightbox-bg' href='#bl-closed' tabindex='-1'></a>"
-          f"<img src='{src}' alt='{alt_a}'></div>")
+          f"<a class='bl-lightbox-bg' href='#bl-closed' tabindex='-1' aria-hidden='true'></a>"
+          f"<div class='bl-lightbox-bar'>"
+          f"<span class='bl-lightbox-hint'>Click the image — or anywhere around it — "
+          f"to close</span>"
+          f"<a class='bl-lightbox-act' href='{src}' target='_blank' rel='noopener'"
+          f" title='The file itself, at full resolution, in a tab of its own'>"
+          f"Open the original &#8599;</a>"
+          f"<a class='bl-lightbox-act bl-lightbox-close' href='#bl-closed'>&times; Close</a>"
+          f"</div>"
+          f"<a class='bl-lightbox-fig' href='#bl-closed' aria-label='Close'>"
+          f"<img src='{src}' alt='{alt_a}'></a></div>")
 
 
 def _heading_html(hashes: str, title: str) -> str:
@@ -1367,7 +1560,7 @@ def _contents_html() -> str:
     chips re-wrapped at every window size — and room for the title in full rather
     than however much of it fits in a pill.
 
-    **Every** level-2 section, numbered or not. "What the tool answers" and
+    **Every** level-2 section, numbered or not. "What this tool checks" and
     "Where to go next" are as jumpable as the seven steps between them, and a
     contents list that quietly omitted them would be misdescribing the page. They
     carry a dot in the number's place, so the column still lines up.

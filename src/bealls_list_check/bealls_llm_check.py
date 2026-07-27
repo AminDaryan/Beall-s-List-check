@@ -23,8 +23,10 @@ What this module does
    workbook, plus that one column and an "LLM review" section in the Summary).
 
 This is OPT-IN and costs LLM tokens (but only for the review backlog, which is
-small).  It uses whatever provider/deployment your ``.env`` configures
-(``LLM_PROVIDER`` / ``AZURE_OPENAI_DEPLOYMENT``).
+small).  It uses whatever provider/deployment the environment configures
+(``LLM_PROVIDER`` / ``AZURE_OPENAI_DEPLOYMENT``) — normally ``.env``, but the
+web UI sets both per run in the environment it starts this script with, and an
+already-set variable wins over the file.  Both are recorded on the Summary sheet.
 
 Usage:
   python bealls_llm_check.py            # all 'review' venues
@@ -51,7 +53,8 @@ from user_lists import load_user_entries, WhitelistMatcher
 
 from common.llm_helpers import TokenUsageTracker, llm_call_parse_retry, print_token_usage_report
 from openai_client import (
-    client as default_client, AZURE_OPENAI_DEPLOYMENT, validate_provider_config,
+    client as default_client, AZURE_OPENAI_DEPLOYMENT, LLM_PROVIDER,
+    validate_provider_config,
 )
 
 
@@ -238,6 +241,10 @@ def run_llm_pass(results, index, *, client, deployment, token_usage, limit=None)
         time.sleep(0.05)
 
     return {
+        # The provider is recorded beside the model because a deployment name on
+        # its own no longer identifies what answered: the web UI picks both per
+        # run, so the same name can mean different backends on different runs.
+        "provider": LLM_PROVIDER,
         "model": deployment,
         "review_venues_checked": len(keys),
         "llm_yes": counts["yes"],

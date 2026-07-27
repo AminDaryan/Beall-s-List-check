@@ -159,12 +159,29 @@ readable in the app and on GitHub. It is not rendered verbatim:
   excluded, so no row can point at a heading the app does not render.
 - **Screenshots are plain `<img>` tags** served from [`static/`](static), not
   `st.image` — which re-encodes a PNG as JPEG, visibly lossy on a picture of
-  text. Each is centred, capped at 40rem, and is a link to itself at full size:
-  clicking opens a pure-CSS `:target` overlay showing the 3000px original at its
-  natural width, scrollable. No script is involved, because Streamlit strips
-  `<script>` out of markdown. The overlay's `z-index` clears Streamlit's own
-  chrome (999990 for the header, 999991 for the sidebar) — below those it covered
-  the page but left the header on top of it, and its close button unclickable.
+  text. Each is centred, capped at 40rem, and is a link to itself enlarged:
+  clicking opens a pure-CSS `:target` overlay. No script is involved, because
+  Streamlit strips `<script>` out of markdown. The overlay's `z-index` clears
+  Streamlit's own chrome (999990 for the header, 999991 for the sidebar) — below
+  those it covered the page but left the header on top of it, and its close
+  button unclickable.
+
+  The overlay shows each capture at **1500px, the width it was taken at**, not at
+  its 3000px pixel width. `shoot_screenshots.py` captures a 1500px viewport at
+  `deviceScaleFactor=2`, so the file is a 1500px picture at 2×; displaying it at
+  3000 was showing the app at 200% zoom, which is why opening one landed the
+  reader inside a wall of letterforms. It is capped at the window as well, so the
+  overlay scrolls down but never sideways — the way the page it is a picture of
+  does.
+
+  **Every surface closes it**: the image, the backdrop around it, and a labelled
+  button in a fixed bar that also says so. Closing used to be that button alone,
+  a 2.5rem `×` to be found on top of a screenshot that had covered the window,
+  while the image under the pointer showed `cursor: zoom-out` and did nothing —
+  the only click-to-close surface was the backdrop, and the image covered every
+  pixel of it. The bar also links to the file itself in a new tab, which is the
+  way *up* in scale: at 1:1 the browser's own image viewer has real zoom and a
+  Back button, neither of which a `:target` overlay can offer.
 - **The column is capped** at 58rem. In `wide` layout a line of prose otherwise
   ran the whole window.
 
@@ -240,8 +257,11 @@ other.
 Selecting the thorough check additionally verifies the LLM configuration, using
 the same `validate_provider_config()` the check itself calls. A missing key or
 endpoint is reported here, naming the empty `.env` values, rather than after a
-run has already been paid for. The model named is the one **Step 3 has
-selected**, so this line and the run it describes cannot disagree.
+run has already been paid for. Both the provider and the model named are the ones
+**Step 3 has selected**, so this line and the run it describes cannot disagree —
+which is why `validate_provider_config()` takes a provider argument at all: Step
+3 can point a run at a backend other than the one `.env` names, and a readiness
+line answering for `.env` would then be answering about a different run.
 
 That verdict has a **line reserved for it under the table whichever check is
 selected**, and the line is a fixed height. It used to be rendered only for the
@@ -301,17 +321,38 @@ form skips input validation entirely.
 
 All optional, but not all equally rare, so they are not all folded away together.
 
-- **Model / deployment** — shown for the **thorough** check only, since it is the
-  only one that uses a model. A choice among the names `.env`'s
-  `AZURE_OPENAI_DEPLOYMENT` configures — that variable takes a bare name, a
-  comma-separated list or a JSON array, and every name in it appears here. It is
-  a choice rather than free text because a name that is not configured cannot be
-  validated before the run, and the readiness line under Step 1 would then be
-  answering about a different model. The selection reaches the check the way the
-  check already looks for it: `runners.run_checker` is given
-  `env_overrides={"AZURE_OPENAI_DEPLOYMENT": …}`, and `openai_client` reads that
-  from the subprocess environment. Switching deployments previously meant editing
-  `.env` and restarting the app.
+- **LLM provider** and **Model / deployment** — shown for the **thorough** check
+  only, since it is the only one that uses an LLM. Offered as a pair because
+  either alone is half an answer: a model name means nothing without the backend
+  that serves it, and a provider without a model just moves the question. The
+  provider list is `openai_client.SUPPORTED_PROVIDERS`, plus `.env`'s own value
+  when that is something else — an unrecognised `LLM_PROVIDER` is passed through
+  to litellm untouched, so a dropdown that dropped it would silently switch the
+  run to another backend.
+
+  The model list is whatever `openai_client.provider_models()` reports for the
+  selected provider: `AZURE_OPENAI_DEPLOYMENT` for the provider `.env` itself
+  selects, `LLM_MODELS_<PROVIDER>` for any other, each accepting a bare name, a
+  comma-separated list or a JSON array. It ends with **Other**, which reveals a
+  text box. A typed name cannot be checked before the run and the caption says
+  so, but "cannot be verified" is not "must not be offered": a list alone was a
+  dead end on any machine whose `.env` happened not to name the wanted model, and
+  the advice it could give — edit `.env`, restart — is exactly the ceremony this
+  control exists to remove.
+
+  Changing the provider reassigns the model to the new provider's first name (or
+  to *Other*) rather than clearing it. Clearing left the picker offering the new
+  list while still displaying the old provider's name: Streamlit rebuilds the
+  options, but a widget whose stored value has vanished is not redrawn with its
+  new default.
+
+  Both selections reach the check the way the check already looks for them:
+  `runners.run_checker` is given `env_overrides={"LLM_PROVIDER": …,
+  "AZURE_OPENAI_DEPLOYMENT": …}`, and `openai_client` reads both from the
+  subprocess environment at import. python-dotenv does not overwrite a variable
+  that is already set, so the choices win over `.env` without touching it and
+  without outliving the run. Both are recorded on the workbook's Summary sheet.
+  Switching either previously meant editing `.env` and restarting the app.
 - **Crossref** — a single checkbox, in the open, on by default. Clearing it is
   exactly `--crossref off`. It is skipped automatically when there is no
   internet. It sits on the page rather than in the expander because it is one
@@ -431,7 +472,8 @@ The most useful table here — the app is not a strict superset of the CLI.
 | | Web app | Command line |
 |---|---|---|
 | `--limit` (cap LLM cost) | **not available** — the thorough check assesses every distinct `review` venue | `bealls_llm_check.py --limit N` |
-| Model / deployment | picked per run in Step 3, from the names `.env` configures | whichever `AZURE_OPENAI_DEPLOYMENT` names first |
+| LLM provider | picked per run in Step 3 | whatever `LLM_PROVIDER` names |
+| Model / deployment | picked per run in Step 3, from the names `.env` configures for that provider — or typed in | whichever `AZURE_OPENAI_DEPLOYMENT` names first |
 | Crossref | checkbox: on / off | `--crossref all \| flagged \| off` |
 | Whitelist / blacklist | pasted JSON; Fast and Thorough only | file path; also on `bealls_llm_check.py` |
 | `.jsonl` input | not accepted | `batch_check.py` only |
@@ -448,15 +490,17 @@ The most useful table here — the app is not a strict superset of the CLI.
   reads back the newest `.xlsx` created since the run started. Two overlapping
   runs — two browser tabs, or the CLI at the same time — can therefore hand one
   session the other's workbook. Run one at a time.
-- **`.env` is read once, at startup**, and the LLM-readiness verdict shown under
-  the thorough check is cached for the session. Restart the app after editing it —
-  including after **adding a deployment**, which is what Step 3's picker offers.
-  Which of the configured ones a run uses needs no restart; adding to the list
-  does. The models are always labelled with the `AZURE_OPENAI_DEPLOYMENT`
-  variable name, whichever provider is active.
+- **`.env` is read once, at startup**, and the LLM-readiness verdict is cached
+  per provider for the session. Restart the app after editing it — including
+  after **adding a deployment to a list**, which is what Step 3's picker offers.
+  Which provider and which model a run uses needs no restart; adding to a list
+  does, and *Other* is the way round that without one. The names come from
+  `AZURE_OPENAI_DEPLOYMENT` for the provider `.env` selects — a historical name,
+  whichever provider that is — and from `LLM_MODELS_<PROVIDER>` for the rest.
 - **The readiness check is a configuration check, not a live call.** It confirms
-  that the provider's key and endpoint are present, not that they are valid, and
-  it says nothing about whether the selected deployment exists.
+  that the selected provider's key and endpoint are present, not that they are
+  valid, and it says nothing about whether the selected model exists — least of
+  all one typed into *Other*, which nothing but the provider can confirm.
 - **The coloured status preview needs pandas**, which arrives as a Streamlit
   dependency rather than a direct requirement; without it the table still renders,
   just without colour.

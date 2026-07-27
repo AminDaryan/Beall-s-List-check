@@ -176,9 +176,11 @@ equivalent to `--crossref off`. Under **Advanced**, a whitelist (*only check
 these venues*) and a blacklist (*also treat these venues as predatory*) are
 pasted as JSON rather than passed as file paths, and apply to the Fast and
 Thorough checks only — Batch CSV classifies every record. The Thorough check
-additionally gets a **Model / deployment** picker, listing every name in
-`AZURE_OPENAI_DEPLOYMENT`, so switching between configured deployments does not
-mean editing `.env` and restarting.
+additionally gets an **LLM provider** picker and a **Model / deployment** picker,
+which decide what answers this run: the provider list is the six supported
+backends, and the model list is the names `.env` gives for whichever is selected,
+plus *Other* for a name typed in. Neither switching provider nor switching model
+means editing `.env` and restarting.
 
 **Step 4 · Run.** A labelled summary restates what is about to run — the check,
 how many papers, Crossref, the two lists, and what comes back — and the button
@@ -242,6 +244,15 @@ the thorough check will not run until you fill them in (or switch provider).
 The **model name goes in `AZURE_OPENAI_DEPLOYMENT` for every provider**, not just
 Azure (e.g. `AZURE_OPENAI_DEPLOYMENT=claude-3-5-sonnet-20241022`). The name is
 historical; see [`.env.example`](.env.example) for a worked example per provider.
+`LLM_MODELS_<PROVIDER>` — `LLM_MODELS_ANTHROPIC`, `LLM_MODELS_OPENAI` and so on —
+names models for the *other* providers, so that switching provider in the web app
+also switches the models it offers.
+
+What `.env` sets is the default rather than the decision. The web app chooses
+**both the provider and the model per run**, in Step 3, and passes them to the
+check in its environment; an environment variable wins over the file, so nothing
+`.env` holds is changed and nothing outlives the run. A run started from the
+command line uses the file, unchanged.
 
 Cost scales with the number of **distinct `review` venues**, not papers: the pass
 groups the `review` rows by venue, makes one call per group, and copies the

@@ -469,6 +469,8 @@ def _write_summary_sheet(ws, results, snapshot_meta, corpus_files,
     if token_usage is not None or llm_stats:
         llm_stats = llm_stats or {}
         header(row, "LLM review (review papers only)", "Value"); row += 1
+        if llm_stats.get("provider"):
+            kv(row, "LLM provider", llm_stats["provider"]); row += 1
         if llm_stats.get("model"):
             kv(row, "Model / deployment", llm_stats["model"]); row += 1
         if "review_venues_checked" in llm_stats:

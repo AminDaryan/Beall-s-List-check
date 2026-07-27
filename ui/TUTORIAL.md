@@ -90,7 +90,8 @@ produce every verdict except `out_of_scope`.
 
 The sidebar holds three things: the links to the two pages (**Run a check** and
 **Tutorial**), one line on what the app does, and an **Environment** panel. The
-title of that panel names the configured LLM provider. It only matters for the
+title of that panel names the LLM provider configured in `.env` — the default a
+run starts from, which Step 3 can change for that run. It only matters for the
 thorough check, so it stays closed until then. The app follows the light or dark
 setting of the browser, and the **⚙** button in the top right corner overrides
 it.
@@ -123,8 +124,8 @@ flagged and why.
 **Step 3 · Options.** Change nothing here. The only option shown directly is
 **Crossref**, which is on by default and should stay on. The whitelist and the
 blacklist are inside **Advanced**, and both are empty. (Choosing the thorough
-check adds a **Model / deployment** list here as well — see
-[section 4](#4-the-thorough-check-optional).)
+check adds an **LLM provider** and a **Model / deployment** list here as well —
+see [section 4](#4-the-thorough-check-optional).)
 
 **Step 4 · Run.** A labelled summary repeats what is about to happen: which
 check, how many papers, whether Crossref is on, which extra lists are used, and
@@ -255,16 +256,28 @@ the only part that costs money. Before using it:
    of that setting is historical.
 3. Restart the app. `.env` is read once, at startup.
 
-`AZURE_OPENAI_DEPLOYMENT` accepts one name, several names separated by commas, or
-a JSON list. **Every name in it appears in Step 3's Model / deployment list**, and
-the run uses the one selected there. Switching between configured models
-therefore does not mean editing `.env` and restarting the app. Step 4's summary
-and the line under Step 1 both name the model that will actually be used.
+Those settings are the starting point, not the decision. Selecting the thorough
+check adds two lists to Step 3 — **LLM provider** and **Model / deployment** —
+and they, not `.env`, decide what answers a given run. Choosing a different
+provider there changes that run only; the file is left alone, and a run started
+from the command line is unaffected.
 
-Selecting this check tests the configuration and names any key or web address
-that is missing, *before* any money is spent. The test only confirms that the
-values are filled in. It does not confirm that they are correct, and it says
-nothing about whether the selected model exists.
+`AZURE_OPENAI_DEPLOYMENT` accepts one name, several names separated by commas, or
+a JSON list, and every name in it appears in the model list. For a provider other
+than the one `.env` selects, the names come from `LLM_MODELS_` followed by the
+provider's name in capitals — `LLM_MODELS_ANTHROPIC`, for example — in the same
+three shapes. A model that is in neither is still usable: choose **Other** at the
+end of the list and type its name.
+
+Step 4's summary and the line under Step 1 both name the provider and the model
+that will actually be used, and the finished workbook records both on its
+*Summary* sheet.
+
+Selecting this check tests the configuration of whichever provider is selected
+and names any key or web address that is missing, *before* any money is spent.
+The test only confirms that the values are filled in. It does not confirm that
+they are correct, and it says nothing about whether the model exists — a name
+typed into **Other** is answered for by the provider, on the first request.
 
 The cost depends on the number of **different venues with the status `review`**,
 not on the number of papers: the rows are grouped by venue, and each group costs
