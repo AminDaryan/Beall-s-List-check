@@ -901,16 +901,20 @@ def _slug(text: str) -> str:
 
 
 @st.cache_data(show_spinner=False)
-def _tutorial_sections():
-    """``[(level, number, title, anchor)]`` for every heading the app renders.
+def _tutorial_sections_cached(mtime_ns, size):
+    """``_tutorial_sections()``'s parse, keyed on the file it parses.
 
-    Read from the file rather than listed here, so renaming or renumbering a
-    section cannot leave the Tutorial's contents, or the ⓘ links that point into
-    it from the flow, aimed at a heading that no longer exists.
+    The arguments are the caller's stat of TUTORIAL.md and are not read here:
+    they exist so that editing the file misses the cache.  Streamlit keys a
+    cached result on the arguments and the source, neither of which changes when
+    a heading is renamed, so without them the app serves the headings it parsed
+    at startup until the server is restarted — while the page below the contents
+    renders the new ones, leaving every row pointing at an anchor that has gone.
 
-    The block the app skips is stripped first, for the same reason: its headings
-    are real on GitHub but are not on the page here, and both callers build links
-    that have to land somewhere.
+    Neither name may be given a leading underscore, tempting as it is for an
+    argument that is never read: that is Streamlit's syntax for *exclude this
+    one from the cache key*, which is precisely the bug this signature exists to
+    fix, and it would reintroduce it silently.
     """
     try:
         text = _MD_SKIP.sub("", _TUTORIAL_MD.read_text(encoding="utf-8"))
@@ -923,6 +927,24 @@ def _tutorial_sections():
         out.append((len(hashes), num if numbered else "",
                     rest if numbered else title, _slug(title)))
     return out
+
+
+def _tutorial_sections():
+    """``[(level, number, title, anchor)]`` for every heading the app renders.
+
+    Read from the file rather than listed here, so renaming or renumbering a
+    section cannot leave the Tutorial's contents, or the ⓘ links that point into
+    it from the flow, aimed at a heading that no longer exists.
+
+    The block the app skips is stripped first, for the same reason: its headings
+    are real on GitHub but are not on the page here, and both callers build links
+    that have to land somewhere.
+    """
+    try:
+        stat = _TUTORIAL_MD.stat()
+    except OSError:
+        return []
+    return _tutorial_sections_cached(stat.st_mtime_ns, stat.st_size)
 
 
 def tutorial_href(phrase: str) -> str:
@@ -1039,7 +1061,7 @@ def page_check():
     # three are meant to be weighed against each other, and a dropdown shows only
     # the option already chosen.
     step_header(1, "Choose a check", "what to run over your papers",
-                f"{checker.icon} {checker.title}", "ok", learn="A first run")
+                f"{checker.icon} {checker.title}", "ok", learn="first run")
     st.caption("All three run the same deterministic engine. They differ in what they add "
                "on top of it, what they cost, and what you get back. "
                "Hover a **Cost**, **Records** or **Returns** pill for the detail.")
@@ -1104,7 +1126,7 @@ def page_check():
     items = get_papers()
     step_header(2, "Provide the papers", "Semantic Scholar records, as JSON",
                 f"✅ {len(items)} paper(s)" if items else "waiting for papers",
-                "ok" if items else "wait", into=head2, learn="real papers")
+                "ok" if items else "wait", into=head2, learn="your own papers")
     if items is not None:
         st.success(f"✅ Loaded {len(items)} paper(s) — ready to run.")
         show_input_quality(items, key="input")
@@ -1119,7 +1141,7 @@ def page_check():
     # empty on almost every run, and cost two text areas to show, so they stay
     # folded away.
     step_header(3, "Options", "all optional", _options_state(checker),
-                learn="Narrowing or extending")
+                learn="Crossref")
 
     # The model is a run setting, so it is chosen here rather than only reported
     # in the sidebar.  Editing .env and restarting the app was the previous way to
@@ -1187,7 +1209,7 @@ def page_check():
     # "Merged" or "8 paper(s)" was answering.
     step_header(4, "Run", "everything above, in one go",
                 "ready" if items else "add papers first", "ok" if items else "wait",
-                learn="Reading what comes back")
+                learn="the report")
     lists_na = checker.kind == "csv"
     # Batch CSV's two "not used here" cells carry the reason as hover text. They
     # are the only place the flow still mentions the lists for that check, now
