@@ -116,6 +116,11 @@ Every `*.json` file **directly inside** that folder is read and merged into one
 run (sub-folders are ignored), and records repeated across files are counted once
 — they are deduplicated on `paperId`, falling back to `title`.
 
+**No papers to hand?** [`examples/sample_papers.json`](examples/sample_papers.json)
+is an eight-record corpus that exercises every verdict the tool can reach without
+a whitelist — use it to confirm the installation works and to see each rule in
+action. Its expected output is tabulated in [`examples/`](examples/README.md).
+
 > Using the **web app** (Step 3)? You upload or paste the papers there — skip this step.
 
 ### Step 3 · Run the check

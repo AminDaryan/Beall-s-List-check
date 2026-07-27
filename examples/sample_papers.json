@@ -1,0 +1,115 @@
+[
+  {
+    "paperId": "example0000000000000000000000000000000001",
+    "title": "Example 1 — the venue's own website is on Beall's List",
+    "venue": "Journal of Modern Physics",
+    "year": 2021,
+    "externalIds": { "DOI": "10.4236/jmp.2021.123045" },
+    "publicationVenue": {
+      "name": "Journal of Modern Physics",
+      "type": "journal",
+      "url": "https://www.scirp.org/journal/jmp",
+      "issn": "2153-1196",
+      "alternate_urls": []
+    },
+    "openAccessPdf": { "url": "https://www.scirp.org/pdf/jmp_2021.pdf" }
+  },
+  {
+    "paperId": "example0000000000000000000000000000000002",
+    "title": "Example 2 — a mainstream journal that is not on the list",
+    "venue": "Nature",
+    "year": 2021,
+    "externalIds": { "DOI": "10.1038/s41586-021-03819-2" },
+    "publicationVenue": {
+      "name": "Nature",
+      "type": "journal",
+      "url": "https://www.nature.com/nature/",
+      "issn": "0028-0836",
+      "alternate_urls": []
+    },
+    "openAccessPdf": { "url": "" }
+  },
+  {
+    "paperId": "example0000000000000000000000000000000003",
+    "title": "Example 3 — a preprint, so there is no journal venue to check",
+    "venue": "arXiv.org",
+    "year": 2023,
+    "externalIds": { "DOI": "10.48550/arXiv.2301.00001" },
+    "publicationVenue": {
+      "name": "arXiv.org",
+      "type": "repository",
+      "url": "https://arxiv.org",
+      "issn": "2331-8422",
+      "alternate_urls": []
+    },
+    "openAccessPdf": { "url": "https://arxiv.org/pdf/2301.00001" }
+  },
+  {
+    "paperId": "example0000000000000000000000000000000004",
+    "title": "Example 4 — the name matches a listed venue but the website does not",
+    "venue": "International Journal of Advanced Research",
+    "year": 2020,
+    "externalIds": { "DOI": "10.21474/IJAR01/10001" },
+    "publicationVenue": {
+      "name": "International Journal of Advanced Research",
+      "type": "journal",
+      "url": "https://www.example-publisher.org/ijar",
+      "issn": "2320-5407",
+      "alternate_urls": []
+    },
+    "openAccessPdf": { "url": "" }
+  },
+  {
+    "paperId": "example0000000000000000000000000000000005",
+    "title": "Example 5 — an established journal whose DOI confirms the venue",
+    "venue": "Clinical and Experimental Dermatology",
+    "year": 2024,
+    "externalIds": { "DOI": "10.1093/ced/llae119" },
+    "publicationVenue": {
+      "name": "Clinical and Experimental Dermatology",
+      "type": "journal",
+      "url": "http://onlinelibrary.wiley.com/journal/10.1111/(issn)1365-2230",
+      "issn": "0307-6938",
+      "alternate_urls": []
+    },
+    "openAccessPdf": { "url": "" }
+  },
+  {
+    "paperId": "example0000000000000000000000000000000006",
+    "title": "Example 6 — a record carrying no venue information at all",
+    "year": 2022,
+    "externalIds": {},
+    "publicationVenue": {},
+    "openAccessPdf": { "url": "" }
+  },
+  {
+    "paperId": "example0000000000000000000000000000000007",
+    "title": "Example 7 — a vanity-press match, which is never asserted as on_list",
+    "venue": "International Journal of Information Technology and Web Engineering",
+    "year": 2020,
+    "externalIds": { "DOI": "10.4018/IJITWE.2020010101" },
+    "publicationVenue": {
+      "name": "International Journal of Information Technology and Web Engineering",
+      "type": "journal",
+      "url": "https://www.igi-global.com/journal/international-journal-information-technology-web/1082",
+      "issn": "1554-1045",
+      "alternate_urls": []
+    },
+    "openAccessPdf": { "url": "" }
+  },
+  {
+    "paperId": "example0000000000000000000000000000000008",
+    "title": "Example 8 — an alternate web link points at a listed site",
+    "venue": "Journal of Power and Energy Engineering",
+    "year": 2020,
+    "externalIds": { "DOI": "10.4236/jpee.2020.88001" },
+    "publicationVenue": {
+      "name": "Journal of Power and Energy Engineering",
+      "type": "journal",
+      "url": "https://www.researchgate.net/journal/jpee",
+      "issn": "2327-588X",
+      "alternate_urls": ["https://www.scirp.org/journal/jpee"]
+    },
+    "openAccessPdf": { "url": "" }
+  }
+]
