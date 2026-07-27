@@ -148,8 +148,15 @@ readable in the app and on GitHub. It is not rendered verbatim:
   the slug Streamlit would have generated (`_slug`), so links into these sections
   — the ⓘs, and the file's own cross-references on GitHub — resolve to the same
   anchors.
-- **A contents strip** sits above the first section: seven numbered chips, read
-  at a glance, rather than a bulleted list a screenful long.
+- **A contents menu** sits above the first section — one full-width row per
+  section, ruled like a table. It was a strip of chips, which is the wrong shape
+  for navigation: a contents list is read down a column rather than across a
+  wrapped line, the chips re-flowed at every window width, and each entry's
+  target was only as big as its text. It lists **every** level-2 section, not
+  just the numbered ones; *What the tool answers* and *Where to go next* are as
+  jumpable as the seven steps between them, and they carry a dot in the number's
+  place so the column still lines up. Sections inside the skipped block are
+  excluded, so no row can point at a heading the app does not render.
 - **Screenshots are plain `<img>` tags** served from [`static/`](static), not
   `st.image` — which re-encodes a PNG as JPEG, visibly lossy on a picture of
   text. Each is centred, capped at 40rem, and is a link to itself at full size:

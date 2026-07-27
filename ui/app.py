@@ -800,24 +800,33 @@ _TUTORIAL_CSS = "<style>" + _TOKENS + _CHROME_CSS + """
 .st-key-tutorial .bl-h-plain {display:block; scroll-margin-top:4rem;}
 
 /* ── Contents ──────────────────────────────────────────────────────────────
-   A strip rather than a bulleted list: nine sections read as a row of chips at
-   a glance, and as a list they would be a screenful before the first word. */
-.bl-toc {display:flex; flex-wrap:wrap; align-items:center; gap:.4rem;
-         padding:.85rem 1rem; margin:0 0 1.5rem;
-         border:1px solid var(--bl-border); border-radius:10px;
-         background:var(--bl-surface);}
-.bl-toc-k {font-size:.7rem; font-weight:700; letter-spacing:.06em;
-           text-transform:uppercase; color:var(--bl-fg-faint); margin-right:.4rem;}
-.bl-toc a {display:inline-flex; align-items:center; gap:.4rem;
-           padding:.25rem .7rem .25rem .3rem; border-radius:999px;
-           font-size:.84rem; color:inherit !important; text-decoration:none !important;
-           background:var(--bl-mute-bg); transition:background-color .15s ease;}
-.bl-toc a:hover {background:var(--bl-accent-soft);
-                 box-shadow:inset 0 0 0 1px var(--bl-accent-line);}
+   A menu of rows, not a strip of chips.  A contents list is navigation, and
+   navigation is read down a column; as chips it wrapped differently at every
+   window width, truncated nothing but promised a pill's worth of room for
+   titles that need a line, and gave each entry a target the size of its text. */
+.bl-toc {margin:0 0 1.75rem; border:1px solid var(--bl-border); border-radius:10px;
+         background:var(--bl-surface); overflow:hidden;}
+.bl-toc-k {padding:.55rem 1rem; font-size:.7rem; font-weight:700; letter-spacing:.06em;
+           text-transform:uppercase; color:var(--bl-fg-faint);
+           border-bottom:1px solid var(--bl-border);}
+.bl-toc-row {display:flex; align-items:center; gap:.8rem; padding:.55rem 1rem;
+             color:inherit !important; text-decoration:none !important;
+             border-bottom:1px solid var(--bl-border);
+             transition:background-color .12s ease, box-shadow .12s ease;}
+.bl-toc-row:last-child {border-bottom:0;}
+/* The hover is a fill and a rule down the left edge, not a colour on the text:
+   the accent is a 3.7:1 blue, which is fine for a bar and short of what text at
+   this size has to clear. */
+.bl-toc-row:hover {background:var(--bl-accent-soft);
+                   box-shadow:inset 3px 0 0 var(--bl-accent);}
 .bl-toc-n {display:inline-flex; align-items:center; justify-content:center;
-           width:1.3rem; height:1.3rem; border-radius:50%; flex:0 0 auto;
+           width:1.55rem; height:1.55rem; border-radius:50%; flex:0 0 auto;
            background:var(--bl-accent); color:var(--bl-on-accent);
-           font-size:.72rem; font-weight:700;}
+           font-size:.78rem; font-weight:700;}
+/* Muted rather than faint: the dot sits on a wash, and the wash costs it enough
+   contrast that the faint level landed at 4.3:1. */
+.bl-toc-n-plain {background:var(--bl-mute-bg); color:var(--bl-fg-muted);}
+.bl-toc-t {font-size:.93rem;}
 
 /* ── Screenshots ───────────────────────────────────────────────────────────
    Centred, framed, and capped well below the column width — these illustrate
@@ -864,6 +873,21 @@ _TUTORIAL_CSS = "<style>" + _TOKENS + _CHROME_CSS + """
 """
 
 
+# ── Rendering a repository markdown file as a page ───────────────────────────
+# A markdown image on a line of its own.
+_MD_IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$", re.M)
+# A link to a file in the repository. It resolves on GitHub but not in the app,
+# where it is shown as the path it points at.
+_MD_REL_LINK = re.compile(r"\[([^\]]+)\]\((?!https?://|#)([^)]+)\)")
+# A section heading, optionally "N · Title".
+_MD_HEADING = re.compile(r"^(#{2,3})[ \t]+(.+?)[ \t]*$", re.M)
+# What the app leaves out. The block between these markers is written for someone
+# reading TUTORIAL.md on GitHub before they have the app; inside the app it is
+# instructions for something already done.
+_MD_SKIP = re.compile(r"[ \t]*<!--[ \t]*app:skip-start[ \t]*-->.*?"
+                      r"<!--[ \t]*app:skip-end[ \t]*-->[ \t]*\n?", re.S)
+
+
 def _slug(text: str) -> str:
     """The anchor Streamlit (and GitHub) give a heading of this text.
 
@@ -878,14 +902,18 @@ def _slug(text: str) -> str:
 
 @st.cache_data(show_spinner=False)
 def _tutorial_sections():
-    """``[(level, number, title, anchor)]`` for every heading in TUTORIAL.md.
+    """``[(level, number, title, anchor)]`` for every heading the app renders.
 
     Read from the file rather than listed here, so renaming or renumbering a
     section cannot leave the Tutorial's contents, or the ⓘ links that point into
     it from the flow, aimed at a heading that no longer exists.
+
+    The block the app skips is stripped first, for the same reason: its headings
+    are real on GitHub but are not on the page here, and both callers build links
+    that have to land somewhere.
     """
     try:
-        text = _TUTORIAL_MD.read_text(encoding="utf-8")
+        text = _MD_SKIP.sub("", _TUTORIAL_MD.read_text(encoding="utf-8"))
     except OSError:
         return []
     out = []
@@ -1281,20 +1309,6 @@ def page_check():
                 render_csv_result(addon)
 
 
-# A markdown image on a line of its own.
-_MD_IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$", re.M)
-# A link to a file in the repository. It resolves on GitHub but not in the app,
-# where it is shown as the path it points at.
-_MD_REL_LINK = re.compile(r"\[([^\]]+)\]\((?!https?://|#)([^)]+)\)")
-# A section heading, optionally "N · Title".
-_MD_HEADING = re.compile(r"^(#{2,3})[ \t]+(.+?)[ \t]*$", re.M)
-# What the app leaves out. The block between these markers is written for someone
-# reading TUTORIAL.md on GitHub before they have the app; inside the app it is
-# instructions for something already done.
-_MD_SKIP = re.compile(r"[ \t]*<!--[ \t]*app:skip-start[ \t]*-->.*?"
-                      r"<!--[ \t]*app:skip-end[ \t]*-->[ \t]*\n?", re.S)
-
-
 def _shot_html(src: str, alt: str, ident: str) -> str:
     """A screenshot, and the full-size copy a click on it opens.
 
@@ -1345,15 +1359,29 @@ def _heading_html(hashes: str, title: str) -> str:
 
 
 def _contents_html() -> str:
-    """The numbered sections, as a strip of links at the top of the page."""
+    """The page's sections, as a menu at the top.
+
+    A row per section rather than a strip of chips: a contents list is
+    navigation, and navigation is read down a column, not across a wrapped line.
+    The rows also give each entry a full-width target and a stable position — the
+    chips re-wrapped at every window size — and room for the title in full rather
+    than however much of it fits in a pill.
+
+    **Every** level-2 section, numbered or not. "What the tool answers" and
+    "Where to go next" are as jumpable as the seven steps between them, and a
+    contents list that quietly omitted them would be misdescribing the page. They
+    carry a dot in the number's place, so the column still lines up.
+    """
     items = [(num, title, anchor) for level, num, title, anchor in _tutorial_sections()
-             if level == 2 and num]
+             if level == 2]
     if not items:
         return ""
-    return ("<div class='bl-toc'><span class='bl-toc-k'>Contents</span>"
-            + "".join(f"<a href='#{a}'><span class='bl-toc-n'>{n}</span>"
-                      f"{html.escape(t)}</a>" for n, t, a in items)
-            + "</div>")
+    rows = "".join(
+        f"<a class='bl-toc-row' href='#{anchor}'>"
+        f"<span class='bl-toc-n{'' if num else ' bl-toc-n-plain'}'>{num or '&bull;'}</span>"
+        f"<span class='bl-toc-t'>{html.escape(title)}</span></a>"
+        for num, title, anchor in items)
+    return f"<div class='bl-toc'><div class='bl-toc-k'>Contents</div>{rows}</div>"
 
 
 def _render_markdown_file(path, *, skip_app_only=False, static_url="", before_sections=""):
