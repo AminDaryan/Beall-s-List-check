@@ -360,11 +360,20 @@ All optional, but not all equally rare, so they are not all folded away together
   Switching either previously meant editing `.env` and restarting the app.
 - **Crossref** — a single checkbox, in the open, on by default. Clearing it is
   exactly `--crossref off`. It is skipped automatically when there is no
-  internet. It sits on the page rather than in the expander because it is one
-  line, it is on by default, and it changes verdicts: two of the example
-  corpus's eight records fall back from `on_list` to `review` without it.
-- **Advanced** — an expander holding the two venue lists, which are empty on
-  almost every run and cost two text areas to show.
+  internet. It changes verdicts: two of the example corpus's eight records fall
+  back from `on_list` to `review` without it.
+- **Venue lists** — the whitelist and the blacklist, side by side, in the open.
+  They were folded away for being rare, but rare is not the same as advanced, and
+  a fold answers the wrong question: it hides *what the run is doing* behind a
+  click, so the only way to confirm that no venue list is in force was to open a
+  panel and read two empty boxes. Shown, they answer that by being visibly empty.
+  Side by side rather than stacked is what the fold was really buying — two 90px
+  boxes in a column pushed the Run button off the screen — and the two are a
+  pair, one narrowing the run and the other widening it, so a row reads them as
+  the opposites they are.
+
+Nothing in Step 3 is folded away. A step whose header claims to summarise the
+settings in force cannot do that while some of them are behind a click.
 
 The two lists are labelled by what they do, with the familiar term kept as a
 secondary identifier. "Whitelist" alone is ambiguous in this domain — it reads
@@ -385,10 +394,10 @@ Both take the same JSON the CLI flags take as a *file*, pasted directly:
 The format is documented in
 [`user_lists/README.md`](../src/bealls_list_check/user_lists/README.md).
 
-**Batch CSV shows no Advanced expander at all.** It takes neither list — there is
+**Batch CSV shows no venue lists at all.** It takes neither — there is
 no `--whitelist` or `--blacklist` on
 [`batch_check.py`](../src/bealls_list_check/batch_check/batch_check.py) to hand
-them to; it classifies every record it is given. The expander used to be
+them to; it classifies every record it is given. The section used to be
 rendered anyway, holding a note saying so, which made a control labelled
 *"narrow the run, or add venues of your own"* promise two things and then
 apologise for having neither. The fact is not lost: Step 4's summary reports

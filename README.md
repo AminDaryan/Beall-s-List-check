@@ -171,11 +171,12 @@ supplying data. An **Input data quality** panel appears as soon as the papers
 load: an offline check of the metadata *before* anything runs, downloadable as
 `input_data_quality.xlsx`.
 
-**Step 3 · Options.** One checkbox controls **Crossref**; clearing it is
-equivalent to `--crossref off`. Under **Advanced**, a whitelist (*only check
-these venues*) and a blacklist (*also treat these venues as predatory*) are
-pasted as JSON rather than passed as file paths, and apply to the Fast and
-Thorough checks only — Batch CSV classifies every record. The Thorough check
+**Step 3 · Options.** Nothing here is folded away. One checkbox controls
+**Crossref**; clearing it is equivalent to `--crossref off`. Under **Venue
+lists**, a whitelist (*only check these venues*) and a blacklist (*also treat
+these venues as predatory*) sit side by side, pasted as JSON rather than passed
+as file paths, and apply to the Fast and Thorough checks only — Batch CSV
+classifies every record. The Thorough check
 additionally gets an **LLM provider** picker and a **Model / deployment** picker,
 which decide what answers this run: the provider list is the six supported
 backends, and the model list is the names `.env` gives for whichever is selected,

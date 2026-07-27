@@ -119,11 +119,11 @@ anything runs, without using the internet. It does not stop the run, and it can
 be downloaded as `input_data_quality.xlsx`. Open it to see which paper was
 flagged and why.
 
-**Step 3 · Options.** Change nothing here. The only option shown directly is
-**Crossref**, which is on by default and should stay on. The whitelist and the
-blacklist are inside **Advanced**, and both are empty. (Choosing the thorough
-check adds an **LLM provider** and a **Model / deployment** list here as well —
-see [section 4](#4-the-thorough-check-optional).)
+**Step 3 · Options.** Change nothing here. **Crossref** is on by default and
+should stay on, and the two **venue list** boxes below it are empty, which is
+what almost every run wants. (Choosing the thorough check adds an **LLM
+provider** and a **Model / deployment** list here as well — see
+[section 4](#4-the-thorough-check-optional).)
 
 **Step 4 · Run.** A labelled summary repeats what is about to happen: which
 check, how many papers, whether Crossref is on, which extra lists are used, and
@@ -293,7 +293,7 @@ The same table also comes back as an Excel file with colours, because a CSV file
 cannot hold colour.
 
 This check classifies every record, so it takes neither a whitelist nor a
-blacklist. Step 3 therefore shows no **Advanced** section for it, and Step 4's
+blacklist. Step 3 therefore shows no **venue list** boxes for it, and Step 4's
 summary reads `not used here` for both. The reason appears when the mouse is over
 those words.
 
@@ -306,14 +306,15 @@ second time.
 
 ## 6 · Crossref, and your own venue lists
 
-The one option shown directly in Step 3 is the **Crossref** checkbox, on by
-default. Crossref is the official registry of published articles; the app looks
-each paper up there by its DOI to confirm the venue. Switching it off forces a
-fully offline run: faster, but the results are less certain. Example papers 4 and
-8 fall back from `on_list` to `review` without it.
+The first option in Step 3 is the **Crossref** checkbox, on by default. Crossref
+is the official registry of published articles; the app looks each paper up there
+by its DOI to confirm the venue. Switching it off forces a fully offline run:
+faster, but the results are less certain. Example papers 4 and 8 fall back from
+`on_list` to `review` without it.
 
-Under **Advanced** are two optional boxes, available on the fast check and the
-thorough check:
+Below it, under **Venue lists**, are two optional boxes, available on the fast
+check and the thorough check. They are empty on almost every run, and being able
+to see that they are empty is the point of their being on the page:
 
 - **Only check these venues** *(whitelist)* — narrows the run. A paper from a
   venue that is not in the box is reported as `out_of_scope` instead of being

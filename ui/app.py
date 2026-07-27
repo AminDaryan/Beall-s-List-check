@@ -1249,12 +1249,11 @@ def page_check():
     # Step 3 — options.  All optional, so the pill states what is in force rather
     # than whether anything was touched.
     #
-    # Crossref is not in the expander with the other two.  It is one checkbox, it
-    # is on by default, and it changes verdicts — two of the example corpus's
-    # eight records fall back from `on_list` to `review` without it — so it is
-    # worth a line of the page.  The venue lists are genuinely advanced, are
-    # empty on almost every run, and cost two text areas to show, so they stay
-    # folded away.
+    # Nothing in this step is folded away any more.  Every control here changes
+    # what the run does — Crossref moves two of the example corpus's eight
+    # records between verdicts on its own — and a step whose header claims to
+    # summarise the settings in force cannot do that while some of them are
+    # behind a click.
     step_header(3, "Options", "all optional", _options_state(checker),
                 learn="venue lists")
 
@@ -1315,29 +1314,43 @@ def page_check():
                "per paper, and is skipped automatically when there is no internet.")
     # Not shown at all for Batch CSV, which takes neither list — batch_check.py
     # has no --whitelist or --blacklist to give them to.  It used to be shown
-    # anyway, holding a note that said so, which made "Advanced — narrow the run,
-    # or add venues of your own" a control that promised two things and then
-    # apologised for having neither.  Step 4's summary already reports the same
-    # fact as a property of the run rather than as a dead end, which is where it
-    # belongs and where it does not cost a click to find.
+    # anyway, holding a note that said so, which made the section a control that
+    # promised two things and then apologised for having neither.  Step 4's
+    # summary already reports the same fact as a property of the run rather than
+    # as a dead end, which is where it belongs.
+    # In the open, not behind a fold.  They were folded away for being rare, but
+    # rare is not the same as advanced, and a fold answers the wrong question: it
+    # hides *what the run is doing* behind a click, so the only way to confirm no
+    # venue list is in force is to open a panel and read two empty boxes.  Shown,
+    # they answer that by being visibly empty.
+    #
+    # Side by side rather than stacked, which is what the fold was really buying:
+    # two 90px boxes in a column pushed the Run button off the screen, and these
+    # two are a pair — one narrows the run, the other widens it — so a row reads
+    # them as the opposites they are.
     wl = bl = None
     if checker.kind != "csv":
-        with st.expander("🎯 Advanced — narrow the run, or add venues of your own"):
-            # Named by what they do, with the familiar term kept as a secondary
-            # identifier.  "Whitelist" alone is ambiguous here: it reads just as
-            # easily as "venues I consider safe", which is the opposite of what
-            # it does.
+        st.markdown("**🎯 Venue lists — narrow the run, or add venues of your own**")
+        st.caption("Both are empty on most runs. Leave them so unless this run needs a "
+                   "different scope from Beall's List itself.")
+        wl_col, bl_col = st.columns(2)
+        # Named by what they do, with the familiar term kept as a secondary
+        # identifier.  "Whitelist" alone is ambiguous here: it reads just as
+        # easily as "venues I consider safe", which is the opposite of what
+        # it does.
+        with wl_col:
             wl = venue_list_input(
                 "Only check these venues  ·  **whitelist**", "wl",
                 hint="Restricts the run. A paper from any venue not listed here is reported as "
                      "`out_of_scope` rather than checked. Leave empty to check every paper.")
+        with bl_col:
             bl = venue_list_input(
                 "Also treat these venues as predatory  ·  **blacklist**", "bl",
                 hint="Extends the list. These venues count as predatory for this run in "
                      "addition to everything on Beall's List.")
-            st.caption('Both boxes take the same JSON: a list like '
-                       '`[{"name": "IEEE", "domain": "ieee.org"}]`, or just `"Nature"` to match '
-                       'by name.')
+        st.caption('Both boxes take the same JSON: a list like '
+                   '`[{"name": "IEEE", "domain": "ieee.org"}]`, or just `"Nature"` to match '
+                   'by name.')
     aux_lists = {"--whitelist": wl, "--blacklist": bl}
     extra_args = None if crossref else ["--crossref", "off"]
 
