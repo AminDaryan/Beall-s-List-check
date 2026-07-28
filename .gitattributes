@@ -1,0 +1,27 @@
+# Line endings.
+#
+# The repository stores text as LF and lets Git hand each platform what it
+# wants on checkout. That is already what a Windows clone with the default
+# core.autocrlf=true does, but it is a property of whoever's git config happens
+# to be in effect, and one contributor set differently is enough to commit CRLF
+# into a file that then breaks for everyone else.
+* text=auto
+
+# The shell scripts are the case where it is not merely untidy. A CRLF in the
+# first line makes the kernel look for an interpreter called "bash\r", and the
+# error it produces -- "/usr/bin/env: 'bash\r': No such file or directory" --
+# names a file that plainly exists, which is a genuinely hard thing to read.
+#
+# eol=lf pins them in the *working tree* as well as in the repository, on every
+# platform. That matters here beyond Linux: this project is developed on
+# Windows, and running these scripts under WSL against the Windows working tree
+# (/mnt/c/...) reads exactly the bytes Git checked out there.
+*.sh    text eol=lf
+
+# The PowerShell counterparts, for the same reason in the other direction:
+# some older PowerShell hosts are unhappy with bare LF in a script.
+*.ps1   text eol=crlf
+
+# Binary — never touch these.
+*.png   binary
+*.xlsx  binary
