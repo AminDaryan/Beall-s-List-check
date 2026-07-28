@@ -328,8 +328,9 @@ whitelisted venue that is on Beall's List still comes back `on_list`.
 
 ### Adding a venue
 
-Type into the **Name, website or ISSN** box and press **＋ Add**. What you type
-decides how it is matched, and the row that appears says which:
+Type into the **Name, website or ISSN** box and press Enter, or use **＋ Add**.
+The venue appears in the box below. What you type decides how it is matched, and
+the row that appears says which:
 
 | What you type | Example | What it matches |
 |---|---|---|
@@ -344,17 +345,21 @@ Remove an entry with the **✕** beside it.
 
 ### Finding a journal in DOAJ
 
-If you know the journal but not its ISSN, open **🔍 Find a journal in DOAJ**
-under the whitelist and search for it by name. The
+If you know the journal but not its ISSN, type its name into
+**🔍 Find a journal in DOAJ** under the whitelist. The
 [Directory of Open Access Journals](https://doaj.org) lists about 20,000 vetted
-open-access journals; **＋ Add** puts the one you pick on the list with its
-official title and ISSN, so you do not have to look either up.
+open-access journals, and the matches appear in the dropdown underneath, whose
+label says how many were found.
 
-The journal's website is *not* added unless you tick **Also add the journal's
-website**. That is deliberate: many journals are published on a shared platform,
+**Choosing one from the dropdown adds it** — with its official title and ISSN, so
+you do not have to look either up. There is no separate Add button: picking the
+journal is the action.
+
+The journal's website is *not* added unless you tick **with website** beside the
+search box. That is deliberate: many journals are published on a shared platform,
 so adding the website of one Elsevier journal would put every Elsevier journal in
-scope. Results whose address looks like a shared platform are marked
-**⚠ shared platform**.
+scope. Results whose address looks like a shared platform are marked with a **⚠**
+in the dropdown.
 
 > Searching DOAJ only helps you *name* a journal. Whether a journal is in DOAJ
 > has no effect on any verdict — the check asks whether the venue is on Beall's

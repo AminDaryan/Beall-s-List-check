@@ -421,6 +421,41 @@ the list above it, in the open, where it can be read and removed.
 
 Each list is a column of rows with a ✕ on each, built by typing or by searching
 DOAJ, with the JSON it serialises to kept underneath in an **Edit as JSON** fold.
+The controls come first and the rows follow: the list is the only part that
+grows, so entries appear inside a box whose position is fixed rather than pushing
+the controls that created them down the page.
+
+#### The layout does not move
+
+Both columns render the **same skeleton in the same order** — heading, add box,
+finder, list, JSON fold — and every band has a height that does not depend on its
+contents. Measured in the running app, adding four venues and removing one leaves
+every band at the same offset and the same height, and so does running a search:
+
+| Band | height | offset below the heading |
+|---|---|---|
+| heading (`.bl-vl-head`) | 86px (`min-height:5.4rem`) | 0 |
+| add box | 38px | 87px |
+| finder (`st-key-venuefind-*`) | 128px (`min-height:8rem`) | 142px |
+| list box (`st-key-venuelist-*`) | 190px (`st.container(height=…)`) | 286px |
+| JSON fold | 40px | 492px |
+
+Three things buy that:
+
+- **The list box is a fixed-height scrollable container.** `st.container(height=)`
+  rather than a stylesheet rule, so the scrolling is the container's own.
+- **The heading and hint are one block with a `min-height`.** The whitelist's hint
+  runs to three lines and the blacklist's to two; without the floor, every control
+  beneath them would sit at a different height in each column.
+- **Nothing is conditionally rendered.** The DOAJ dropdown, the blacklist's
+  finder-band note and the **Clear the list** button are always present — the
+  button disabled when there is nothing to clear — because a control that comes
+  and goes takes its band's height with it.
+
+The blacklist has no DOAJ search, so its finder band carries the reason instead.
+That is not filler: an empty band there would leave the blacklist's list and JSON
+fold sitting 42px above the whitelist's, which is exactly what the measurements
+above showed before the `min-height` was raised to clear the whitelist's content.
 
 It was previously a 90px textarea holding raw JSON, which made the format the
 interface. Every add was text surgery and every removal was careful text
@@ -462,6 +497,27 @@ is passed through as typed. The client is [`doaj.py`](doaj.py), which is
 Streamlit-free and returns its failures rather than raising, so they can be
 cached — Streamlit reruns the script on every click, and an uncached search would
 re-query DOAJ each time a checkbox moved three steps away.
+
+**The matches are a dropdown, and choosing one adds it.** There is no Add button
+beside each result, for the same reason there are no result rows: a list of rows
+is as tall as the number of matches, so every keystroke that changed the count
+would move everything beneath it. One dropdown is one height whether it holds one
+match or eight.
+
+The search's status is the dropdown's **label** — `8 of 12 matches — pick one to
+add it`, `No journal in DOAJ matched that`, or the error from a failed lookup. A
+caption below the control would be another band appearing and disappearing; the
+label is always there and reads as the heading of the thing it describes. It is
+truncated past 66 characters, with the full text in the tooltip, so it can never
+wrap onto a second line.
+
+Options are the formatted lines themselves rather than the `Journal` objects,
+mapped back through a dict in session state. Two DOAJ records can reduce to the
+same line, so labels are made unique before they become keys — otherwise one
+would shadow the other and be unselectable. The first option is a constant
+prompt, not the status line: the options change with every query, and a stored
+selection that is no longer among them is a value Streamlit has to resolve on its
+own.
 
 **Adding a journal contributes its title and ISSN, not its website.** A domain is
 matched by host, so adding the site of a journal published on a platform

@@ -274,7 +274,15 @@ def get_papers():
 # Rows are Streamlit widgets, and a pasted list of 200 venues would be 400 of
 # them.  Past this many the list stops being rendered row-by-row and says so;
 # every entry is still in force, and the fold below holds all of them.
-_MAX_SHOWN_VENUES = 15
+_MAX_SHOWN_VENUES = 25
+
+# The height of the box the venues live in, in pixels.  Fixed, with its own
+# scrollbar, because it is the only band in the column whose contents grow: a box
+# that resized to fit would move the JSON fold below it, and — since the two
+# lists sit side by side and fill independently — would leave the whitelist's
+# controls level with a different part of the blacklist's after every add.
+# Roughly six rows, which covers the great majority of lists without scrolling.
+_VENUE_BOX_HEIGHT = 190
 
 # How many DOAJ hits one search puts on screen.  DOAJ ranks by relevance and the
 # wanted journal is normally first, so this is a shortlist to choose from rather
@@ -461,84 +469,132 @@ def _venue_row_html(entry):
             f"{html.escape(shown)}</span>{_sig_chips(entry, shown)}</div>")
 
 
-def _doaj_row_html(journal, with_site):
-    """One DOAJ hit: what it is, who publishes it, and what adding it would key on."""
-    meta = " · ".join(filter(None, [journal.publisher, journal.country]))
-    issn = ", ".join(journal.issns) or "no ISSN"
-    shown = journal.title or issn
-    site = ""
+def _doaj_option_label(journal):
+    """One line for the results dropdown: the journal, and what adding it keys on."""
+    if journal is None:
+        return ""                       # replaced per-state by the caller
+    bits = [journal.title or ", ".join(journal.issns) or "untitled"]
+    if journal.issns:
+        bits.append(" · ".join(journal.issns))
+    if journal.publisher:
+        bits.append(journal.publisher)
     if journal.host:
-        warn = " ⚠ shared platform" if journal.site_is_shared else ""
-        cls = " bl-sig-wide" if (with_site and journal.site_is_shared) else ""
-        state = "" if with_site else " (not added)"
-        site = (f"<span class='bl-sig bl-sig-site{cls}'>"
-                f"{html.escape(journal.host)}{warn}{state}</span>")
-    return (f"<div class='bl-vl-row'>"
-            f"<span class='bl-vl-name'>{html.escape(shown)}</span>"
-            f"<span class='bl-sig bl-sig-issn'>"
-            f"{'ISSN' if issn == shown else html.escape(issn)}</span>{site}"
-            + (f"<div class='bl-vl-meta'>{html.escape(meta)}</div>" if meta else "")
-            + "</div>")
+        bits.append(f"⚠ {journal.host}" if journal.site_is_shared else journal.host)
+    return "  —  ".join(bits)
+
+
+# The dropdown's first row, and the value it is reset to.  A constant, not the
+# status line: the options change with every query, and a stored selection that
+# is no longer among them is a value Streamlit has to resolve on its own.
+_DOAJ_PROMPT = "— pick a journal to add —"
+
+
+def _pick_doaj(key):
+    """Add the journal chosen in the results dropdown (its ``on_change``).
+
+    The dropdown is the button: choosing a row *is* adding it, so there is no
+    separate Add beside each result.  That is what keeps the results a fixed-size
+    control — a list of rows with a button each grows and shrinks with the number
+    of matches, and moves everything below it every time the query changes.
+
+    Reset to the prompt afterwards, so the control goes back to naming the action
+    rather than holding a stale choice, and so a journal can be picked again
+    after being removed from the list.
+    """
+    picked = st.session_state.get(f"{key}_doaj_pick")
+    journal = (st.session_state.get(f"{key}_doaj_opts") or {}).get(picked)
+    if journal is None:
+        return
+    _add_venue(key, journal.to_entry(
+        include_site=bool(st.session_state.get(f"{key}_doaj_site"))))
+    st.session_state[f"{key}_doaj_pick"] = _DOAJ_PROMPT
 
 
 def _doaj_finder(key):
-    """The DOAJ search fold: find a journal by name, add it as a scoped entry.
+    """Search DOAJ and offer the matches as a dropdown that adds on selection.
 
-    Folded, unlike everything else in Step 3.  The rule this step follows is that
-    a control which changes what the run does must not be behind a click — but
-    what is behind this one is a *finder*, not a setting.  Whatever it finds
-    lands in the list above, in the open, where it can be read and removed; shut,
-    this costs one row and Step 3 looks as it did before.
+    Rendered unconditionally and always the same three controls — a search box, a
+    website toggle, a dropdown — so typing, clearing or re-running a query never
+    moves the list below it.  A results *list* cannot do that: it is as tall as
+    the number of matches, so every keystroke that changes the count shifts
+    everything under it.
+
+    The search's status is the dropdown's **label**, which is one line whether it
+    reports a count, no matches or a failed lookup.  As a caption below the
+    control it would be another band that appears and disappears; as the label it
+    is always there and reads as the heading of the thing it describes.
     """
-    with st.expander("🔍 Find a journal in DOAJ", expanded=False):
-        st.caption("The Directory of Open Access Journals knows the exact title, ISSN and "
-                   "website of ~20,000 vetted open-access journals. Search it here to add "
-                   "one without looking any of that up. **Being in DOAJ is not part of any "
-                   "verdict** — this only helps name a venue.")
-        query = st.text_input(
-            "Search DOAJ", key=f"{key}_doaj_q", label_visibility="collapsed",
-            placeholder="Journal title, publisher, or ISSN",
-            help="Plain text is searched across title, publisher and subject. An ISSN "
-                 "(1234-5678) is looked up exactly. A field-scoped query such as "
-                 "`bibjson.publisher.name:Elsevier` is passed to DOAJ as typed.")
-        with_site = st.checkbox(
-            "Also add the journal's website", key=f"{key}_doaj_site",
-            help="Off by default. A domain is matched by host, so adding the website of a "
-                 "journal published on a platform (sciencedirect.com, nature.com, a shared "
-                 "OJS install) puts every other journal on that platform in scope too. The "
-                 "ISSN and title added without it name this journal alone.")
-        if not query.strip():
-            st.caption("Nothing searched yet.")
-            return
+    row = st.columns([6.4, 3.6], vertical_alignment="bottom")
+    query = row[0].text_input(
+        "Search DOAJ", key=f"{key}_doaj_q", label_visibility="collapsed",
+        placeholder="🔍 Find a journal in DOAJ",
+        help="The Directory of Open Access Journals knows the exact title, ISSN and website "
+             "of ~20,000 vetted open-access journals, so neither has to be looked up by "
+             "hand. Plain text is searched across title, publisher and subject; an ISSN "
+             "(1234-5678) is looked up exactly; a field-scoped query such as "
+             "`bibjson.publisher.name:Elsevier` is passed to DOAJ as typed. **Being indexed "
+             "in DOAJ is not part of any verdict** — this only helps name a venue.")
+    row[1].checkbox(
+        "with website", key=f"{key}_doaj_site",
+        help="Off by default. A domain is matched by host, so adding the website of a "
+             "journal published on a platform (sciencedirect.com, nature.com, a shared OJS "
+             "install) puts every other journal on that platform in scope too. The ISSN and "
+             "title added without it name this journal alone. Results whose host looks like "
+             "a platform are marked ⚠.")
+
+    journals, status = (), "Search DOAJ above to add a journal by name"
+    if query.strip():
         result = doaj_search(query.strip(), _DOAJ_LIMIT)
         if not result.ok:
-            st.warning(result.error)
-            return
-        if not result.journals:
-            miss = "No journal in DOAJ matched that."
-            if result.mode == "advanced":
-                miss += (" That was read as a field-scoped query, and DOAJ answers an "
-                         "unknown field name with no matches rather than with an error — "
-                         "so check the field, or drop the colon to search as plain text.")
-            st.caption(miss)
-            return
-        shown = len(result.journals)
-        st.caption(f"Showing {shown} of {result.total} match(es), most relevant first."
-                   + ("" if shown >= result.total else
-                      " Narrow the search if the journal you want is not here."))
-        existing = {_venue_key(v) for v in (st.session_state.get(f"{key}_venues") or [])}
-        for i, journal in enumerate(result.journals):
-            entry = journal.to_entry(include_site=with_site)
-            row = st.columns([7.3, 2.7], vertical_alignment="center")
-            row[0].markdown(_doaj_row_html(journal, with_site), unsafe_allow_html=True)
-            already = _venue_key(entry) in existing
-            # Keyed by position, not by anything DOAJ supplied: two records with
-            # the same id would be a duplicate widget key, which is an exception
-            # rather than a cosmetic problem.
-            row[1].button(
-                "✓ Added" if already else "＋ Add", width="stretch", disabled=already,
-                key=f"{key}_doajadd_{i}", on_click=_add_venue, args=(key, entry),
-                help=None if already else f"Add {journal.title} to the list above.")
+            status = result.error
+        elif not result.journals:
+            status = ("No journal in DOAJ matched — check the field name"
+                      if result.mode == "advanced" else "No journal in DOAJ matched that")
+        else:
+            journals = result.journals
+            status = (f"{len(journals)} of {result.total} matches — pick one to add it"
+                      if len(journals) < result.total else
+                      f"{len(journals)} match(es) — pick one to add it")
+
+    # Options are the formatted lines themselves, mapped back to their journal
+    # for the callback.  Labels are made unique before they become keys: DOAJ can
+    # hold two records that reduce to the same line, and one would otherwise
+    # shadow the other in the mapping and be unselectable.
+    by_label = {}
+    for journal in journals:
+        label = _doaj_option_label(journal)
+        while label in by_label:
+            label += " "                     # thin space; invisible, unique
+        by_label[label] = journal
+    st.session_state[f"{key}_doaj_opts"] = by_label
+
+    st.selectbox(
+        # A label long enough to wrap would cost the band a second line, which is
+        # exactly the movement this arrangement exists to avoid.
+        status if len(status) <= 66 else status[:65].rstrip() + "…",
+        [_DOAJ_PROMPT, *by_label], key=f"{key}_doaj_pick", disabled=not journals,
+        on_change=_pick_doaj, args=(key,),
+        help="Choosing a journal adds it to the list below, with its official title and "
+             "ISSN. There is no separate Add button: the choice is the action. "
+             + (status if len(status) > 66 else ""))
+
+
+def _venue_list_body(key, empty):
+    """The rows themselves, inside the fixed-height box that never resizes."""
+    venues = st.session_state.get(f"{key}_venues") or []
+    if not venues:
+        st.markdown(f"<div class='bl-vl-empty'>{empty}</div>", unsafe_allow_html=True)
+        return
+    for i, entry in enumerate(venues[:_MAX_SHOWN_VENUES]):
+        row = st.columns([8.4, 1.6], vertical_alignment="center")
+        row[0].markdown(_venue_row_html(entry), unsafe_allow_html=True)
+        row[1].button("✕", key=f"{key}_rm_{i}", width="stretch",
+                      on_click=_remove_venue, args=(key, i),
+                      help=f"Remove {_venue_name(entry)}")
+    if len(venues) > _MAX_SHOWN_VENUES:
+        st.caption(f"…and {len(venues) - _MAX_SHOWN_VENUES} more not listed here. "
+                   f"All {len(venues)} are in force; the full list is under "
+                   "**Edit as JSON**.")
 
 
 def venue_list_editor(label: str, key: str, hint: str, empty: str,
@@ -549,6 +605,19 @@ def venue_list_editor(label: str, key: str, hint: str, empty: str,
     everything downstream — the run summary, the temp file, the CLI flag — is
     unchanged.
 
+    Both lists render the **same skeleton in the same order** — heading, add box,
+    finder, list, JSON fold — and every band in it has a height that does not
+    depend on its contents.  That is what makes the two columns line up and stay
+    lined up: the whitelist and the blacklist put their controls on the same rows
+    because they are the same rows, and a venue added to one moves nothing in
+    either.  The blacklist has no DOAJ search (see the call site), so its finder
+    band holds the reason instead of being left as a hole that would drop its add
+    box half an inch below the whitelist's.
+
+    The controls come first and the list follows, because the list is the only
+    part that grows: entries appear at the top of a box whose position is fixed,
+    rather than pushing the controls that created them down the page.
+
     *empty* is what the list says when it holds nothing, and the two lists must
     say different things: an empty whitelist means every paper is checked, while
     an empty blacklist means Beall's List is used as it stands.  One sentence
@@ -558,34 +627,41 @@ def venue_list_editor(label: str, key: str, hint: str, empty: str,
     st.session_state.setdefault(key, "")
     venues = st.session_state[f"{key}_venues"]
 
-    st.markdown(f"<div class='bl-vl-label'>{label}</div>", unsafe_allow_html=True)
-    st.caption(hint)
-
-    with st.container(key=f"venuelist-{key}"):
-        if not venues:
-            st.markdown(f"<div class='bl-vl-empty'>{empty}</div>", unsafe_allow_html=True)
-        for i, entry in enumerate(venues[:_MAX_SHOWN_VENUES]):
-            row = st.columns([8.4, 1.6], vertical_alignment="center")
-            row[0].markdown(_venue_row_html(entry), unsafe_allow_html=True)
-            row[1].button("✕", key=f"{key}_rm_{i}", width="stretch",
-                          on_click=_remove_venue, args=(key, i),
-                          help=f"Remove {_venue_name(entry)}")
-        if len(venues) > _MAX_SHOWN_VENUES:
-            st.caption(f"…and {len(venues) - _MAX_SHOWN_VENUES} more not listed here. "
-                       f"All {len(venues)} are in force; the full list is under "
-                       "**Edit as JSON**.")
+    # Heading and hint as one block, so a two-line hint and a three-line one
+    # occupy the same band and the add boxes beneath them share a row.
+    st.markdown(f"<div class='bl-vl-head'><div class='bl-vl-label'>{label}</div>"
+                f"<div class='bl-vl-hint'>{hint}</div></div>", unsafe_allow_html=True)
 
     add = st.columns([7.2, 2.8], vertical_alignment="bottom")
+    # Enter adds, as well as the button.  A box labelled "Add a venue" beside a
+    # button labelled Add gives the return key an obvious meaning, and requiring
+    # the mouse for every entry makes building a list of ten a chore.  Pressing
+    # Add after typing fires both — the blur first, then the click — and the
+    # second is a no-op because _add_venue de-duplicates.
     add[0].text_input("Add a venue", key=f"{key}_hand", label_visibility="collapsed",
                       placeholder="Name, website or ISSN",
+                      on_change=_add_typed_venue, args=(key,),
                       help="Typed as a name, a website (ieee.org) or an ISSN (1234-5678) — "
                            "which one it is read as is decided by what you type, and shown "
-                           "on the row it becomes.")
+                           "on the row it becomes. Press Enter or use Add.")
     add[1].button("＋ Add", key=f"{key}_handadd", width="stretch",
                   on_click=_add_typed_venue, args=(key,))
 
-    if find_in_doaj:
-        _doaj_finder(key)
+    with st.container(key=f"venuefind-{key}"):
+        if find_in_doaj:
+            _doaj_finder(key)
+        else:
+            st.markdown(
+                "<div class='bl-vl-nofind'>No directory search here. Being listed in a "
+                "directory of vetted journals is evidence a journal was screened, which is "
+                "no reason to treat it as predatory.</div>", unsafe_allow_html=True)
+
+    # A fixed height with its own scrollbar: the one part of this column whose
+    # contents grow, given a size that does not.  Streamlit's `height=` is used
+    # rather than a stylesheet rule so the scroll behaviour is the container's
+    # own and survives a change to its internals.
+    with st.container(height=_VENUE_BOX_HEIGHT, border=True, key=f"venuelist-{key}"):
+        _venue_list_body(key, empty)
 
     with st.expander("{ } Edit as JSON", expanded=False):
         st.text_area(
@@ -600,9 +676,11 @@ def venue_list_editor(label: str, key: str, hint: str, empty: str,
         st.caption('A JSON list of `{"name", "domain", "issns"}` objects, or bare strings '
                    'like `"Nature"` to match by name alone. Paste one from a colleague or a '
                    'previous run; it appears as rows above.')
-        if venues:
-            st.button("Clear the list", key=f"{key}_clear", on_click=_clear_venues,
-                      args=(key,), help="Remove every entry from this list.")
+        # Always rendered, disabled when there is nothing to clear: a button that
+        # comes and goes with the list would move the fold's own contents.
+        st.button("Clear the list", key=f"{key}_clear", on_click=_clear_venues,
+                  args=(key,), disabled=not venues,
+                  help="Remove every entry from this list.")
 
     return list(venues) or None
 
@@ -1165,7 +1243,25 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
    and want to be read, these are identifiers stacked several to a line and want
    to be scanned.  Monospaced digits, because most of them are ISSNs and a
    column of proportional figures does not line up. */
+/* The two columns are aligned band by band rather than by luck: each band below
+   is given a height that does not depend on what is in it, so the whitelist's
+   controls sit on the same rows as the blacklist's however either is filled.
+   `min-height` on the heading is what stops a three-line hint in one column and
+   a two-line hint in the other from offsetting every control beneath them. */
+.bl-vl-head {min-height:5.4rem;}
 .bl-vl-label {font-size:.95rem; font-weight:600; color:var(--bl-fg); margin-bottom:.1rem;}
+.bl-vl-hint {font-size:.8rem; line-height:1.45; color:var(--bl-fg-faint);}
+.bl-vl-hint code {font-size:.92em; padding:1px 4px; border-radius:4px;
+                  background:color-mix(in srgb, currentColor 13%, transparent);}
+/* The finder band. The whitelist fills it with a search box and a dropdown; the
+   blacklist, which has no directory search, fills it with the reason — a hole
+   there would leave its list and its JSON fold sitting above the whitelist's,
+   which is the misalignment this whole set of heights exists to prevent.
+   8rem clears the whitelist's measured 124px, so the rule and not the content is
+   what sets the height on BOTH sides and the two cannot drift apart. */
+div[class*="st-key-venuefind-"] {min-height:8rem;}
+.bl-vl-nofind {font-size:.78rem; line-height:1.45; color:var(--bl-fg-faint);
+               font-style:italic; padding-top:.35rem;}
 .bl-vl-row {display:flex; align-items:center; gap:.4rem; flex-wrap:wrap;
             padding:.1rem 0; line-height:1.5;}
 .bl-vl-name {font-size:.9rem; font-weight:600; color:var(--bl-fg);
@@ -1188,8 +1284,13 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
    between the parts of a form and much too much between the rows of a list --
    eight venues came to a column of text separated by whitespace rather than to
    a list.  Tightened only inside these containers, and only for the rows. */
-div[class*="st-key-venuelist-"] > div > div[data-testid="stVerticalBlock"] {gap:.2rem;}
+div[class*="st-key-venuelist-"] div[data-testid="stVerticalBlock"] {gap:.2rem;}
 div[class*="st-key-venuelist-"] [data-testid="stMarkdownContainer"] {margin-bottom:0;}
+/* The box holds a scrollbar, so it needs the room for one and a quieter border
+   than a bordered container's default -- it is a well the rows sit in, not a
+   panel competing with the step's own frame. */
+div[class*="st-key-venuelist-"] {border-color:var(--bl-border) !important;
+                                 padding:.4rem .5rem !important;}
 /* The ✕ next to each row: square, quiet, and the row's height rather than a
    button's, so a list of them reads as a column of rows and not as a keypad. */
 div[class*="st-key-venuelist-"] button[data-testid^="stBaseButton"] {
@@ -1797,8 +1898,8 @@ def page_check():
             wl = venue_list_editor(
                 "Only check these venues &nbsp;·&nbsp; <b>whitelist</b>", "wl",
                 "Restricts the run. A paper from any venue not listed here is reported as "
-                "`out_of_scope` — **not examined**, which is not the same as cleared. "
-                "Leave empty to check every paper.",
+                "<code>out_of_scope</code> — <b>not examined</b>, which is not the same as "
+                "cleared. Leave empty to check every paper.",
                 "Empty — every paper is checked.",
                 # DOAJ indexes journals, not predatory publishers, so it can help
                 # build this list and has no business building the other one:
