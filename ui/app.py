@@ -571,6 +571,13 @@ _TOKENS = """
   --bl-warn-bg:rgba(245,158,11,.25);   /* amber-500   */
   --bl-mute-bg:color-mix(in srgb, currentColor 13%, transparent);
 
+  /* One duration and one curve for every hover in the app, so that the controls
+     Streamlit paints and the ones this file paints respond at the same speed.
+     120ms is under the ~150ms at which a transition stops reading as a response
+     to the pointer and starts reading as an animation of its own. */
+  --bl-hover:120ms cubic-bezier(.2,0,.2,1);
+  --bl-lift:0 2px 8px rgba(15,23,42,.18);
+
   /* A gear, as a mask rather than an <img>, so it inherits the toolbar's colour
      and therefore needs no light/dark pair either. Material Symbols "settings". */
   --bl-gear:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg'\
@@ -640,6 +647,63 @@ _CHROME_CSS = """
     background:currentColor;
     -webkit-mask:var(--bl-gear) center/contain no-repeat;
             mask:var(--bl-gear) center/contain no-repeat;}
+
+/* ── Pointer and hover, on everything that acts like a button ───────────────
+   Measured across the app, one control disagreed with the rest: every part of
+   a selectbox — the wrapper, the value, the arrow, the `role="combobox"` input
+   — computed `cursor: text`, while checkboxes, radios, expander headers,
+   buttons and the upload dropzone were already `pointer`.  A caret says "type
+   here"; the control opens a menu.  It is given the pointer the rest have.
+
+   That does cost something and the trade is deliberate: Streamlit's selectbox
+   is searchable, and `text` is the honest cursor for a field that accepts
+   typing.  Typing still filters — a cursor changes no behaviour — but with six
+   providers and a handful of models, being legible as a menu is worth more than
+   advertising a filter nobody needs at that length. */
+[data-testid="stSelectbox"] div[data-baseweb="select"],
+[data-testid="stSelectbox"] div[data-baseweb="select"] *,
+[data-testid="stSelectbox"] div[data-baseweb="select"] input {cursor:pointer !important;}
+
+/* The hover itself.  Buttons lift; everything else, being a field or a row
+   rather than an object, answers with its border and a soft ring in the accent
+   instead — a 1px rise on a full-width text area reads as the layout twitching.
+   :active drops the lift so a press still feels like a press. */
+button[data-testid^="stBaseButton"] {
+    transition:transform var(--bl-hover), box-shadow var(--bl-hover),
+               background-color var(--bl-hover), border-color var(--bl-hover),
+               color var(--bl-hover);}
+button[data-testid^="stBaseButton"]:hover:not(:disabled) {
+    transform:translateY(-1px); box-shadow:var(--bl-lift);}
+button[data-testid^="stBaseButton"]:active:not(:disabled) {
+    transform:translateY(0); box-shadow:none;}
+
+/* The ring is drawn on the control Streamlit renders inside each widget, not on
+   the widget wrapper, so it follows the rounded corners of the thing itself. */
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+[data-testid="stTextInput"] div[data-baseweb="input"],
+[data-testid="stTextArea"] div[data-baseweb="textarea"],
+[data-testid="stFileUploaderDropzone"] {
+    transition:border-color var(--bl-hover), box-shadow var(--bl-hover),
+               background-color var(--bl-hover);}
+[data-testid="stSelectbox"]:hover div[data-baseweb="select"] > div,
+[data-testid="stTextInput"]:hover div[data-baseweb="input"],
+[data-testid="stTextArea"]:hover div[data-baseweb="textarea"],
+[data-testid="stFileUploaderDropzone"]:hover {
+    border-color:var(--bl-accent-line);
+    box-shadow:0 0 0 3px var(--bl-accent-soft);}
+
+/* Rows: the expander header, and the label a checkbox or radio shares with its
+   box.  A wash, because these are strips of the page rather than objects on it. */
+[data-testid="stExpander"] summary,
+[data-testid="stCheckbox"] label, [data-testid="stRadio"] label {
+    transition:background-color var(--bl-hover), color var(--bl-hover);}
+[data-testid="stExpander"] summary:hover {background:var(--bl-accent-soft);}
+
+/* Motion is the decoration here; the colour change carries the same message
+   without it, so only the movement is dropped. */
+@media (prefers-reduced-motion:reduce) {
+  button[data-testid^="stBaseButton"]:hover:not(:disabled) {transform:none;}
+}
 """
 
 # The rest of the page's styling, emitted once per render.  What is here is what

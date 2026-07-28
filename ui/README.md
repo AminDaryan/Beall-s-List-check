@@ -136,6 +136,39 @@ stylesheets raises nothing in a browser — it silently discards every rule afte
 it — and has twice collapsed Step 1's comparison table without a word in any log,
 so the app now refuses to start on one instead.
 
+## Pointer and hover
+
+One duration and one curve for the whole app (`--bl-hover`, 120ms — under the
+~150ms at which a transition stops reading as a response to the pointer and
+starts reading as an animation of its own), so the controls Streamlit paints and
+the ones this file paints answer at the same speed.
+
+**The cursor.** Measured across the app, one control disagreed with the rest:
+every part of a selectbox — the wrapper, the value, the arrow, the
+`role="combobox"` input — computed `cursor: text`, while checkboxes, radios,
+expander headers, buttons and the upload dropzone were already `pointer`. A caret
+says *type here*; the control opens a menu. It is given the pointer the others
+have. The trade is deliberate: Streamlit's selectbox is searchable, and `text` is
+the honest cursor for a field that accepts typing. Typing still filters — a
+cursor changes no behaviour — but with six providers and a handful of models,
+being legible as a menu is worth more than advertising a filter nobody needs at
+that length.
+
+**The hover.** Buttons lift 1px onto a soft shadow and drop back on `:active`, so
+a press still feels like a press; `:not(:disabled)` keeps the disabled Run button
+out of it. Everything else — selectbox, text input, text area, dropzone — is a
+field or a row rather than an object, and answers with its border going to
+`--bl-accent-line` behind a 3px `--bl-accent-soft` ring instead. A 1px rise on a
+full-width text area reads as the layout twitching. The expander header takes the
+same wash. `prefers-reduced-motion` drops the movement only: the colour change
+carries the same message without it.
+
+> Verifying this in an automated browser is misleading. `getComputedStyle`
+> reports a transitioning property's *current* value, and a pane that is not
+> compositing frames never advances the transition past t=0 — so a working hover
+> reads as no hover at all. Inject `* { transition: none !important }` first and
+> the target values appear.
+
 ## The Tutorial page
 
 [`TUTORIAL.md`](TUTORIAL.md) is rendered here, so the walkthrough has one copy —
