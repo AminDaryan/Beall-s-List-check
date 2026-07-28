@@ -427,13 +427,10 @@ the controls that created them down the page.
 
 #### One control, and a layout that does not move
 
-Each list is built with a **single combobox** and an Add button. It was three
-controls — a text box, a DOAJ search box and a results dropdown — which was one
-question, *which venue*, asked three times, and left the answer half-entered in
-one of them while another held something else. Streamlit's `accept_new_options`
-makes one control do both jobs: the dropdown holds whatever DOAJ last matched,
-and a value that is not among them is still accepted, so a journal the directory
-has never heard of is typed into the same box as one it has.
+Each list is built with a **single search-as-you-type box** and an Add button.
+It was three controls — a text box, a DOAJ search box and a results dropdown —
+which was one question, *which venue*, asked three times, and left the answer
+half-entered in one of them while another held something else.
 
 Both columns render the **same skeleton in the same order** and every band has a
 height that does not depend on its contents. Measured in the running app —
@@ -443,7 +440,7 @@ not — every band keeps the same offset and the same height, in both columns:
 | Band | height | offset below the heading |
 |---|---|---|
 | heading (`.bl-vl-head`) | 86px (`min-height:5.4rem`) | 0 |
-| combobox + Add | 40px | 86px |
+| search box + Add | 38px | 86px |
 | note (`.bl-vl-note`) | 40px (fixed, clipped) | 142px |
 | list box (`st-key-venuelist-*`) | 190px (`st.container(height=…)`) | 182px |
 | JSON fold | 40px | 388px |
@@ -465,40 +462,67 @@ Four things buy that:
 
 ### Finding a journal in DOAJ
 
-The whitelist's combobox searches the
-[Directory of Open Access Journals](https://doaj.org) — ~20,000 vetted
-open-access journals — so a journal can be added without looking up its exact
-title or ISSN. The client is [`doaj.py`](doaj.py), which is Streamlit-free and
-returns its failures rather than raising, so they can be cached: Streamlit reruns
-the script on every click, and an uncached search would re-query DOAJ each time
-anything on the page moved.
+The whitelist's box searches the
+[Directory of Open Access Journals](https://doaj.org) **as the name is typed** —
+"I" already offers journals, "IEE" narrows to IEEE's. Choosing a match adds that
+journal with its official title and ISSN; choosing *is* adding, so there is no
+Add button beside each result. **＋ Add** takes the text verbatim instead,
+whether or not DOAJ knows it, which is how a venue the directory has never heard
+of goes into the same box as one it has.
 
-Type a name and press **Enter**: that commits the text, which the app reads as a
-query, searches, and turns into the box's own options. Open the list and choose
-one, and that journal is added with its official title and ISSN — choosing *is*
-adding, so there is no Add button beside each result. Press **Add** instead and
-the text is taken verbatim, whether or not DOAJ knew it. Plain text is searched
-across title, publisher and subject; an ISSN is looked up exactly; a field-scoped
-query (`bibjson.publisher.name:Elsevier`) is passed through as typed.
+#### Why the whole list is downloaded, and not searched per keystroke
 
-Enter therefore means *search* on the whitelist and *add* on the blacklist, which
-has no directory behind it and so would have nothing to ask. Add always adds.
+DOAJ's search API cannot be called on every keystroke. Measured: typing four
+letters into it earns a Cloudflare **502 with `Retry-After: 60`**, and the box
+then reports a timeout instead of matches. It is also not ours to do — DOAJ is a
+free service run by a non-profit.
 
-The note under the box says which state the search is in — `Open the list for 8
-of 31 DOAJ match(es), or press Add to use "IEEE" as typed`, or `Nothing in DOAJ
-matched "…" — press Add to use it as typed`, or the error from a failed lookup.
+DOAJ publishes the entire journal list as one CSV for exactly this reason, so
+[`doaj.py`](doaj.py) fetches it **once** (~23,000 journals, ~25 MB, a few
+seconds), reduces it to the five fields a venue entry needs, and caches it in
+`ui/.cache/` (gitignored, refetched after a fortnight). Everything after that is
+local:
 
-Options are the formatted lines themselves, mapped back to their `Journal`
-through a dict in session state. Two DOAJ records can reduce to the same line, so
-labels are made unique before they become keys — otherwise one would shadow the
-other and be unselectable.
+| | |
+|---|---|
+| First load | ~25 s, once per machine per fortnight |
+| Cached load | ~0.07 s |
+| One search | 4–38 ms over 23,000 journals |
+
+So the box keeps up with typing, works offline once primed, and puts no load on
+DOAJ at all. The trade is that a journal added to DOAJ since the last fetch has
+to be typed by hand — which the box allows anyway.
+
+Ranking is by how early and how cleanly the term appears: a title that *starts*
+with it, then a *word* of the title starting with it, then anywhere in the title,
+then the publisher. Shorter titles win ties, so "nature" offers *Nature* before
+*Nature Reviews Methods Primers*. An ISSN is matched exactly instead.
+
+#### The control
+
+`st.selectbox` cannot do this: it filters options **client-side** over a list it
+was given, so it can never look anything up while a word is being typed. The box
+is therefore [`streamlit-searchbox`](https://pypi.org/project/streamlit-searchbox/),
+which calls back into Python per keystroke. That also gets two things the native
+widget could not: a real **text cursor**, and a menu that exists **only when
+something has been typed** — an empty box opens nothing.
+
+The component renders in an iframe, and its menu lives *inside* that iframe, so
+the frame grows to ~350 px to show it. In normal flow that pushed the list and
+the JSON fold a third of a screen down on every keystroke and left the two
+columns at different heights, so it is given `style_absolute=True` and overlays
+what is beneath instead — which is what a dropdown should do anyway.
+
+It is an optional import: a checkout whose venv predates the dependency still
+runs, with the box falling back to plain text entry and the lookup simply absent.
+`requirements.txt` and both `run_ui` launchers install it.
 
 **Adding a journal contributes its title and ISSN, not its website.** A domain is
 matched by host, so adding the site of a journal published on a platform
 (`sciencedirect.com`, `nature.com`, a shared OJS install) would put every other
-journal on that platform in scope; options whose host looks like a platform are
+journal on that platform in scope; matches whose host looks like a platform are
 marked **⚠**. A publisher domain is added deliberately, by typing it into the
-same box — which is what that box is for.
+same box.
 
 Two things DOAJ is deliberately *not* used for:
 

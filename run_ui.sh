@@ -25,10 +25,16 @@ if ! "$py" -m pip --version >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! "$py" -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('streamlit') else 1)"; then
-    echo "Streamlit not installed - installing it into the venv..."
-    "$py" -m pip install streamlit
-fi
+# Both UI packages, checked by import name rather than by package name: the
+# searchbox arrived after the first release of this script, so an existing venv
+# has Streamlit and not it.
+for mod in streamlit streamlit_searchbox; do
+    if ! "$py" -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('$mod') else 1)"; then
+        echo "$mod not installed - installing the UI requirements into the venv..."
+        "$py" -m pip install streamlit "streamlit-searchbox>=0.1.24,<0.2"
+        break
+    fi
+done
 
 echo "Starting the UI at http://localhost:8501  (press Ctrl+C to stop)"
 exec "$py" -m streamlit run "$root/ui/app.py"

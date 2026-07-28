@@ -91,13 +91,13 @@ matching.
 
 ## Web app
 
-Step 3 edits each list as a **list of rows**, built with a single combobox:
-type a name, a website or an ISSN and press Add. On the whitelist, pressing
-Enter first searches the [DOAJ](https://doaj.org) and turns the matches into that
-same box's options, so a journal can be added with its official title and ISSN
-without either being looked up — choosing a match adds it. If nothing matches,
-Add takes the text as typed. Each row states which of the three identifiers it
-carries, because that is what decides the run's scope.
+Step 3 edits each list as a **list of rows**, built with a single box: type a
+name, a website or an ISSN and press Add. On the whitelist, typing also searches
+the [DOAJ](https://doaj.org) as you go and offers its journals underneath, so one
+can be added with its official title and ISSN without either being looked up —
+choosing a match adds it. If nothing matches, Add takes the text as typed. Each
+row states which of the three identifiers it carries, because that is what
+decides the run's scope.
 
 Adding from DOAJ contributes the title and ISSN but **not** the journal's
 website, since a domain is matched by host and many journals share a publisher

@@ -340,37 +340,37 @@ type decides how the venue is matched, and the row that appears says which:
 An ISSN is the most precise, so prefer it when you mean one particular journal.
 A website or a name is the right choice when you mean a whole publisher.
 
-**On the blacklist**, press Enter and the venue is added as typed.
-
-**On the whitelist**, pressing Enter searches the DOAJ first (see below). Press
-**＋ Add** at any time to add exactly what is in the box, searched or not.
+Press **＋ Add** to add exactly what is in the box. On the whitelist, typing
+also searches DOAJ (see below), and choosing one of its matches adds that journal
+instead.
 
 Added venues appear in the box underneath. Remove one with the **✕** beside it.
 
 ### Finding a journal in DOAJ
 
-If you know the journal but not its ISSN, type its name into the whitelist's box
-and press **Enter**. The [Directory of Open Access Journals](https://doaj.org)
-lists about 20,000 vetted open-access journals, and the matches become the
-options of that same box — there is no second search field and no separate
-results list.
+If you know the journal but not its ISSN, just start typing its name into the
+whitelist's box. Matches from the
+[Directory of Open Access Journals](https://doaj.org) — about 23,000 vetted
+open-access journals — appear underneath **as you type**, so `IEE` is already
+enough to see IEEE's journals.
 
-Open the list and **choose a journal to add it**, with its official title and
-ISSN, so you do not have to look either up. Choosing is the action; there is no
-Add button beside each result.
-
-The line under the box tells you where you are — how many matches there were, or
-that nothing matched.
+**Choose one and it is added**, with its official title and ISSN, so you do not
+have to look either up. There is no Add button beside each match; choosing is the
+action. The line under the box says how many were found.
 
 **If nothing matches, press ＋ Add and your text is added as typed.** So a venue
-DOAJ has never heard of goes into the same box as one it has: type `WOl`, press
-Enter, see that nothing matched, press Add.
+DOAJ has never heard of goes into the same box as one it has: type `WOl`, see
+that nothing matched, press Add.
 
 The journal's website is *not* added — only its title and ISSN. That is
 deliberate: many journals are published on a shared platform, so adding the
 website of one Elsevier journal would put every Elsevier journal in scope.
 Matches whose address looks like a shared platform are marked with a **⚠**. If
 you do want a publisher's whole site, type its domain into the box instead.
+
+The first time you use the search, the app downloads DOAJ's journal list once
+(about 25 MB, a few seconds) and keeps it, so every search after that is instant
+and works without internet. It refreshes itself every couple of weeks.
 
 > Searching DOAJ only helps you *name* a journal. Whether a journal is in DOAJ
 > has no effect on any verdict — the check asks whether the venue is on Beall's

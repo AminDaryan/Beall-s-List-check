@@ -22,6 +22,7 @@ import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
 
 import openpyxl
@@ -30,6 +31,16 @@ from dotenv import load_dotenv
 
 import doaj
 import runners
+
+# Step 3's venue boxes search DOAJ while a name is being typed, which Streamlit's
+# own widgets cannot do — they filter options client-side and call back only on
+# Enter or blur.  Optional at import: a checkout whose venv predates this
+# dependency still runs, with the boxes falling back to plain text entry and the
+# lookup simply absent.  requirements.txt and both run_ui launchers install it.
+try:
+    from streamlit_searchbox import st_searchbox
+except Exception:
+    st_searchbox = None
 
 load_dotenv(runners.REPO_ROOT / ".env")
 
@@ -291,18 +302,23 @@ _VENUE_BOX_HEIGHT = 190
 _DOAJ_LIMIT = 8
 
 
-@st.cache_data(show_spinner=False, ttl=3600)
-def doaj_search(query: str, limit: int):
-    """Memoized :func:`doaj.search` — one lookup per distinct query per hour.
+@st.cache_resource(show_spinner=False)
+def doaj_index():
+    """DOAJ's whole journal list, fetched once and kept for the life of the process.
 
-    Caching is not an optimisation here, it is what makes the search usable at
-    all: Streamlit reruns the whole script on every click anywhere on the page,
-    so an uncached call would re-query DOAJ each time a checkbox is ticked three
-    steps away.  ``doaj.search`` returns its failures rather than raising
-    precisely so that they land in this cache too — an exception is not
-    cacheable, so a query DOAJ rejects would otherwise be re-sent forever.
+    ``cache_resource`` rather than ``cache_data``: this is one large object that
+    every session should share, not a per-call value worth copying.  The fetch
+    behind it happens at most once per process and, thanks to the module's own
+    disk cache, at most once a fortnight per machine — which is what lets the
+    box search on every keystroke without sending anything to DOAJ.  See
+    ``doaj.py``'s module docstring for why a request per keystroke is not an
+    option.
+
+    Returns ``(index, error)``; *error* is shown under the box and is empty on
+    success.
     """
-    return doaj.search(query, limit=limit)
+    journals, error = doaj.load_journals()
+    return doaj.build_index(journals), error
 
 
 def _venue_key(entry):
@@ -479,112 +495,158 @@ def _doaj_option_label(journal):
     return "  —  ".join(bits)
 
 
-def _commit_venue(key, add_text):
-    """Handle whatever the combobox is holding (its ``on_change``, and Add).
+def _doaj_lookup(key, term):
+    """The searchbox's ``search_function`` — run on every keystroke.
 
-    The box does double duty — it is where a venue is typed AND where DOAJ's
-    matches are offered — so what a commit means depends on what is in it:
+    Returns ``(label, Journal)`` pairs for the component to offer, and records
+    what the lookup found in ``<key>_last`` so the line under the box can report
+    it on the rerun that follows.
 
-      * a value that maps to one of the offered journals: the user picked a
-        match, so add that journal;
-      * anything else: free text.  *add_text* decides whether that is added as
-        typed — which is what the Add button always does — or merely remembered
-        as the query for the DOAJ search the next render runs.
-
-    That split is what lets one control both search and add: Enter asks the
-    directory, Add takes you at your word.  Where there is no directory behind
-    the box (the blacklist) Enter adds directly, because there would be nothing
-    for it to ask.
+    An empty box returns nothing, which is what keeps the menu shut until
+    something is typed: the component has no results to draw and so draws no
+    menu.  Every call goes through the memoized :func:`doaj_search`, so the
+    prefixes of a word being typed are fetched once each and then replayed from
+    cache as the user carries on or backspaces.
     """
-    field = f"{key}_pick"
-    value = st.session_state.get(field)
-    text = "" if value is None else str(value).strip()
-    if not text:
-        return
-    journal = (st.session_state.get(f"{key}_doaj_opts") or {}).get(value)
-    if journal is not None:
+    term = (term or "").strip()
+    if not term:
+        st.session_state[f"{key}_last"] = ("", 0, "")
+        return []
+    index, error = doaj_index()
+    if error:
+        st.session_state[f"{key}_last"] = (term, 0, error)
+        return []
+    journals = doaj.search(index, term, _DOAJ_LIMIT)
+    # Labels are made unique before they are offered: DOAJ can hold two records
+    # that reduce to the same line, and the component keys its options by label.
+    options, seen = [], set()
+    for journal in journals:
+        label = _doaj_option_label(journal)
+        while label in seen:
+            label += "\u2009"                # thin space; invisible, unique
+        seen.add(label)
+        options.append((label, journal))
+    st.session_state[f"{key}_last"] = (term, len(options), "")
+    return options
+
+
+def _reset_box(key):
+    """Empty the searchbox, the way its own clear-on-submit does.
+
+    The React side is remounted by changing the key it was given, which is why
+    the stored key carries a timestamp; writing the search term alone would leave
+    the box still showing it.  Guarded, because this reaches into the
+    component's own state shape: if a future version changes it, the box simply
+    keeps its text instead of the page breaking.
+    """
+    try:
+        st.session_state[f"{key}_box"] = {
+            "result": None,
+            "search": "",
+            "options_js": [],
+            "key_react": f"{key}_box_react_{time.time()}",
+        }
+    except Exception:
+        pass
+
+
+def _add_doaj_pick(key, journal):
+    """The searchbox's ``submit_function`` — a match was chosen, so add it."""
+    if isinstance(journal, doaj.Journal):
         _add_venue(key, journal.to_entry())
-    elif add_text:
-        entry = _entry_from_text(text)
-        if entry:
-            _add_venue(key, entry)
+        # The box empties itself on submit, so the line under it has to stop
+        # reporting the search that filled it — otherwise an empty box sits
+        # under "8 best matches shown".
+        st.session_state[f"{key}_last"] = ("", 0, "")
+
+
+def _add_typed_venue(key):
+    """Add whatever is in the box, exactly as typed (the Add button).
+
+    Read from the component's own live search term rather than from a committed
+    value, because the whole point of this button is the case where nothing was
+    committed: DOAJ offered nothing to choose, so there is only what was typed.
+    """
+    if st_searchbox is None:
+        term = st.session_state.get(f"{key}_fallback") or ""
     else:
-        # Neither a match nor an explicit Add: read it as a search, and leave it
-        # in the box so what was asked stays visible and can still be added as
-        # typed if the directory has nothing.
-        st.session_state[f"{key}_query"] = text
-        return
-    st.session_state[field] = None            # a callback may clear its own widget
-    st.session_state.pop(f"{key}_query", None)
+        term = (st.session_state.get(f"{key}_box") or {}).get("search") or ""
+    entry = _entry_from_text(term)
+    if entry:
+        _add_venue(key, entry)
+        st.session_state[f"{key}_last"] = ("", 0, "")
+        if st_searchbox is None:
+            st.session_state[f"{key}_fallback"] = ""
+        else:
+            _reset_box(key)
+
+
+def _venue_note(key, find_in_doaj):
+    """The one line under the box: what the last keystroke's lookup found."""
+    if not find_in_doaj:
+        return "Added exactly as typed — a name, a website (ieee.org) or an ISSN."
+    term, shown, error = st.session_state.get(f"{key}_last") or ("", 0, "")
+    if error:
+        return error
+    if not term:
+        return "Start typing — DOAJ's journals are matched as you go."
+    if not shown:
+        return f"No DOAJ journal matches “{term}” — press Add to use it as typed."
+    return (f"{shown} best match(es) shown — choose one, or press Add to use "
+            f"“{term}” as typed.")
 
 
 def _venue_input(key, find_in_doaj):
     """The one control each list is built with: type a venue, or pick a match.
 
-    A combobox rather than a text box, a search box and a results dropdown.  The
-    three were one question asked three times — *which venue* — and splitting
-    them meant the answer could be half-entered in one of them while another
-    held something else.  Streamlit's ``accept_new_options`` makes a single
-    control do both jobs: the dropdown holds whatever DOAJ last matched, and a
-    value that is not among them is still accepted, so a journal the directory
-    has never heard of is typed into the same box as one it has.
+    A search-as-you-type box rather than a dropdown.  Streamlit's own selectbox
+    filters *client-side* over options it was given, so it cannot look anything
+    up while a word is being typed — the best it could do was search on Enter and
+    offer the results afterwards, which made finding a journal a two-step
+    operation and left the control's menu opening on an empty box with nothing
+    in it.  ``st_searchbox`` calls back into Python on each keystroke, so "I"
+    already offers IEEE's journals, and the menu exists only when there is
+    something to show.
 
-    Returns the one-line note that goes under it, which is always present and
-    always one line — it is the only feedback the search gives, and a note that
-    appeared only when there was something to say would move the list below it.
+    The blacklist gets the same box with no lookup behind it — there is no
+    directory of predatory venues to consult, and appearing in a directory of
+    vetted ones is no reason to treat a venue as predatory — so it never offers
+    anything and its Add button is the whole interaction.
     """
-    entry_help = ("Typed as a name, a website (ieee.org) or an ISSN (1234-5678) — which one "
-                  "it is read as is decided by what you type, and shown on the row it "
-                  "becomes.")
-    by_label, note = {}, ""
-    query = (st.session_state.get(f"{key}_query") or "").strip() if find_in_doaj else ""
-
-    if not find_in_doaj:
-        note = "Added exactly as typed. Press Enter, or use Add."
-    elif not query:
-        note = "Type a journal name and press Enter to search DOAJ — or Add it as typed."
-    else:
-        result = doaj_search(query, _DOAJ_LIMIT)
-        if not result.ok:
-            note = result.error
-        elif not result.journals:
-            note = (f"Nothing in DOAJ matched “{query}” — press Add to use it as typed."
-                    + (" (Field-scoped queries return nothing when the field name is wrong.)"
-                       if result.mode == "advanced" else ""))
-        else:
-            # Labels are made unique before they become keys: DOAJ can hold two
-            # records that reduce to the same line, and one would otherwise
-            # shadow the other in the mapping and be unselectable.
-            for journal in result.journals:
-                label = _doaj_option_label(journal)
-                while label in by_label:
-                    label += "\u2009"          # thin space; invisible, unique
-                by_label[label] = journal
-            more = "" if len(by_label) >= result.total else f" of {result.total}"
-            note = (f"Open the list for {len(by_label)}{more} DOAJ match(es), "
-                    f"or press Add to use “{query}” as typed.")
-
-    st.session_state[f"{key}_doaj_opts"] = by_label
-
+    entry_help = ("Read as a name, a website (ieee.org) or an ISSN (1234-5678) — which one "
+                  "is decided by what you type, and shown on the row it becomes.")
     row = st.columns([7.2, 2.8], vertical_alignment="bottom")
     with row[0]:
-        st.selectbox(
-            "Add a venue", [*by_label], key=f"{key}_pick", index=None,
-            label_visibility="collapsed", accept_new_options=True,
-            placeholder="Name, website or ISSN",
-            # Enter searches where there is a directory to search, and adds where
-            # there is not; Add always adds.  See _commit_venue.
-            on_change=_commit_venue, args=(key, not find_in_doaj),
-            help=(entry_help + " Typing a name and pressing Enter searches DOAJ; its matches "
-                  "appear in this same list, and choosing one adds that journal with its "
-                  "official title and ISSN. **Being indexed in DOAJ is not part of any "
-                  "verdict** — it only helps name a venue."
-                  if find_in_doaj else entry_help))
+        if st_searchbox is None:
+            # The component is missing (an un-updated checkout). The list still
+            # works by hand and by JSON; only the lookup is gone.
+            st.text_input("Add a venue", key=f"{key}_fallback",
+                          label_visibility="collapsed",
+                          placeholder="Name, website or ISSN", help=entry_help)
+        else:
+            st_searchbox(
+                (lambda term: _doaj_lookup(key, term)) if find_in_doaj else (lambda _t: []),
+                key=f"{key}_box",
+                placeholder="Name, website or ISSN",
+                label=None,
+                clear_on_submit=True,
+                # The menu lives *inside* the component's iframe, so the frame
+                # has to grow to ~350px to show it — and in normal flow that
+                # pushes the list and the JSON fold a third of a screen down
+                # every time a letter is typed, and leaves the two columns at
+                # different heights.  Positioned absolutely it overlays what is
+                # beneath instead, which is what a dropdown should do anyway.
+                style_absolute=True,
+                debounce=120,          # local lookup: no reason to wait longer
+                submit_function=lambda journal: _add_doaj_pick(key, journal),
+                help=(entry_help + " Typing searches DOAJ as you go; choosing a match adds "
+                      "that journal with its official title and ISSN. Being indexed in DOAJ "
+                      "is not part of any verdict — it only helps name a venue."
+                      if find_in_doaj else entry_help))
     row[1].button("＋ Add", key=f"{key}_handadd", width="stretch",
-                  on_click=_commit_venue, args=(key, True),
+                  on_click=_add_typed_venue, args=(key,),
                   help="Add exactly what is in the box, whether or not DOAJ knows it.")
-    return note
-
+    return _venue_note(key, find_in_doaj)
 
 
 def _venue_list_body(key, empty):

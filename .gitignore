@@ -20,3 +20,6 @@ src/bealls_list_check/results/
 
 # Input corpus: Semantic Scholar dump JSON files (large; not committed)
 docs/
+
+# DOAJ journal list cached by the web app (ui/doaj.py) - refetched when stale.
+ui/.cache/

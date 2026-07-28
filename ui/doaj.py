@@ -1,4 +1,4 @@
-"""Look journals up in the DOAJ, to build the whitelist by name rather than by hand.
+"""The DOAJ journal list, held locally so a venue can be found while it is typed.
 
 The Directory of Open Access Journals (https://doaj.org) is the reference index
 of vetted open-access journals.  Step 3's **Only check these venues** list is a
@@ -7,25 +7,38 @@ means knowing its exact title, its website, or its ISSN.  DOAJ knows all three,
 so this module turns "the journal I mean is called roughly this" into an entry
 the check can match on.
 
+**Why the whole list, and not the search API.**  The box searches as the name is
+typed, and a request per keystroke is both too slow and not ours to make: DOAJ is
+a free service run by a non-profit, and typing four letters into its search
+endpoint earns a Cloudflare 502 with ``Retry-After: 60`` — measured, not
+supposed.  DOAJ publishes the entire journal list as one CSV for exactly this
+reason, so it is fetched **once** (~23,000 journals, ~25 MB, a few seconds),
+reduced to the five fields a venue entry needs, and cached on disk.  Everything
+after that is a dictionary lookup: instant from the first character, correct
+offline, and no load on DOAJ at all.
+
 Nothing in the check engine imports this: DOAJ has no part in any verdict, and
 must not acquire one.  Being indexed in DOAJ says a journal passed DOAJ's
 editorial screening; it is not the question this tool asks, which is whether the
 venue appears on Beall's List.  All this module does is help *name* a venue.
 
 Like ``runners.py`` this is import-safe — no Streamlit — so it can be exercised
-from a shell.  Failures are *returned*, never raised: the caller caches results,
-and an exception cannot be cached, so a rejected query would otherwise be re-sent
-to DOAJ on every rerun of the page.
+from a shell:
 
-    >>> search("journal of power sources advances").journals[0].issns
+    >>> journals, err = load_journals()
+    >>> search(journals, "power sources adv")[0].issns
     ('2666-2485',)
 """
 
+import csv
+import io
+import json
 import re
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import quote, urlparse
+from urllib.parse import urlparse
 
 import requests
 
@@ -53,80 +66,39 @@ except Exception:                                   # pragma: no cover - fallbac
         return f"{m.group(1)}-{m.group(2).upper()}" if m else ""
 
 
-_API = "https://doaj.org/api/search/journals/"
+# DOAJ's own "all journals as CSV" download — one request, refreshed daily at
+# source.  It 307s to a signed S3 URL, which requests follows.
+_CSV_URL = "https://doaj.org/csv"
 
-# DOAJ caps pageSize at 100 whatever is asked for; the UI wants far fewer than
-# that on screen at once, so the ceiling is only here to keep a caller honest.
-MAX_PAGE_SIZE = 100
+# Where the reduced list is kept between runs.  Beside the app rather than in a
+# platform cache directory, so it is obvious what it is and deleting it is
+# obviously safe; .gitignore keeps it out of the repository.
+CACHE_DIR = Path(__file__).resolve().parent / ".cache"
+CACHE_FILE = CACHE_DIR / "doaj_journals.json"
+
+# How long a cached list is used before it is fetched again.  A journal
+# directory does not turn over quickly, and the cost of being two weeks stale is
+# that a very new journal has to be typed by hand — which the box allows anyway.
+MAX_CACHE_AGE_SECONDS = 14 * 24 * 3600
+
 DEFAULT_LIMIT = 8
 
-# No key is needed for search, and DOAJ asks only that clients identify
-# themselves.  Same shape as data_quality.py's Crossref agent.
+# No key is needed, and DOAJ asks only that clients identify themselves.  Same
+# shape as data_quality.py's Crossref agent.
 _UA = "bealls-list-check/1.0 (research tooling; +https://doaj.org/docs/api)"
 
 _ISSN_RE = re.compile(r"\b\d{4}-?\d{3}[\dxX]\b")
-# Labels people put in front of a pasted ISSN, dropped before deciding whether
-# the box holds nothing else.
-_ISSN_LABEL_RE = re.compile(r"\b[ep]?issn\b:?", re.I)
 
-# A field-scoped query is recognised narrowly, because the alternative is worse
-# than not supporting one: "Nature: Communications" is a journal title, and read
-# as a query scoped to a field named `Nature` it returns nothing at all rather
-# than the twelve journals the escaped text finds.  So the colon must be followed
-# immediately by a value (a title's colon is followed by a space) AND the field
-# must look like a real one — dotted, as DOAJ's own paths are, or one of the
-# documented shortcuts.
-_FIELD_RE = re.compile(r"^([A-Za-z_][\w.]*):\S")
-_KNOWN_FIELDS = {
-    "issn", "eissn", "pissn", "title", "publisher", "subject", "license",
-    "country", "language", "doi", "abstract", "keywords", "editor",
-}
-
-# Elasticsearch query_string reserves these.  An unescaped one is not a subtly
-# worse search, it is an HTTP 400 — "Nature: Communications" returns nothing at
-# all unescaped and twelve journals escaped — so everything the user types is
-# escaped unless it is deliberately an advanced query (see :func:`build_query`).
-_RESERVED = set('+-=&|><!(){}[]^"~*?:\\/')
-
-
-def _escape(text):
-    """Backslash-escape every character Elasticsearch would read as syntax."""
-    return "".join("\\" + ch if ch in _RESERVED else ch for ch in text)
-
-
-def build_query(text):
-    """The DOAJ query for what the user typed, and how it was read.
-
-    Returns ``(query, mode)`` where *mode* is one of:
-
-      * ``issn``     — the box held nothing but ISSNs, so they are asked for by
-                       identifier.  This is the exact lookup, and the one worth
-                       recommending: it returns the journal or it returns nothing.
-      * ``advanced`` — the text is already a field-scoped query
-                       (``bibjson.publisher.name:Elsevier``), so it is passed
-                       through untouched.  It may well be rejected by DOAJ; that
-                       is DOAJ's answer to give, and refusing to send it would be
-                       this module deciding what DOAJ supports on DOAJ's behalf.
-      * ``text``     — anything else: escaped and sent as free text, which DOAJ
-                       ranks by relevance across title, publisher and subject.
-    """
-    text = (text or "").strip()
-    if not text:
-        return "", "text"
-
-    issns = _ISSN_RE.findall(text)
-    leftover = _ISSN_LABEL_RE.sub("", _ISSN_RE.sub("", text)).strip(" ,;/|")
-    if issns and not leftover:
-        # Nothing in the box but ISSNs (and perhaps the word "ISSN") — ask by
-        # identifier, OR-ing several so a journal's print and electronic ISSN
-        # pasted together still find it once.
-        return " OR ".join(f"issn:{normalize_issn(i)}" for i in issns), "issn"
-
-    field = _FIELD_RE.match(text)
-    if field and ("." in field.group(1) or field.group(1).lower() in _KNOWN_FIELDS):
-        return text, "advanced"
-
-    return _escape(text), "text"
+# The CSV's column headings, named once here.  DOAJ has renamed these before, so
+# each is looked up with a fallback and a missing one costs that field, not the
+# whole load.
+_COL_TITLE = "Journal title"
+_COL_ALT = "Alternative title"
+_COL_PISSN = "Journal ISSN (print version)"
+_COL_EISSN = "Journal EISSN (online version)"
+_COL_PUBLISHER = "Publisher"
+_COL_COUNTRY = "Country of publisher"
+_COL_URL = "Journal URL"
 
 
 # Hosts known to carry many journals.  The path test in :func:`site_is_shared`
@@ -141,8 +113,9 @@ _PLATFORM_HOSTS = (
     "frontiersin.org", "mdpi.com", "hindawi.com", "karger.com",
     "degruyter.com", "emerald.com", "inderscience.com", "lww.com",
     "keaipublishing.com", "bmj.com", "plos.org", "wolterskluwer.com",
-    "dergipark.org.tr", "dergipark.gov.tr", "jstage.jst.go.jp", "scielo.br",
-    "redalyc.org", "sanad.iau.ir", "digitalcommons.",
+    "dovepress.com", "dergipark.org.tr", "dergipark.gov.tr",
+    "jstage.jst.go.jp", "scielo.br", "redalyc.org", "sanad.iau.ir",
+    "digitalcommons.",
 )
 
 
@@ -173,15 +146,13 @@ def site_is_shared(url):
 
 @dataclass(frozen=True)
 class Journal:
-    """One DOAJ journal record, reduced to what naming a venue needs."""
+    """One DOAJ journal, reduced to what naming a venue needs."""
 
     title: str
     issns: tuple = ()                 # print then electronic, normalized, deduped
-    site: str = ""                    # bibjson.ref.journal — the journal's homepage
+    site: str = ""                    # the journal's own homepage
     publisher: str = ""
     country: str = ""
-    subjects: tuple = ()
-    doaj_id: str = ""
 
     @property
     def host(self):
@@ -195,9 +166,7 @@ class Journal:
     @property
     def doaj_url(self):
         """This journal's page on doaj.org, so a row can be checked at the source."""
-        if self.issns:
-            return f"https://doaj.org/toc/{self.issns[0]}"
-        return f"https://doaj.org/search/journals?source={self.doaj_id}" if self.doaj_id else ""
+        return f"https://doaj.org/toc/{self.issns[0]}" if self.issns else ""
 
     def to_entry(self, *, include_site=False):
         """This journal as a whitelist entry, in ``user_lists.py``'s JSON format.
@@ -220,96 +189,141 @@ class Journal:
         return entry
 
 
-def _journal(record):
-    """Build a :class:`Journal` from one DOAJ API result."""
-    bibjson = record.get("bibjson") or {}
+def _row_to_journal(row):
+    """One CSV row as a :class:`Journal`, or ``None`` if it names nothing."""
     issns = []
-    for key in ("pissn", "eissn"):
-        issn = normalize_issn(bibjson.get(key))
+    for col in (_COL_PISSN, _COL_EISSN):
+        issn = normalize_issn(row.get(col))
         if issn and issn not in issns:
             issns.append(issn)
+    title = (row.get(_COL_TITLE) or "").strip()
+    if not (title or issns):
+        return None
     return Journal(
-        title=(bibjson.get("title") or "").strip(),
+        title=title,
         issns=tuple(issns),
-        site=((bibjson.get("ref") or {}).get("journal") or "").strip(),
-        publisher=((bibjson.get("publisher") or {}).get("name") or "").strip(),
-        country=((bibjson.get("publisher") or {}).get("country") or "").strip(),
-        subjects=tuple(s.get("term", "") for s in (bibjson.get("subject") or [])
-                       if s.get("term")),
-        doaj_id=record.get("id", ""),
+        site=(row.get(_COL_URL) or "").strip(),
+        publisher=(row.get(_COL_PUBLISHER) or "").strip(),
+        country=(row.get(_COL_COUNTRY) or "").strip(),
     )
 
 
-@dataclass(frozen=True)
-class SearchResult:
-    """What one search produced — including, on failure, why it produced nothing."""
+def _read_cache():
+    """The cached list, or ``None`` when it is absent, stale or unreadable."""
+    try:
+        if not CACHE_FILE.is_file():
+            return None
+        if time.time() - CACHE_FILE.stat().st_mtime > MAX_CACHE_AGE_SECONDS:
+            return None
+        with io.open(CACHE_FILE, encoding="utf-8") as fh:
+            return [Journal(title=t, issns=tuple(i), site=s, publisher=p, country=c)
+                    for t, i, s, p, c in json.load(fh)["journals"]]
+    except Exception:
+        return None                     # a damaged cache is a missing cache
 
-    journals: tuple = ()
-    total: int = 0                 # matches DOAJ holds, which exceeds len(journals)
-    query: str = ""                # what was actually sent, after build_query
-    mode: str = "text"
-    error: str = ""                # a sentence for the user; "" when the search ran
 
-    @property
-    def ok(self):
-        return not self.error
+def _write_cache(journals):
+    """Persist the reduced list. Failure is not an error — it just costs a fetch."""
+    try:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        payload = {"fetched": time.time(),
+                   "journals": [[j.title, list(j.issns), j.site, j.publisher, j.country]
+                                for j in journals]}
+        with io.open(CACHE_FILE, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False)
+    except Exception:
+        pass
 
 
-def search(text, *, limit=DEFAULT_LIMIT, timeout=12.0):
-    """Search DOAJ's journals for *text*; never raises.
+def load_journals(*, timeout=120.0, refresh=False):
+    """Every journal in DOAJ, from the disk cache or one download.
 
-    *limit* is how many records to fetch, not how many exist — ``total`` reports
-    the latter so the caller can say "8 of 43" rather than implying it has them
-    all.
-
-    Every failure comes back as :attr:`SearchResult.error`, phrased for the
-    person who typed the query rather than for a log.  Callers are expected to
-    memoize this function; returning failures makes them cacheable too, so a
-    query DOAJ rejects is sent once rather than on every rerun of the page.
+    Returns ``(journals, error)``.  *error* is a sentence for the person at the
+    screen and is empty on success; *journals* is empty only when the list could
+    not be obtained at all.  Nothing raises — the box this feeds must keep
+    working by hand when DOAJ or the network does not.
     """
-    query, mode = build_query(text)
-    if not query:
-        return SearchResult(query="", mode=mode)
-
-    limit = max(1, min(int(limit), MAX_PAGE_SIZE))
-    # The query is a path SEGMENT, so `quote` has to encode "/" as well — a
-    # journal title containing one would otherwise split the URL.
-    url = f"{_API}{quote(query, safe='')}?page=1&pageSize={limit}"
+    if not refresh:
+        cached = _read_cache()
+        if cached:
+            return cached, ""
     try:
-        response = requests.get(url, headers={"User-Agent": _UA}, timeout=timeout)
-    except requests.exceptions.Timeout:
-        return SearchResult(query=query, mode=mode,
-                            error=f"DOAJ did not answer within {timeout:g}s. "
-                                  "It may be busy — try again, or add the journal by hand.")
+        response = requests.get(_CSV_URL, headers={"User-Agent": _UA},
+                                timeout=timeout, stream=True)
     except requests.exceptions.RequestException:
-        return SearchResult(query=query, mode=mode,
-                            error="Could not reach DOAJ (no internet, or the site is down). "
-                                  "Journals can still be added by hand.")
-
-    if response.status_code == 400:
-        # DOAJ rejected the query as syntax.  Only an `advanced` query can
-        # normally get here — free text is escaped — so say which half is wrong.
-        return SearchResult(
-            query=query, mode=mode,
-            error=("DOAJ could not parse that query. Field-scoped searches "
-                   "(`name:value`) are passed through as typed, so check the field name — "
-                   "or drop the colon to search as plain text."
-                   if mode == "advanced" else
-                   "DOAJ could not parse that query. Try a plainer search — "
-                   "the journal's title, or its ISSN."))
+        return (_read_cache() or []), ("Could not reach DOAJ to fetch its journal list. "
+                                       "Venues can still be added by typing them.")
     if response.status_code != 200:
-        return SearchResult(query=query, mode=mode,
-                            error=f"DOAJ answered {response.status_code}. Try again shortly.")
-
+        return (_read_cache() or []), (
+            f"DOAJ answered {response.status_code} for its journal list. "
+            "Venues can still be added by typing them.")
     try:
-        payload = response.json()
-    except ValueError:
-        return SearchResult(query=query, mode=mode,
-                            error="DOAJ's answer was not readable as JSON.")
+        text = response.content.decode("utf-8", errors="replace")
+        rows = csv.DictReader(io.StringIO(text))
+        journals = [j for j in (_row_to_journal(r) for r in rows) if j is not None]
+    except Exception as exc:
+        return (_read_cache() or []), f"DOAJ's journal list could not be read ({exc})."
+    if not journals:
+        return [], "DOAJ's journal list came back empty."
+    _write_cache(journals)
+    return journals, ""
 
-    journals = tuple(_journal(r) for r in (payload.get("results") or []))
-    # A record with neither a title nor an ISSN cannot be turned into a whitelist
-    # entry that matches anything, so it is dropped rather than offered.
-    journals = tuple(j for j in journals if j.title or j.issns)
-    return SearchResult(journals=journals, total=int(payload.get("total") or 0),
-                        query=query, mode=mode)
+
+def _haystack(journal):
+    """The lower-cased text one journal is matched against."""
+    return f"{journal.title} {journal.publisher}".lower()
+
+
+def build_index(journals):
+    """Pre-lower every journal's searchable text, once, for :func:`search`.
+
+    Returns a list of ``(haystack, lowered_title, journal)``.  Doing this per
+    keystroke over 23,000 journals is the difference between a box that keeps up
+    with typing and one that does not.
+    """
+    return [(_haystack(j), j.title.lower(), j) for j in journals]
+
+
+def search(index, term, limit=DEFAULT_LIMIT):
+    """The best *limit* matches for *term*, most relevant first.
+
+    *index* is what :func:`build_index` returned (a bare journal list is also
+    accepted, and indexed on the spot).  Ranking is by how early and how cleanly
+    the term appears, which is what makes a half-typed name useful:
+
+      1. the title starts with it — "power sou" -> *Power Sources…*
+      2. a word of the title starts with it — "sources" -> *Journal of Power Sources*
+      3. it appears anywhere in the title
+      4. it appears in the publisher's name
+
+    An ISSN is matched exactly instead, against either of a journal's two.
+    """
+    term = (term or "").strip().lower()
+    if not term or not index:
+        return []
+    if index and isinstance(index[0], Journal):
+        index = build_index(index)
+
+    issn = normalize_issn(term) if _ISSN_RE.search(term) else ""
+    if issn:
+        return [j for _h, _t, j in index if issn in j.issns][:limit]
+
+    hits = []
+    for haystack, title, journal in index:
+        if title.startswith(term):
+            rank = 0
+        elif re.search(r"\b" + re.escape(term), title):
+            rank = 1
+        elif term in title:
+            rank = 2
+        elif term in haystack:
+            rank = 3
+        else:
+            continue
+        # Shorter titles first within a rank: a search for "nature" should offer
+        # *Nature* before *Nature Reviews Methods Primers*.
+        hits.append((rank, len(title), journal))
+        if len(hits) > 4000:            # a one-letter term matches thousands
+            break
+    hits.sort(key=lambda h: (h[0], h[1]))
+    return [j for _r, _l, j in hits[:limit]]
