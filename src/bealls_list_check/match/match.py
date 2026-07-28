@@ -88,11 +88,18 @@ def _domain_corroborates(entry_domain, paper_domains):
 
 
 def venue_signals(paper):
-    """Return ``(venue_domains, normalized_names)`` for whitelist scoping.
+    """Return ``(venue_domains, normalized_names, issns)`` for whitelist scoping.
 
     venue_domains = the canonical + alternate *venue* hosts (NOT the open-access
     PDF host — a paper's PDF living on a publisher's server does not mean it
     belongs to that publisher).  Used by the whitelist filter in user_lists.py.
+
+    The ISSNs come from ``publicationVenue.issn`` via the same
+    :func:`extract_issns` that ``_classify`` uses below, so the whitelist and the
+    Beall index ask the identity question of a venue in exactly one way.  It is
+    the most precise signal of the three: a name can be shared by unrelated
+    journals and a domain can be a publisher platform hosting thousands, while an
+    ISSN names one journal and nothing else.
     """
     pv = paper.get("publicationVenue") or {}
     domains = ([normalize_host(pv["url"])] if pv.get("url") else []) + [
@@ -105,7 +112,7 @@ def venue_signals(paper):
         if nn and nn not in seen:
             seen.add(nn)
             names.append(nn)
-    return domains, names
+    return domains, names, extract_issns(pv.get("issn"))
 
 
 class BeallIndex:

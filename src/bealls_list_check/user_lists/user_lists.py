@@ -12,11 +12,19 @@ plain string is treated as a name; ``url`` is accepted in place of ``domain``):
     ``out_of_scope`` and skipped.  An empty/absent whitelist means "check
     everything" (the default behaviour).
 
-A paper is *in scope* if any of its venue domains is the same as, or a subdomain
-of, a whitelisted domain (so whitelisting a publisher domain covers all its
-journals), OR a whitelisted name appears as a whole-word phrase in one of the
-paper's venue names (so whitelisting the publisher "IEEE" matches "IEEE
-Transactions on …", without "nature" spuriously matching "signature").
+A paper is *in scope* if any one of three signals matches, tried most precise
+first:
+
+  * one of its venue ISSNs is whitelisted — an ISSN names one journal and
+    nothing else, so this is the only signal that cannot widen the scope beyond
+    the journal the user actually named;
+  * any of its venue domains is the same as, or a subdomain of, a whitelisted
+    domain (so whitelisting a publisher domain covers all its journals — useful
+    deliberately, over-broad by accident, which is why the web app asks before
+    adding a domain it recognises as a shared platform);
+  * a whitelisted name appears as a whole-word phrase in one of the paper's
+    venue names (so whitelisting the publisher "IEEE" matches "IEEE Transactions
+    on …", without "nature" spuriously matching "signature").
 """
 
 import json
@@ -36,7 +44,10 @@ from match import venue_signals
 def load_user_entries(path, list_source):
     """Load a user JSON list into snapshot-entry dicts (``list_source`` tagged).
 
-    Skips entries that have neither a usable name nor a domain.
+    Skips entries carrying none of the three identifying signals — name, domain,
+    ISSN.  An ISSN alone is enough (both lists match on it), so a whitelist built
+    from a journal directory needs nothing but the identifier that directory is
+    surest about.
     """
     with open(path, encoding="utf-8") as fh:
         data = json.load(fh)
@@ -53,14 +64,17 @@ def load_user_entries(path, list_source):
         url = (item.get("url") or item.get("domain") or "").strip()
         domain = normalize_host(url) if url else ""
         normalized_name = normalize_name(name)
-        if not (domain or normalized_name):
+        issns = [normalize_issn(i) for i in (item.get("issns") or []) if normalize_issn(i)]
+        if not (domain or normalized_name or issns):
             continue
         entries.append({
-            "name": name or domain,
+            # Something to call the entry in a report or a log line, preferring
+            # the most human of whatever it was given.
+            "name": name or domain or issns[0],
             "url": item.get("url") or (f"https://{domain}" if domain else ""),
             "domain": domain,
             "normalized_name": normalized_name,
-            "issns": [normalize_issn(i) for i in (item.get("issns") or []) if normalize_issn(i)],
+            "issns": issns,
             "list_source": list_source,
         })
     return entries
@@ -73,10 +87,11 @@ class WhitelistMatcher:
         self.domains = {e["domain"] for e in entries if e["domain"]}
         # Stored space-padded so we can test for whole-word phrase containment.
         self.name_phrases = {f" {e['normalized_name']} " for e in entries if e["normalized_name"]}
+        self.issns = {i for e in entries for i in e["issns"]}
 
     @property
     def active(self):
-        return bool(self.domains or self.name_phrases)
+        return bool(self.domains or self.name_phrases or self.issns)
 
     def _domain_in_scope(self, host):
         if not host:
@@ -85,8 +100,16 @@ class WhitelistMatcher:
         return any(".".join(labels[i:]) in self.domains for i in range(len(labels) - 1))
 
     def in_scope(self, paper):
-        """True if the paper's venue belongs to a whitelisted publisher/journal."""
-        domains, names = venue_signals(paper)
+        """True if the paper's venue belongs to a whitelisted publisher/journal.
+
+        Signals are tried most precise first.  Unlike the matcher's tiers, which
+        one hit is irrelevant here — the answer is a yes/no about scope, not a
+        verdict that has to explain itself — so the order buys nothing but a
+        cheap set lookup before the phrase scan.
+        """
+        domains, names, issns = venue_signals(paper)
+        if any(i in self.issns for i in issns):
+            return True
         if any(self._domain_in_scope(d) for d in domains):
             return True
         padded = [f" {n} " for n in names]

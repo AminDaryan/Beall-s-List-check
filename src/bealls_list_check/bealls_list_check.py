@@ -204,7 +204,8 @@ def main(argv=None):
     whitelist = None
     if args.whitelist:
         whitelist = WhitelistMatcher(load_user_entries(args.whitelist, "whitelist"))
-        print(f"Whitelist active ({len(whitelist.domains)} domain(s) + "
+        print(f"Whitelist active ({len(whitelist.issns)} ISSN(s) + "
+              f"{len(whitelist.domains)} domain(s) + "
               f"{len(whitelist.name_phrases)} name(s)) — papers outside it are skipped.")
 
     crossref_mode = resolve_crossref_mode(args.crossref)

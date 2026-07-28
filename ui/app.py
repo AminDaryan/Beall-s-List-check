@@ -28,6 +28,7 @@ import openpyxl
 import streamlit as st
 from dotenv import load_dotenv
 
+import doaj
 import runners
 
 load_dotenv(runners.REPO_ROOT / ".env")
@@ -247,23 +248,347 @@ def get_papers():
         return None
 
 
-def venue_list_input(label: str, key: str, hint: str = ""):
-    """Optional JSON list of venues for whitelist/blacklist. Returns list or None."""
-    raw = st.text_area(label, height=90, key=key, help=hint or None,
-                       placeholder='[{"name": "IEEE", "domain": "ieee.org"}, "Nature"]')
-    if not raw or not raw.strip():
+# ── Step 3's venue lists ─────────────────────────────────────────────────────
+# A venue list is a *list*, and it is now edited as one: rows with a ✕, built by
+# searching DOAJ or by typing, with the JSON it serialises to kept underneath in
+# a fold.  It used to be a 90px textarea holding raw JSON, which made the format
+# the interface — every add was text surgery, every removal was careful text
+# surgery, and after half a dozen entries the box was a wall of braces that no
+# longer answered the only question it is there to answer, which is *which
+# venues is this run scoped to*.
+#
+# The JSON has not gone anywhere and is not demoted to a preview: it is still a
+# real editor, it still accepts a pasted list from a colleague or a previous run,
+# and it stays in sync both ways.  It is simply no longer the only way in.
+#
+# Two identifiers per entry rather than one, because a venue can be named three
+# ways and they are not equally good:
+#   * an ISSN names one journal and nothing else;
+#   * a domain is matched by host, so a publisher's domain covers every journal
+#     it hosts — deliberately useful, accidentally enormous;
+#   * a name is matched as a whole-word phrase, so a short one ("Sensors") is
+#     shared by journals that have nothing to do with each other.
+# Each row therefore says which of the three it carries, because that — not the
+# venue's name — is what decides which papers the run will look at.
+
+# Rows are Streamlit widgets, and a pasted list of 200 venues would be 400 of
+# them.  Past this many the list stops being rendered row-by-row and says so;
+# every entry is still in force, and the fold below holds all of them.
+_MAX_SHOWN_VENUES = 15
+
+# How many DOAJ hits one search puts on screen.  DOAJ ranks by relevance and the
+# wanted journal is normally first, so this is a shortlist to choose from rather
+# than a results page to page through — `total` is reported beside it so the
+# shortlist never reads as the whole answer.
+_DOAJ_LIMIT = 8
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def doaj_search(query: str, limit: int):
+    """Memoized :func:`doaj.search` — one lookup per distinct query per hour.
+
+    Caching is not an optimisation here, it is what makes the search usable at
+    all: Streamlit reruns the whole script on every click anywhere on the page,
+    so an uncached call would re-query DOAJ each time a checkbox is ticked three
+    steps away.  ``doaj.search`` returns its failures rather than raising
+    precisely so that they land in this cache too — an exception is not
+    cacheable, so a query DOAJ rejects would otherwise be re-sent forever.
+    """
+    return doaj.search(query, limit=limit)
+
+
+def _venue_key(entry):
+    """Identity of an entry, so the same venue cannot be added twice."""
+    return (
+        doaj.normalize_host(entry.get("domain") or entry.get("url") or ""),
+        (entry.get("name") or "").strip().casefold(),
+        tuple(sorted(entry.get("issns") or [])),
+    )
+
+
+def _venue_name(entry):
+    """What to call an entry: the most human of whatever it carries."""
+    return (entry.get("name") or entry.get("domain") or entry.get("url")
+            or (entry.get("issns") or [""])[0] or "?")
+
+
+def _normalize_venue(item):
+    """One list item as an entry dict, accepting everything the JSON format does.
+
+    A bare string is a name, ``url`` and ``domain`` are interchangeable, and
+    anything with none of the three identifying fields is dropped — the same
+    rule ``load_user_entries`` applies when the check reads the file, applied
+    here so the rows on screen are the entries that will actually be in force.
+    """
+    if isinstance(item, str):
+        item = {"name": item}
+    if not isinstance(item, dict):
         return None
+    entry = {}
+    if (item.get("name") or "").strip():
+        entry["name"] = item["name"].strip()
+    site = (item.get("domain") or item.get("url") or "").strip()
+    if site:
+        entry["domain"] = doaj.normalize_host(site) or site
+    issns = [doaj.normalize_issn(i) for i in (item.get("issns") or [])]
+    issns = [i for i in issns if i]
+    if issns:
+        entry["issns"] = issns
+    return entry or None
+
+
+def _venues_to_json(venues):
+    return json.dumps(venues, indent=2, ensure_ascii=False) if venues else ""
+
+
+def _sync_venue_json(key):
+    """Write the list back into the JSON box.
+
+    Only ever called from a widget callback, which Streamlit runs *before* the
+    rerun that redraws the widgets — so assigning to the text area's own key is
+    allowed here and is what it comes back holding.  Doing it from the render
+    pass instead would raise.
+    """
+    st.session_state[key] = _venues_to_json(st.session_state.get(f"{key}_venues") or [])
+    st.session_state.pop(f"{key}_jsonerr", None)
+
+
+def _add_venue(key, entry):
+    """Append one entry unless an identical one is already there."""
+    venues = st.session_state.setdefault(f"{key}_venues", [])
+    if any(_venue_key(v) == _venue_key(entry) for v in venues):
+        notify(f"{_venue_name(entry)} is already on the list.", icon="•")
+        return
+    venues.append(entry)
+    _sync_venue_json(key)
+    notify(f"Added {_venue_name(entry)}.", icon="✅")
+
+
+def _remove_venue(key, index):
+    venues = st.session_state.get(f"{key}_venues") or []
+    if 0 <= index < len(venues):
+        venues.pop(index)
+        _sync_venue_json(key)
+
+
+def _clear_venues(key):
+    st.session_state[f"{key}_venues"] = []
+    _sync_venue_json(key)
+
+
+def _add_typed_venue(key):
+    """Add whatever was typed into the hand-add box, read as ISSN / site / name.
+
+    One box rather than three, because the three are alternatives and asking for
+    all of them would imply they are wanted together.  Which one was typed is
+    decided here and shown on the row that appears, so a misread is visible
+    immediately rather than at the end of the run.
+    """
+    field = f"{key}_hand"
+    text = (st.session_state.get(field) or "").strip()
+    if not text:
+        return
+    issn = doaj.normalize_issn(text)
+    if issn and not text.replace("-", "").strip().isalpha():
+        entry = {"issns": [issn]}
+    elif " " not in text and "." in text and doaj.normalize_host(text):
+        entry = {"domain": doaj.normalize_host(text)}
+    else:
+        entry = {"name": text}
+    _add_venue(key, entry)
+    st.session_state[field] = ""          # a callback may clear its own widget
+
+
+def _venue_json_edited(key):
+    """Parse the JSON box back into the list (its ``on_change``).
+
+    Invalid JSON does not clear the list: the last list that parsed stays in
+    force, and the box says so.  Silently emptying the run's scope because a
+    comma went missing is the one behaviour this must not have.
+    """
+    raw = (st.session_state.get(key) or "").strip()
+    if not raw:
+        st.session_state[f"{key}_venues"] = []
+        st.session_state.pop(f"{key}_jsonerr", None)
+        return
     try:
         parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        st.error(f"{label}: invalid JSON ({e})")
-        return None
+    except json.JSONDecodeError as exc:
+        st.session_state[f"{key}_jsonerr"] = (
+            f"Invalid JSON ({exc}). The list above is unchanged and is what the run "
+            "will use — fix the text, or edit the list directly.")
+        return
     if isinstance(parsed, dict):
         parsed = [parsed]
     if not isinstance(parsed, list):
-        st.error(f"{label}: must be a JSON list of venues.")
-        return None
-    return parsed
+        st.session_state[f"{key}_jsonerr"] = (
+            "This must be a JSON list of venues. The list above is unchanged.")
+        return
+    st.session_state[f"{key}_venues"] = [e for e in (_normalize_venue(i) for i in parsed) if e]
+    st.session_state.pop(f"{key}_jsonerr", None)
+
+
+def _sig_chips(entry):
+    """The pills saying what an entry will be matched on, strongest first."""
+    chips = []
+    for issn in entry.get("issns") or []:
+        chips.append(f"<span class='bl-sig bl-sig-issn' title='Matches this journal's "
+                     f"ISSN exactly — the most precise signal there is.'>{issn}</span>")
+    if entry.get("domain"):
+        shared = doaj.site_is_shared(f"https://{entry['domain']}")
+        why = ("Matches this host and its subdomains. This looks like a shared "
+               "publisher platform, so it covers every journal hosted there."
+               if shared else
+               "Matches this host and any of its subdomains.")
+        chips.append(f"<span class='bl-sig bl-sig-site{' bl-sig-wide' if shared else ''}' "
+                     f"title='{html.escape(why, quote=True)}'>"
+                     f"{'⚠ ' if shared else ''}{html.escape(entry['domain'])}</span>")
+    if entry.get("name"):
+        chips.append("<span class='bl-sig' title='Matches as a whole-word phrase inside a "
+                     "paper&#39;s venue name.'>name</span>")
+    return "".join(chips)
+
+
+def _venue_row_html(entry):
+    return (f"<div class='bl-vl-row'><span class='bl-vl-name'>"
+            f"{html.escape(_venue_name(entry))}</span>{_sig_chips(entry)}</div>")
+
+
+def _doaj_row_html(journal, with_site):
+    """One DOAJ hit: what it is, who publishes it, and what adding it would key on."""
+    meta = " · ".join(filter(None, [journal.publisher, journal.country]))
+    issn = ", ".join(journal.issns) or "no ISSN"
+    site = ""
+    if journal.host:
+        warn = " ⚠ shared platform" if journal.site_is_shared else ""
+        cls = " bl-sig-wide" if (with_site and journal.site_is_shared) else ""
+        state = "" if with_site else " (not added)"
+        site = (f"<span class='bl-sig bl-sig-site{cls}'>"
+                f"{html.escape(journal.host)}{warn}{state}</span>")
+    return (f"<div class='bl-vl-row'>"
+            f"<span class='bl-vl-name'>{html.escape(journal.title or issn)}</span>"
+            f"<span class='bl-sig bl-sig-issn'>{html.escape(issn)}</span>{site}"
+            + (f"<div class='bl-vl-meta'>{html.escape(meta)}</div>" if meta else "")
+            + "</div>")
+
+
+def _doaj_finder(key):
+    """The DOAJ search fold: find a journal by name, add it as a scoped entry.
+
+    Folded, unlike everything else in Step 3.  The rule this step follows is that
+    a control which changes what the run does must not be behind a click — but
+    what is behind this one is a *finder*, not a setting.  Whatever it finds
+    lands in the list above, in the open, where it can be read and removed; shut,
+    this costs one row and Step 3 looks as it did before.
+    """
+    with st.expander("🔍 Find a journal in DOAJ", expanded=False):
+        st.caption("The Directory of Open Access Journals knows the exact title, ISSN and "
+                   "website of ~20,000 vetted open-access journals. Search it here to add "
+                   "one without looking any of that up. **Being in DOAJ is not part of any "
+                   "verdict** — this only helps name a venue.")
+        query = st.text_input(
+            "Search DOAJ", key=f"{key}_doaj_q", label_visibility="collapsed",
+            placeholder="Journal title, publisher, or ISSN",
+            help="Plain text is searched across title, publisher and subject. An ISSN "
+                 "(1234-5678) is looked up exactly. A field-scoped query such as "
+                 "`bibjson.publisher.name:Elsevier` is passed to DOAJ as typed.")
+        with_site = st.checkbox(
+            "Also add the journal's website", key=f"{key}_doaj_site",
+            help="Off by default. A domain is matched by host, so adding the website of a "
+                 "journal published on a platform (sciencedirect.com, nature.com, a shared "
+                 "OJS install) puts every other journal on that platform in scope too. The "
+                 "ISSN and title added without it name this journal alone.")
+        if not query.strip():
+            st.caption("Nothing searched yet.")
+            return
+        result = doaj_search(query.strip(), _DOAJ_LIMIT)
+        if not result.ok:
+            st.warning(result.error)
+            return
+        if not result.journals:
+            miss = "No journal in DOAJ matched that."
+            if result.mode == "advanced":
+                miss += (" That was read as a field-scoped query, and DOAJ answers an "
+                         "unknown field name with no matches rather than with an error — "
+                         "so check the field, or drop the colon to search as plain text.")
+            st.caption(miss)
+            return
+        shown = len(result.journals)
+        st.caption(f"Showing {shown} of {result.total} match(es), most relevant first."
+                   + ("" if shown >= result.total else
+                      " Narrow the search if the journal you want is not here."))
+        existing = {_venue_key(v) for v in (st.session_state.get(f"{key}_venues") or [])}
+        for journal in result.journals:
+            entry = journal.to_entry(include_site=with_site)
+            row = st.columns([7.3, 2.7], vertical_alignment="center")
+            row[0].markdown(_doaj_row_html(journal, with_site), unsafe_allow_html=True)
+            already = _venue_key(entry) in existing
+            row[1].button(
+                "✓ Added" if already else "＋ Add", width="stretch", disabled=already,
+                key=f"{key}_doajadd_{journal.doaj_id or journal.title}",
+                on_click=_add_venue, args=(key, entry),
+                help=None if already else f"Add {journal.title} to the list above.")
+
+
+def venue_list_editor(label: str, key: str, hint: str, *, find_in_doaj: bool = False):
+    """One venue list, edited as a list. Returns the entries, or None if empty.
+
+    The return value is the same JSON-shaped list the old text box parsed to, so
+    everything downstream — the run summary, the temp file, the CLI flag — is
+    unchanged.
+    """
+    st.session_state.setdefault(f"{key}_venues", [])
+    st.session_state.setdefault(key, "")
+    venues = st.session_state[f"{key}_venues"]
+
+    st.markdown(f"<div class='bl-vl-label'>{label}</div>", unsafe_allow_html=True)
+    st.caption(hint)
+
+    with st.container(key=f"venuelist-{key}"):
+        if not venues:
+            st.markdown("<div class='bl-vl-empty'>Empty — no venue restriction from this "
+                        "list.</div>", unsafe_allow_html=True)
+        for i, entry in enumerate(venues[:_MAX_SHOWN_VENUES]):
+            row = st.columns([8.4, 1.6], vertical_alignment="center")
+            row[0].markdown(_venue_row_html(entry), unsafe_allow_html=True)
+            row[1].button("✕", key=f"{key}_rm_{i}", width="stretch",
+                          on_click=_remove_venue, args=(key, i),
+                          help=f"Remove {_venue_name(entry)}")
+        if len(venues) > _MAX_SHOWN_VENUES:
+            st.caption(f"…and {len(venues) - _MAX_SHOWN_VENUES} more not listed here. "
+                       f"All {len(venues)} are in force; the full list is under "
+                       "**Edit as JSON**.")
+
+    add = st.columns([7.2, 2.8], vertical_alignment="bottom")
+    add[0].text_input("Add a venue", key=f"{key}_hand", label_visibility="collapsed",
+                      placeholder="Name, website or ISSN",
+                      help="Typed as a name, a website (ieee.org) or an ISSN (1234-5678) — "
+                           "which one it is read as is decided by what you type, and shown "
+                           "on the row it becomes.")
+    add[1].button("＋ Add", key=f"{key}_handadd", width="stretch",
+                  on_click=_add_typed_venue, args=(key,))
+
+    if find_in_doaj:
+        _doaj_finder(key)
+
+    with st.expander("{ } Edit as JSON", expanded=False):
+        st.text_area(
+            "Venue list as JSON", key=key, height=150, label_visibility="collapsed",
+            on_change=_venue_json_edited, args=(key,),
+            placeholder='[{"name": "IEEE", "domain": "ieee.org"}, "Nature"]',
+            help="The same list, in the format the check reads. Edits here update the list "
+                 "above when the box loses focus (or on Ctrl+Enter).")
+        error = st.session_state.get(f"{key}_jsonerr")
+        if error:
+            st.error(error)
+        st.caption('A JSON list of `{"name", "domain", "issns"}` objects, or bare strings '
+                   'like `"Nature"` to match by name alone. Paste one from a colleague or a '
+                   'previous run; it appears as rows above.')
+        if venues:
+            st.button("Clear the list", key=f"{key}_clear", on_click=_clear_venues,
+                      args=(key,), help="Remove every entry from this list.")
+
+    return list(venues) or None
 
 
 def show_input_quality(items, key):

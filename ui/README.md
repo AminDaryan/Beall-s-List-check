@@ -10,7 +10,7 @@ line runs. It is intended for **local, single-user** use — it is not a server,
 has no authentication, and writes to the same results folder as the CLI.
 
 ```powershell
-.\run_ui.ps1       # from the repo root; macOS/Linux: bash ./run_ui.sh
+.\run_ui.ps1       # from the repo root; macOS/Linux: ./run_ui.sh
 ```
 
 The launcher verifies that `.venv` exists (run [`setup.ps1`](../setup.ps1) first

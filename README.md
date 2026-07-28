@@ -87,10 +87,20 @@ Three steps: **set up once, add your papers, run.**
   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
   ```
 
+- **Debian and Ubuntu:** these ship `python3` without the `venv` module, so
+  `./setup.sh` cannot create the virtual environment until it is installed:
+
+  ```bash
+  sudo apt install python3-venv
+  ```
+
+  The script checks for this before it creates anything and says so by name, so
+  there is no need to recognise the failure yourself.
+
 ### Step 1 · Set up (once)
 
 ```powershell
-.\setup.ps1        # Windows PowerShell   (macOS/Linux: bash ./setup.sh)
+.\setup.ps1        # Windows PowerShell   (macOS/Linux: ./setup.sh)
 ```
 
 Creates a `.venv`, installs [`requirements.txt`](requirements.txt), and copies
@@ -128,7 +138,7 @@ action. Its expected output is tabulated in [`examples/`](examples/README.md).
 #### The web app (easiest)
 
 ```powershell
-.\run_ui.ps1       # macOS/Linux: bash ./run_ui.sh
+.\run_ui.ps1       # macOS/Linux: ./run_ui.sh
 ```
 
 Open the URL the launcher prints — `http://localhost:8501` unless that port is

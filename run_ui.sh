@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-command launcher for the Streamlit UI - no manual venv activation needed.
-#   bash ./run_ui.sh
+#   ./run_ui.sh
 set -e
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$root"
