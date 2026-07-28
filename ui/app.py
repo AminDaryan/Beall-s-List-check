@@ -384,27 +384,23 @@ def _clear_venues(key):
     _sync_venue_json(key)
 
 
-def _add_typed_venue(key):
-    """Add whatever was typed into the hand-add box, read as ISSN / site / name.
+def _entry_from_text(text):
+    """Read one typed venue as an ISSN, a website or a name.
 
     One box rather than three, because the three are alternatives and asking for
     all of them would imply they are wanted together.  Which one was typed is
     decided here and shown on the row that appears, so a misread is visible
     immediately rather than at the end of the run.
     """
-    field = f"{key}_hand"
-    text = (st.session_state.get(field) or "").strip()
+    text = (text or "").strip()
     if not text:
-        return
+        return None
     issn = doaj.normalize_issn(text)
     if issn and not text.replace("-", "").strip().isalpha():
-        entry = {"issns": [issn]}
-    elif " " not in text and "." in text and doaj.normalize_host(text):
-        entry = {"domain": doaj.normalize_host(text)}
-    else:
-        entry = {"name": text}
-    _add_venue(key, entry)
-    st.session_state[field] = ""          # a callback may clear its own widget
+        return {"issns": [issn]}
+    if " " not in text and "." in text and doaj.normalize_host(text):
+        return {"domain": doaj.normalize_host(text)}
+    return {"name": text}
 
 
 def _venue_json_edited(key):
@@ -483,100 +479,112 @@ def _doaj_option_label(journal):
     return "  —  ".join(bits)
 
 
-# The dropdown's first row, and the value it is reset to.  A constant, not the
-# status line: the options change with every query, and a stored selection that
-# is no longer among them is a value Streamlit has to resolve on its own.
-_DOAJ_PROMPT = "— pick a journal to add —"
+def _commit_venue(key, add_text):
+    """Handle whatever the combobox is holding (its ``on_change``, and Add).
 
+    The box does double duty — it is where a venue is typed AND where DOAJ's
+    matches are offered — so what a commit means depends on what is in it:
 
-def _pick_doaj(key):
-    """Add the journal chosen in the results dropdown (its ``on_change``).
+      * a value that maps to one of the offered journals: the user picked a
+        match, so add that journal;
+      * anything else: free text.  *add_text* decides whether that is added as
+        typed — which is what the Add button always does — or merely remembered
+        as the query for the DOAJ search the next render runs.
 
-    The dropdown is the button: choosing a row *is* adding it, so there is no
-    separate Add beside each result.  That is what keeps the results a fixed-size
-    control — a list of rows with a button each grows and shrinks with the number
-    of matches, and moves everything below it every time the query changes.
-
-    Reset to the prompt afterwards, so the control goes back to naming the action
-    rather than holding a stale choice, and so a journal can be picked again
-    after being removed from the list.
+    That split is what lets one control both search and add: Enter asks the
+    directory, Add takes you at your word.  Where there is no directory behind
+    the box (the blacklist) Enter adds directly, because there would be nothing
+    for it to ask.
     """
-    picked = st.session_state.get(f"{key}_doaj_pick")
-    journal = (st.session_state.get(f"{key}_doaj_opts") or {}).get(picked)
-    if journal is None:
+    field = f"{key}_pick"
+    value = st.session_state.get(field)
+    text = "" if value is None else str(value).strip()
+    if not text:
         return
-    _add_venue(key, journal.to_entry(
-        include_site=bool(st.session_state.get(f"{key}_doaj_site"))))
-    st.session_state[f"{key}_doaj_pick"] = _DOAJ_PROMPT
+    journal = (st.session_state.get(f"{key}_doaj_opts") or {}).get(value)
+    if journal is not None:
+        _add_venue(key, journal.to_entry())
+    elif add_text:
+        entry = _entry_from_text(text)
+        if entry:
+            _add_venue(key, entry)
+    else:
+        # Neither a match nor an explicit Add: read it as a search, and leave it
+        # in the box so what was asked stays visible and can still be added as
+        # typed if the directory has nothing.
+        st.session_state[f"{key}_query"] = text
+        return
+    st.session_state[field] = None            # a callback may clear its own widget
+    st.session_state.pop(f"{key}_query", None)
 
 
-def _doaj_finder(key):
-    """Search DOAJ and offer the matches as a dropdown that adds on selection.
+def _venue_input(key, find_in_doaj):
+    """The one control each list is built with: type a venue, or pick a match.
 
-    Rendered unconditionally and always the same three controls — a search box, a
-    website toggle, a dropdown — so typing, clearing or re-running a query never
-    moves the list below it.  A results *list* cannot do that: it is as tall as
-    the number of matches, so every keystroke that changes the count shifts
-    everything under it.
+    A combobox rather than a text box, a search box and a results dropdown.  The
+    three were one question asked three times — *which venue* — and splitting
+    them meant the answer could be half-entered in one of them while another
+    held something else.  Streamlit's ``accept_new_options`` makes a single
+    control do both jobs: the dropdown holds whatever DOAJ last matched, and a
+    value that is not among them is still accepted, so a journal the directory
+    has never heard of is typed into the same box as one it has.
 
-    The search's status is the dropdown's **label**, which is one line whether it
-    reports a count, no matches or a failed lookup.  As a caption below the
-    control it would be another band that appears and disappears; as the label it
-    is always there and reads as the heading of the thing it describes.
+    Returns the one-line note that goes under it, which is always present and
+    always one line — it is the only feedback the search gives, and a note that
+    appeared only when there was something to say would move the list below it.
     """
-    row = st.columns([6.4, 3.6], vertical_alignment="bottom")
-    query = row[0].text_input(
-        "Search DOAJ", key=f"{key}_doaj_q", label_visibility="collapsed",
-        placeholder="🔍 Find a journal in DOAJ",
-        help="The Directory of Open Access Journals knows the exact title, ISSN and website "
-             "of ~20,000 vetted open-access journals, so neither has to be looked up by "
-             "hand. Plain text is searched across title, publisher and subject; an ISSN "
-             "(1234-5678) is looked up exactly; a field-scoped query such as "
-             "`bibjson.publisher.name:Elsevier` is passed to DOAJ as typed. **Being indexed "
-             "in DOAJ is not part of any verdict** — this only helps name a venue.")
-    row[1].checkbox(
-        "with website", key=f"{key}_doaj_site",
-        help="Off by default. A domain is matched by host, so adding the website of a "
-             "journal published on a platform (sciencedirect.com, nature.com, a shared OJS "
-             "install) puts every other journal on that platform in scope too. The ISSN and "
-             "title added without it name this journal alone. Results whose host looks like "
-             "a platform are marked ⚠.")
+    entry_help = ("Typed as a name, a website (ieee.org) or an ISSN (1234-5678) — which one "
+                  "it is read as is decided by what you type, and shown on the row it "
+                  "becomes.")
+    by_label, note = {}, ""
+    query = (st.session_state.get(f"{key}_query") or "").strip() if find_in_doaj else ""
 
-    journals, status = (), "Search DOAJ above to add a journal by name"
-    if query.strip():
-        result = doaj_search(query.strip(), _DOAJ_LIMIT)
+    if not find_in_doaj:
+        note = "Added exactly as typed. Press Enter, or use Add."
+    elif not query:
+        note = "Type a journal name and press Enter to search DOAJ — or Add it as typed."
+    else:
+        result = doaj_search(query, _DOAJ_LIMIT)
         if not result.ok:
-            status = result.error
+            note = result.error
         elif not result.journals:
-            status = ("No journal in DOAJ matched — check the field name"
-                      if result.mode == "advanced" else "No journal in DOAJ matched that")
+            note = (f"Nothing in DOAJ matched “{query}” — press Add to use it as typed."
+                    + (" (Field-scoped queries return nothing when the field name is wrong.)"
+                       if result.mode == "advanced" else ""))
         else:
-            journals = result.journals
-            status = (f"{len(journals)} of {result.total} matches — pick one to add it"
-                      if len(journals) < result.total else
-                      f"{len(journals)} match(es) — pick one to add it")
+            # Labels are made unique before they become keys: DOAJ can hold two
+            # records that reduce to the same line, and one would otherwise
+            # shadow the other in the mapping and be unselectable.
+            for journal in result.journals:
+                label = _doaj_option_label(journal)
+                while label in by_label:
+                    label += "\u2009"          # thin space; invisible, unique
+                by_label[label] = journal
+            more = "" if len(by_label) >= result.total else f" of {result.total}"
+            note = (f"Open the list for {len(by_label)}{more} DOAJ match(es), "
+                    f"or press Add to use “{query}” as typed.")
 
-    # Options are the formatted lines themselves, mapped back to their journal
-    # for the callback.  Labels are made unique before they become keys: DOAJ can
-    # hold two records that reduce to the same line, and one would otherwise
-    # shadow the other in the mapping and be unselectable.
-    by_label = {}
-    for journal in journals:
-        label = _doaj_option_label(journal)
-        while label in by_label:
-            label += " "                     # thin space; invisible, unique
-        by_label[label] = journal
     st.session_state[f"{key}_doaj_opts"] = by_label
 
-    st.selectbox(
-        # A label long enough to wrap would cost the band a second line, which is
-        # exactly the movement this arrangement exists to avoid.
-        status if len(status) <= 66 else status[:65].rstrip() + "…",
-        [_DOAJ_PROMPT, *by_label], key=f"{key}_doaj_pick", disabled=not journals,
-        on_change=_pick_doaj, args=(key,),
-        help="Choosing a journal adds it to the list below, with its official title and "
-             "ISSN. There is no separate Add button: the choice is the action. "
-             + (status if len(status) > 66 else ""))
+    row = st.columns([7.2, 2.8], vertical_alignment="bottom")
+    with row[0]:
+        st.selectbox(
+            "Add a venue", [*by_label], key=f"{key}_pick", index=None,
+            label_visibility="collapsed", accept_new_options=True,
+            placeholder="Name, website or ISSN",
+            # Enter searches where there is a directory to search, and adds where
+            # there is not; Add always adds.  See _commit_venue.
+            on_change=_commit_venue, args=(key, not find_in_doaj),
+            help=(entry_help + " Typing a name and pressing Enter searches DOAJ; its matches "
+                  "appear in this same list, and choosing one adds that journal with its "
+                  "official title and ISSN. **Being indexed in DOAJ is not part of any "
+                  "verdict** — it only helps name a venue."
+                  if find_in_doaj else entry_help))
+    row[1].button("＋ Add", key=f"{key}_handadd", width="stretch",
+                  on_click=_commit_venue, args=(key, True),
+                  help="Add exactly what is in the box, whether or not DOAJ knows it.")
+    return note
+
 
 
 def _venue_list_body(key, empty):
@@ -605,14 +613,13 @@ def venue_list_editor(label: str, key: str, hint: str, empty: str,
     everything downstream — the run summary, the temp file, the CLI flag — is
     unchanged.
 
-    Both lists render the **same skeleton in the same order** — heading, add box,
-    finder, list, JSON fold — and every band in it has a height that does not
-    depend on its contents.  That is what makes the two columns line up and stay
-    lined up: the whitelist and the blacklist put their controls on the same rows
-    because they are the same rows, and a venue added to one moves nothing in
-    either.  The blacklist has no DOAJ search (see the call site), so its finder
-    band holds the reason instead of being left as a hole that would drop its add
-    box half an inch below the whitelist's.
+    Both lists render the **same skeleton in the same order** — heading, one
+    combobox with its Add button, a one-line note, list, JSON fold — and every
+    band in it has a height that does not depend on its contents.  That is what
+    makes the two columns line up and stay lined up: the whitelist and the
+    blacklist put their controls on the same rows because they are literally the
+    same rows.  The only difference between them is what the combobox offers,
+    which costs no height at all.
 
     The controls come first and the list follows, because the list is the only
     part that grows: entries appear at the top of a box whose position is fixed,
@@ -632,29 +639,12 @@ def venue_list_editor(label: str, key: str, hint: str, empty: str,
     st.markdown(f"<div class='bl-vl-head'><div class='bl-vl-label'>{label}</div>"
                 f"<div class='bl-vl-hint'>{hint}</div></div>", unsafe_allow_html=True)
 
-    add = st.columns([7.2, 2.8], vertical_alignment="bottom")
-    # Enter adds, as well as the button.  A box labelled "Add a venue" beside a
-    # button labelled Add gives the return key an obvious meaning, and requiring
-    # the mouse for every entry makes building a list of ten a chore.  Pressing
-    # Add after typing fires both — the blur first, then the click — and the
-    # second is a no-op because _add_venue de-duplicates.
-    add[0].text_input("Add a venue", key=f"{key}_hand", label_visibility="collapsed",
-                      placeholder="Name, website or ISSN",
-                      on_change=_add_typed_venue, args=(key,),
-                      help="Typed as a name, a website (ieee.org) or an ISSN (1234-5678) — "
-                           "which one it is read as is decided by what you type, and shown "
-                           "on the row it becomes. Press Enter or use Add.")
-    add[1].button("＋ Add", key=f"{key}_handadd", width="stretch",
-                  on_click=_add_typed_venue, args=(key,))
-
-    with st.container(key=f"venuefind-{key}"):
-        if find_in_doaj:
-            _doaj_finder(key)
-        else:
-            st.markdown(
-                "<div class='bl-vl-nofind'>No directory search here. Being listed in a "
-                "directory of vetted journals is evidence a journal was screened, which is "
-                "no reason to treat it as predatory.</div>", unsafe_allow_html=True)
+    note = _venue_input(key, find_in_doaj)
+    # Always rendered, always one line: this is the search's only feedback, and a
+    # note that appeared only when it had something to say would take the list
+    # below it up and down the page as the query changed.
+    st.markdown(f"<div class='bl-vl-note'>{html.escape(note)}</div>",
+                unsafe_allow_html=True)
 
     # A fixed height with its own scrollbar: the one part of this column whose
     # contents grow, given a size that does not.  Streamlit's `height=` is used
@@ -1253,15 +1243,13 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
 .bl-vl-hint {font-size:.8rem; line-height:1.45; color:var(--bl-fg-faint);}
 .bl-vl-hint code {font-size:.92em; padding:1px 4px; border-radius:4px;
                   background:color-mix(in srgb, currentColor 13%, transparent);}
-/* The finder band. The whitelist fills it with a search box and a dropdown; the
-   blacklist, which has no directory search, fills it with the reason — a hole
-   there would leave its list and its JSON fold sitting above the whitelist's,
-   which is the misalignment this whole set of heights exists to prevent.
-   8rem clears the whitelist's measured 124px, so the rule and not the content is
-   what sets the height on BOTH sides and the two cannot drift apart. */
-div[class*="st-key-venuefind-"] {min-height:8rem;}
-.bl-vl-nofind {font-size:.78rem; line-height:1.45; color:var(--bl-fg-faint);
-               font-style:italic; padding-top:.35rem;}
+/* The line under the combobox: what the directory said, or how to use the box.
+   Fixed at two lines' worth and clipped, so the longest message DOAJ can return
+   — a network error — occupies exactly what the shortest does, and the list
+   below never moves.  The full text is on the control's own tooltip. */
+.bl-vl-note {min-height:2.5rem; max-height:2.5rem; overflow:hidden;
+             font-size:.78rem; line-height:1.25rem; color:var(--bl-fg-faint);
+             padding-top:.3rem;}
 .bl-vl-row {display:flex; align-items:center; gap:.4rem; flex-wrap:wrap;
             padding:.1rem 0; line-height:1.5;}
 .bl-vl-name {font-size:.9rem; font-weight:600; color:var(--bl-fg);

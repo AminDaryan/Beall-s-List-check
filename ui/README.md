@@ -425,105 +425,80 @@ The controls come first and the rows follow: the list is the only part that
 grows, so entries appear inside a box whose position is fixed rather than pushing
 the controls that created them down the page.
 
-#### The layout does not move
+#### One control, and a layout that does not move
 
-Both columns render the **same skeleton in the same order** — heading, add box,
-finder, list, JSON fold — and every band has a height that does not depend on its
-contents. Measured in the running app, adding four venues and removing one leaves
-every band at the same offset and the same height, and so does running a search:
+Each list is built with a **single combobox** and an Add button. It was three
+controls — a text box, a DOAJ search box and a results dropdown — which was one
+question, *which venue*, asked three times, and left the answer half-entered in
+one of them while another held something else. Streamlit's `accept_new_options`
+makes one control do both jobs: the dropdown holds whatever DOAJ last matched,
+and a value that is not among them is still accepted, so a journal the directory
+has never heard of is typed into the same box as one it has.
+
+Both columns render the **same skeleton in the same order** and every band has a
+height that does not depend on its contents. Measured in the running app —
+adding four venues, removing one, and running searches that match and that do
+not — every band keeps the same offset and the same height, in both columns:
 
 | Band | height | offset below the heading |
 |---|---|---|
 | heading (`.bl-vl-head`) | 86px (`min-height:5.4rem`) | 0 |
-| add box | 38px | 87px |
-| finder (`st-key-venuefind-*`) | 128px (`min-height:8rem`) | 142px |
-| list box (`st-key-venuelist-*`) | 190px (`st.container(height=…)`) | 286px |
-| JSON fold | 40px | 492px |
+| combobox + Add | 40px | 86px |
+| note (`.bl-vl-note`) | 40px (fixed, clipped) | 142px |
+| list box (`st-key-venuelist-*`) | 190px (`st.container(height=…)`) | 182px |
+| JSON fold | 40px | 388px |
 
-Three things buy that:
+Four things buy that:
 
 - **The list box is a fixed-height scrollable container.** `st.container(height=)`
   rather than a stylesheet rule, so the scrolling is the container's own.
-- **The heading and hint are one block with a `min-height`.** The whitelist's hint
-  runs to three lines and the blacklist's to two; without the floor, every control
-  beneath them would sit at a different height in each column.
-- **Nothing is conditionally rendered.** The DOAJ dropdown, the blacklist's
-  finder-band note and the **Clear the list** button are always present — the
-  button disabled when there is nothing to clear — because a control that comes
-  and goes takes its band's height with it.
-
-The blacklist has no DOAJ search, so its finder band carries the reason instead.
-That is not filler: an empty band there would leave the blacklist's list and JSON
-fold sitting 42px above the whitelist's, which is exactly what the measurements
-above showed before the `min-height` was raised to clear the whitelist's content.
-
-It was previously a 90px textarea holding raw JSON, which made the format the
-interface. Every add was text surgery and every removal was careful text
-surgery; past half a dozen entries the box was a wall of braces that no longer
-answered the only question it exists to answer, which is *which venues is this
-run scoped to*. The JSON has not been demoted to a preview — it is still a real
-editor, it still takes a list pasted from a colleague or a previous run, and it
-stays in sync both ways. It is simply no longer the only way in.
-
-Every row states **which identifiers it carries**, because that, and not the
-venue's name, is what decides which papers the run looks at:
-
-| Pill | Meaning |
-|---|---|
-| an ISSN, green | Matches that journal exactly. The signal to prefer. |
-| a host, blue | Matches the host **and its subdomains**. |
-| a host, amber, with ⚠ | The same, but the host looks like a shared publisher platform, so it covers every journal hosted there. |
-| `name` | Matches as a whole-word phrase inside a paper's venue name. |
-
-Three behaviours are worth stating because they are the ones a list editor
-usually gets wrong:
-
-- **Invalid JSON does not empty the list.** The last list that parsed stays in
-  force and the box says so. Silently dropping a run's scope because a comma went
-  missing is the one behaviour this must not have.
-- **Adding the same venue twice is a no-op**, reported as a toast rather than
-  ignored in silence.
-- **Past 15 entries the rows stop being drawn** and the list says how many are
-  not shown. All of them are still in force, and the fold holds the full list.
+- **The rows sit below the controls**, so the one part that grows cannot push the
+  controls that created them down the page.
+- **The heading and the note are fixed bands.** The note is the search's only
+  feedback, and it is clipped at two lines so the longest thing DOAJ can return —
+  a network error — occupies exactly what the shortest does. The full text is on
+  the control's tooltip.
+- **Nothing is conditionally rendered.** Both comboboxes, both notes and both
+  **Clear the list** buttons are always present, Clear merely disabled when there
+  is nothing to clear, because a control that comes and goes takes its band's
+  height with it.
 
 ### Finding a journal in DOAJ
 
-Under the whitelist, **🔍 Find a journal in DOAJ** searches the
+The whitelist's combobox searches the
 [Directory of Open Access Journals](https://doaj.org) — ~20,000 vetted
 open-access journals — so a journal can be added without looking up its exact
-title or ISSN. Plain text is searched across title, publisher and subject; an
-ISSN is looked up exactly; a field-scoped query (`bibjson.publisher.name:Elsevier`)
-is passed through as typed. The client is [`doaj.py`](doaj.py), which is
-Streamlit-free and returns its failures rather than raising, so they can be
-cached — Streamlit reruns the script on every click, and an uncached search would
-re-query DOAJ each time a checkbox moved three steps away.
+title or ISSN. The client is [`doaj.py`](doaj.py), which is Streamlit-free and
+returns its failures rather than raising, so they can be cached: Streamlit reruns
+the script on every click, and an uncached search would re-query DOAJ each time
+anything on the page moved.
 
-**The matches are a dropdown, and choosing one adds it.** There is no Add button
-beside each result, for the same reason there are no result rows: a list of rows
-is as tall as the number of matches, so every keystroke that changed the count
-would move everything beneath it. One dropdown is one height whether it holds one
-match or eight.
+Type a name and press **Enter**: that commits the text, which the app reads as a
+query, searches, and turns into the box's own options. Open the list and choose
+one, and that journal is added with its official title and ISSN — choosing *is*
+adding, so there is no Add button beside each result. Press **Add** instead and
+the text is taken verbatim, whether or not DOAJ knew it. Plain text is searched
+across title, publisher and subject; an ISSN is looked up exactly; a field-scoped
+query (`bibjson.publisher.name:Elsevier`) is passed through as typed.
 
-The search's status is the dropdown's **label** — `8 of 12 matches — pick one to
-add it`, `No journal in DOAJ matched that`, or the error from a failed lookup. A
-caption below the control would be another band appearing and disappearing; the
-label is always there and reads as the heading of the thing it describes. It is
-truncated past 66 characters, with the full text in the tooltip, so it can never
-wrap onto a second line.
+Enter therefore means *search* on the whitelist and *add* on the blacklist, which
+has no directory behind it and so would have nothing to ask. Add always adds.
 
-Options are the formatted lines themselves rather than the `Journal` objects,
-mapped back through a dict in session state. Two DOAJ records can reduce to the
-same line, so labels are made unique before they become keys — otherwise one
-would shadow the other and be unselectable. The first option is a constant
-prompt, not the status line: the options change with every query, and a stored
-selection that is no longer among them is a value Streamlit has to resolve on its
-own.
+The note under the box says which state the search is in — `Open the list for 8
+of 31 DOAJ match(es), or press Add to use "IEEE" as typed`, or `Nothing in DOAJ
+matched "…" — press Add to use it as typed`, or the error from a failed lookup.
+
+Options are the formatted lines themselves, mapped back to their `Journal`
+through a dict in session state. Two DOAJ records can reduce to the same line, so
+labels are made unique before they become keys — otherwise one would shadow the
+other and be unselectable.
 
 **Adding a journal contributes its title and ISSN, not its website.** A domain is
 matched by host, so adding the site of a journal published on a platform
 (`sciencedirect.com`, `nature.com`, a shared OJS install) would put every other
-journal on that platform in scope. A checkbox adds it deliberately, and each
-result marks its host `⚠ shared platform` when it looks like one.
+journal on that platform in scope; options whose host looks like a platform are
+marked **⚠**. A publisher domain is added deliberately, by typing it into the
+same box — which is what that box is for.
 
 Two things DOAJ is deliberately *not* used for:
 

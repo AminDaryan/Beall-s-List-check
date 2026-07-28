@@ -91,11 +91,18 @@ matching.
 
 ## Web app
 
-Step 3 edits each list as a **list of rows** rather than as raw JSON: entries are
-added by typing a name, a website or an ISSN, or — for the whitelist — by
-searching the [DOAJ](https://doaj.org), which supplies the exact title and ISSN
-so neither has to be looked up by hand. Each row states which of the three
-identifiers it carries, because that is what decides the run's scope.
+Step 3 edits each list as a **list of rows**, built with a single combobox:
+type a name, a website or an ISSN and press Add. On the whitelist, pressing
+Enter first searches the [DOAJ](https://doaj.org) and turns the matches into that
+same box's options, so a journal can be added with its official title and ISSN
+without either being looked up — choosing a match adds it. If nothing matches,
+Add takes the text as typed. Each row states which of the three identifiers it
+carries, because that is what decides the run's scope.
+
+Adding from DOAJ contributes the title and ISSN but **not** the journal's
+website, since a domain is matched by host and many journals share a publisher
+platform. A publisher domain is added deliberately, by typing it into the same
+box.
 
 The JSON is still there, in an **Edit as JSON** fold, in this same format and
 synced both ways, so a list can still be pasted in or copied out. The app writes
