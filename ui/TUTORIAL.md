@@ -340,19 +340,28 @@ type decides how the venue is matched, and the row that appears says which:
 An ISSN is the most precise, so prefer it when you mean one particular journal.
 A website or a name is the right choice when you mean a whole publisher.
 
-Press **＋ Add** to add exactly what is in the box. On the whitelist, typing
-also searches DOAJ (see below), and choosing one of its matches adds that journal
-instead.
+Press **Add** — the small button at the right-hand end of the box — to add
+exactly what is typed. It appears as soon as you type something. Typing also
+searches a venue directory (see below), and choosing one of its matches adds that
+venue instead.
 
 Added venues appear in the box underneath. Remove one with the **✕** beside it.
 
-### Finding a journal in DOAJ
+### Finding a venue in a directory
 
-If you know the journal but not its ISSN, just start typing its name into the
-whitelist's box. Matches from the
-[Directory of Open Access Journals](https://doaj.org) — about 23,000 vetted
-open-access journals — appear underneath **as you type**, so `IEE` is already
-enough to see IEEE's journals.
+If you know the venue but not its ISSN, just start typing its name. Matches
+appear underneath **as you type**, so `IEE` is already enough to see IEEE's
+journals.
+
+The two boxes search different directories, because they are for opposite
+things:
+
+- **Whitelist** — the [Directory of Open Access Journals](https://doaj.org),
+  about 23,000 journals that passed its editorial screening.
+- **Blacklist** — [OpenAlex](https://openalex.org), which lists every journal it
+  knows of, screened or not. A venue you want to mark as predatory will not be in
+  a directory of vetted journals, so the blacklist needs the wider one. OpenAlex
+  starts searching once you have typed three letters.
 
 **Choose one and it is added**, with its official title and ISSN, so you do not
 have to look either up. There is no Add button beside each match; choosing is the
@@ -361,10 +370,10 @@ action. The line under the box says how many were found — `8 of 138`, say.
 The menu shows the eight best matches. If there are more, its last row offers
 them: **▾ Show 20 more** keeps what you typed and lengthens the list.
 
-**If nothing matches, press ＋ Add and your text is added as typed.** So a venue
+**If nothing matches, press Add and your text is added as typed.** So a venue
 DOAJ has never heard of goes into the same box as one it has: type `WOl`, see
-that nothing matched, press Add. The **＋ Add** button appears beside the box as
-soon as you type something, and is not there while the box is empty.
+that nothing matched, press Add. The button sits inside the box on the right and
+appears as soon as you type something.
 
 The journal's website is *not* added — only its title and ISSN. That is
 deliberate: many journals are published on a shared platform, so adding the
@@ -372,13 +381,14 @@ website of one Elsevier journal would put every Elsevier journal in scope.
 Matches whose address looks like a shared platform are marked with a **⚠**. If
 you do want a publisher's whole site, type its domain into the box instead.
 
-The first time you use the search, the app downloads DOAJ's journal list once
-(about 25 MB, a few seconds) and keeps it, so every search after that is instant
-and works without internet. It refreshes itself every couple of weeks.
+The first time you use the whitelist's search, the app downloads DOAJ's journal
+list once (about 25 MB, a few seconds) and keeps it, so every search after that
+is instant and works without internet. It refreshes itself every couple of weeks.
+The blacklist asks OpenAlex as you type, so it needs a connection.
 
-> Searching DOAJ only helps you *name* a journal. Whether a journal is in DOAJ
-> has no effect on any verdict — the check asks whether the venue is on Beall's
-> List, which is a different question.
+> These searches only help you *name* a venue. Whether a journal is in DOAJ or
+> OpenAlex has no effect on any verdict — the check asks whether the venue is on
+> Beall's List, which is a different question.
 
 ### Editing the list as JSON
 

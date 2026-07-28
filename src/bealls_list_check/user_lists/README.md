@@ -92,10 +92,13 @@ matching.
 ## Web app
 
 Step 3 edits each list as a **list of rows**, built with a single box: type a
-name, a website or an ISSN and press Add. On the whitelist, typing also searches
-the [DOAJ](https://doaj.org) as you go and offers its journals underneath, so one
-can be added with its official title and ISSN without either being looked up —
-choosing a match adds it. If nothing matches, Add takes the text as typed. Each
+name, a website or an ISSN and press Add. Typing also searches a venue directory as you
+go and offers its venues underneath, so one can be added with its official title
+and ISSN without either being looked up — choosing a match adds it. The whitelist
+searches the [DOAJ](https://doaj.org); the blacklist searches
+[OpenAlex](https://openalex.org), since a venue worth blacklisting is by
+definition not in a directory of vetted journals. If nothing matches, Add takes
+the text as typed. Each
 row states which of the three identifiers it carries, because that is what
 decides the run's scope.
 
@@ -110,7 +113,7 @@ your uploaded papers to a temporary folder and passes the lists through as the
 same CLI flags, so behaviour is identical to the command line. See
 [`ui/README.md`](../../../ui/README.md).
 
-> DOAJ is used only to *name* a venue. Being indexed in DOAJ is not part of any
-> verdict, and it is offered on the whitelist alone — appearing in a directory of
-> vetted journals is evidence a journal was screened, which is no reason to add
-> it to a blacklist.
+> Both directories are used only to *name* a venue. Being listed in either is not
+> part of any verdict: DOAJ membership says a journal passed a screening, and an
+> OpenAlex entry says only that OpenAlex has heard of it. Neither answers the
+> question this tool asks.

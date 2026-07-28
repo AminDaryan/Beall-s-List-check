@@ -460,34 +460,39 @@ Four things buy that:
   is nothing to clear, because a control that comes and goes takes its band's
   height with it.
 
-### Finding a journal in DOAJ
+### Two directories, one for each list
 
-The whitelist's box searches the
-[Directory of Open Access Journals](https://doaj.org) **as the name is typed** —
-"I" already offers journals, "IEE" narrows to IEEE's. Choosing a match adds that
-journal with its official title and ISSN; choosing *is* adding, so there is no
-Add button beside each result. **＋ Add** takes the text verbatim instead,
-whether or not DOAJ knows it, which is how a venue the directory has never heard
-of goes into the same box as one it has.
+Each box searches as the name is typed, but not the same catalogue — and the
+reason is the one that makes the two lists opposites:
 
-#### Why the whole list is downloaded, and not searched per keystroke
+| List | Directory | Why that one |
+|---|---|---|
+| **whitelist** | [DOAJ](https://doaj.org) | Lists journals that *passed* an editorial screening — the venues someone narrowing a run is naming. |
+| **blacklist** | [OpenAlex](https://openalex.org) | Indexes every source it can find, screened or not. A venue worth blacklisting is by definition **not** in a directory of vetted ones, so DOAJ cannot help name it. |
 
-DOAJ's search API cannot be called on every keystroke. Measured: typing four
-letters into it earns a Cloudflare **502 with `Retry-After: 60`**, and the box
-then reports a timeout instead of matches. It is also not ours to do — DOAJ is a
-free service run by a non-profit.
+Both hand back the same [`Venue`](venue_lookup.py), so the box that offers it and
+the entry it becomes never have to know which directory it came from. Choosing a
+match adds it with its official title and ISSN — choosing *is* adding, so there
+is no button beside each result. **Add** takes the text verbatim instead,
+whether or not the directory knows it.
+
+#### DOAJ: the whole list, downloaded once
+
+DOAJ's search API cannot be called per keystroke. Measured: typing four letters
+into it earns a Cloudflare **502 with `Retry-After: 60`**, and the box then
+reports a timeout instead of matches. It is also not ours to do — DOAJ is a free
+service run by a non-profit.
 
 DOAJ publishes the entire journal list as one CSV for exactly this reason, so
-[`doaj.py`](doaj.py) fetches it **once** (~23,000 journals, ~25 MB, a few
-seconds), reduces it to the five fields a venue entry needs, and caches it in
-`ui/.cache/` (gitignored, refetched after a fortnight). Everything after that is
-local:
+[`doaj.py`](doaj.py) fetches it **once** (~23,000 journals, ~25 MB), reduces it
+to the fields a venue entry needs, and caches it in `ui/.cache/` (gitignored,
+refetched after a fortnight). Everything after that is local:
 
 | | |
 |---|---|
 | First load | ~25 s, once per machine per fortnight |
-| Cached load | ~0.07 s |
-| One search | 4–38 ms over 23,000 journals |
+| Cached load | ~0.1 s |
+| One search | 30-90 ms over 23,000 journals |
 
 So the box keeps up with typing, works offline once primed, and puts no load on
 DOAJ at all. The trade is that a journal added to DOAJ since the last fetch has
@@ -498,21 +503,48 @@ with it, then a *word* of the title starting with it, then anywhere in the title
 then the publisher. Shorter titles win ties, so "nature" offers *Nature* before
 *Nature Reviews Methods Primers*. An ISSN is matched exactly instead.
 
+#### OpenAlex: a metered API, so a floor and a longer debounce
+
+OpenAlex has no bulk file small enough to be worth downloading here, so
+[`openalex.py`](openalex.py) queries it live — and it meters requests. Every
+response carries the budget:
+
+```
+X-RateLimit-Limit: 1000   X-RateLimit-Credits-Used: 10   X-RateLimit-Reset: 26255
+```
+
+Ten credits a search, a thousand per window — **about a hundred searches per
+~7 hours** without an account. Ample for adding venues to a list, nowhere near
+enough for a request per keystroke, so this side:
+
+- **does not search below three characters.** One or two letters match tens of
+  thousands of sources, so the answer is useless *and* it spends a request. The
+  note says so rather than pretending nothing matched.
+- **debounces at 400 ms** rather than DOAJ's 120, because a keystroke here costs
+  something. Normal typing comes to one or two requests per word.
+- **caches every term for an hour**, so extending and backspacing a word replays
+  from cache.
+- **reports the budget** (`SearchResult.budget_left`) and says plainly when it is
+  gone, instead of going quiet.
+
+Set `OPENALEX_MAILTO` in `.env` to join OpenAlex's polite pool; harmless if unset.
+
 #### The control
 
-`st.selectbox` cannot do this: it filters options **client-side** over a list it
-was given, so it can never look anything up while a word is being typed. The box
-is therefore [`streamlit-searchbox`](https://pypi.org/project/streamlit-searchbox/),
+`st.selectbox` cannot do any of this: it filters options **client-side** over a
+list it was given, so it can never look anything up while a word is being typed.
+The box is therefore [`streamlit-searchbox`](https://pypi.org/project/streamlit-searchbox/),
 which calls back into Python per keystroke.
 
-Four things about it are deliberate, and each was wrong before it was fixed:
+Five things about it are deliberate, and each was wrong before it was fixed:
 
 | | Why |
 |---|---|
 | No chevron (`dropdown: {width: 0, height: 0}`) | A chevron promises a list to open. On an empty box there is none — this is a box you type into, not a menu that tolerates typing. |
 | No "No options" message (`optionEmpty: "hidden"`) | It was being drawn under an untouched box, announcing the absence of results for a search nobody had run. |
-| **＋ Add** only once something is typed | Add belongs to the text. On an empty box it offers to do something that cannot work. Both columns are laid out either way, so the box keeps its width and nothing moves sideways when the button arrives. |
-| `style_absolute=True` | The menu lives *inside* the component's iframe, so the frame grows to ~350 px to show it. In normal flow that pushed the list and the JSON fold a third of a screen down on every keystroke and left the two columns at different heights; positioned absolutely it overlays instead, which is what a dropdown should do. |
+| **Add** inside the box, at the right-hand end | It acts on the text in the box and nothing else, so it is the box's own button rather than a second control taking a quarter of the width from the thing being typed into. It has to be *overlaid* — the input is inside the component's iframe and no Streamlit widget can be rendered in there — so the container is the positioning context and the button is lifted out of flow onto the right edge, clearing the iframe's `z-index`. Out of flow it has no width to inherit, and Streamlit's label will shrink to one character per line (measured: 8 px wide, 67 px tall, inside a 28 px button), so every level from the button down is pinned to `nowrap` and `max-content`. |
+| Add only once something is typed | On an empty box it offers to do something that cannot work. |
+| `style_absolute=True` | The menu lives *inside* the iframe, so the frame grows to ~350 px to show it. In normal flow that pushed the list and the JSON fold a third of a screen down on every keystroke and left the two columns at different heights; positioned absolutely it overlays instead. |
 
 #### Show more, rather than a silent top-eight
 
@@ -520,38 +552,34 @@ The menu opens with eight matches and its last row says how many it is holding
 back — `▾ Show 20 more (130 further match(es))`. Choosing it widens the window by
 twenty and re-runs the search; the term stays, and nothing is added.
 
-That row exists because `doaj.search` returns `(hits, total)` rather than just
-the slice. A menu showing eight of a hundred and thirty-eight, silently, claims
-to be the answer when it is a sample. The scan is uncapped so the total is exact
-— measured at ~42 ms for a one-letter term over the whole directory, which a
-keystroke can afford.
+That row exists because both searches report a **total**, not just the slice. A
+menu showing eight of a hundred and thirty-eight, silently, claims to be the
+answer when it is a sample. DOAJ's scan is uncapped so its total is exact;
+OpenAlex reports `meta.count`.
 
 Two component defaults have to be turned off for it: `clear_on_submit` and
 `edit_after_submit`. Show more *is* a selection, so both would fire — emptying
 the box and closing the menu, throwing away the very term whose next page was
 just requested. The clearing is done in the handler instead, which knows the
-difference between turning a page and choosing a journal.
+difference between turning a page and choosing a venue.
 
 `search_function` only fires on a keystroke, so after a Show more the component
-would still be holding its previous eight options. `_refresh_options` writes the
-longer list straight into the component's `options_js` / `options_py` state,
-which it re-reads on every render. Its `key_react` is deliberately left alone —
-changing that is what forces a remount, and a remount would clear the term.
+would still be holding its previous options. `_refresh_options` writes the longer
+list straight into the component's `options_js` / `options_py` state, which it
+re-reads on every render. Its `key_react` is deliberately left alone — changing
+that forces a remount, and a remount would clear the term.
 
-**Adding a journal contributes its title and ISSN, not its website.** A domain is
+**Adding a venue contributes its title and ISSN, not its website.** A domain is
 matched by host, so adding the site of a journal published on a platform
 (`sciencedirect.com`, `nature.com`, a shared OJS install) would put every other
 journal on that platform in scope; matches whose host looks like a platform are
-marked **⚠**. A publisher domain is added deliberately, by typing it into the
-same box.
+marked with a warning sign. A publisher domain is added deliberately, by typing
+it into the same box.
 
-Two things DOAJ is deliberately *not* used for:
-
-- **It has no part in any verdict.** Being indexed in DOAJ means a journal
-  passed DOAJ's editorial screening; the question this tool asks is whether the
-  venue is on Beall's List. The search only helps *name* a venue.
-- **It is offered on the whitelist alone.** Appearing in a directory of vetted
-  journals is no reason to add a venue to a blacklist.
+Neither directory takes any part in a verdict. Being listed in DOAJ means a
+journal passed its screening; being in OpenAlex means only that OpenAlex has
+heard of it. The question this tool asks is whether the venue is on Beall's List,
+which neither answers. The search only helps *name* a venue.
 
 That distinction is why the whitelist's caption spells out that `out_of_scope`
 means **not examined** rather than cleared. DOAJ is the canonical index of

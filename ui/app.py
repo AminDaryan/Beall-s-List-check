@@ -30,7 +30,9 @@ import streamlit as st
 from dotenv import load_dotenv
 
 import doaj
+import openalex
 import runners
+import venue_lookup
 
 # Step 3's venue boxes search DOAJ while a name is being typed, which Streamlit's
 # own widgets cannot do — they filter options client-side and call back only on
@@ -296,20 +298,39 @@ _MAX_SHOWN_VENUES = 25
 _VENUE_BOX_HEIGHT = 190
 
 # How many matches the menu opens with, and how many more each Show more adds.
-# The wanted journal is normally in the first few, so this is a shortlist rather
+# The wanted venue is normally in the first few, so this is a shortlist rather
 # than a results page — but it says how many it is holding back, and the last row
 # of the menu fetches them, so the shortlist never passes for the whole answer.
-_DOAJ_LIMIT = 8
-_DOAJ_MORE = 20
+_LOOKUP_LIMIT = 8
+_LOOKUP_MORE = 20
 
 # The value behind that last row.  A plain string rather than a sentinel object
 # because it travels through the component's own option state.
 _SHOW_MORE = "__bl_show_more__"
 
+# The two directories, and why each list searches the one it does.
+#
+# DOAJ lists journals that PASSED an editorial screening, which is the right
+# catalogue for naming the venues a run should be narrowed to — and the wrong one
+# for a blacklist, where the venue being named is by definition not in a
+# directory of vetted ones.  OpenAlex indexes every source it can find, screened
+# or not, so it is the only one of the two that can help name a venue nobody
+# vouches for.
+#
+# The debounce differs because the cost of a keystroke does.  DOAJ is a local
+# index — the whole list is downloaded once — so a lookup is a dictionary scan
+# and there is no reason to wait.  OpenAlex is a metered API, ~100 searches per
+# window (see openalex.py), so its keystrokes are coalesced harder and it does
+# not start until there are three letters to send.
+_DIRECTORIES = {
+    "doaj": {"name": "DOAJ", "debounce": 120},
+    "openalex": {"name": "OpenAlex", "debounce": 400},
+}
+
 # What the last lookup found, as a mapping rather than a positional tuple: it is
 # written from four places and read in one, and a tuple that grew a field once
 # already broke the reader from a site that had not been updated with it.
-_LOOKUP_IDLE = {"term": "", "shown": 0, "total": 0, "error": ""}
+_LOOKUP_IDLE = {"term": "", "shown": 0, "total": 0, "error": "", "pending": False}
 
 
 @st.cache_resource(show_spinner=False)
@@ -331,10 +352,24 @@ def doaj_index():
     return doaj.build_index(journals), error
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
+def openalex_search(term: str, limit: int):
+    """Memoized :func:`openalex.search` — one request per distinct term per hour.
+
+    Caching is what makes a metered API usable behind a box that searches while
+    a name is typed: Streamlit reruns the whole script on every click anywhere on
+    the page, and the prefixes of a word are re-sent as it is extended and
+    backspaced.  ``openalex.search`` returns its failures rather than raising
+    precisely so they land in this cache too — an exception is not cacheable, so
+    a refused query would otherwise be re-sent forever.
+    """
+    return openalex.search(term, limit=limit)
+
+
 def _venue_key(entry):
     """Identity of an entry, so the same venue cannot be added twice."""
     return (
-        doaj.normalize_host(entry.get("domain") or entry.get("url") or ""),
+        venue_lookup.normalize_host(entry.get("domain") or entry.get("url") or ""),
         (entry.get("name") or "").strip().casefold(),
         tuple(sorted(entry.get("issns") or [])),
     )
@@ -363,8 +398,8 @@ def _normalize_venue(item):
         entry["name"] = item["name"].strip()
     site = (item.get("domain") or item.get("url") or "").strip()
     if site:
-        entry["domain"] = doaj.normalize_host(site) or site
-    issns = [doaj.normalize_issn(i) for i in (item.get("issns") or [])]
+        entry["domain"] = venue_lookup.normalize_host(site) or site
+    issns = [venue_lookup.normalize_issn(i) for i in (item.get("issns") or [])]
     issns = [i for i in issns if i]
     if issns:
         entry["issns"] = issns
@@ -421,11 +456,11 @@ def _entry_from_text(text):
     text = (text or "").strip()
     if not text:
         return None
-    issn = doaj.normalize_issn(text)
+    issn = venue_lookup.normalize_issn(text)
     if issn and not text.replace("-", "").strip().isalpha():
         return {"issns": [issn]}
-    if " " not in text and "." in text and doaj.normalize_host(text):
-        return {"domain": doaj.normalize_host(text)}
+    if " " not in text and "." in text and venue_lookup.normalize_host(text):
+        return {"domain": venue_lookup.normalize_host(text)}
     return {"name": text}
 
 
@@ -471,7 +506,7 @@ def _sig_chips(entry, shown=""):
                      f"ISSN exactly — the most precise signal there is.'>"
                      f"{'ISSN' if issn == shown else issn}</span>")
     if entry.get("domain"):
-        shared = doaj.site_is_shared(f"https://{entry['domain']}")
+        shared = venue_lookup.site_is_shared(f"https://{entry['domain']}")
         why = ("Matches this host and its subdomains. This looks like a shared "
                "publisher platform, so it covers every journal hosted there."
                if shared else
@@ -491,78 +526,71 @@ def _venue_row_html(entry):
             f"{html.escape(shown)}</span>{_sig_chips(entry, shown)}</div>")
 
 
-def _doaj_option_label(journal):
-    """One line for the results dropdown: the journal, and what adding it keys on."""
-    if journal is None:
-        return ""                       # replaced per-state by the caller
-    bits = [journal.title or ", ".join(journal.issns) or "untitled"]
-    if journal.issns:
-        bits.append(" · ".join(journal.issns))
-    if journal.publisher:
-        bits.append(journal.publisher)
-    if journal.host:
-        bits.append(f"⚠ {journal.host}" if journal.site_is_shared else journal.host)
-    return "  —  ".join(bits)
+def _lookup(key, term, source):
+    """A venue box's ``search_function`` — the matches for what has been typed.
 
-
-def _doaj_lookup(key, term):
-    """The searchbox's ``search_function`` — run on every keystroke.
-
-    Resets the page size whenever the term changes, so a widened menu belongs to
-    the search it was widened for and the next word starts from eight again.
-
-    Returns ``(label, Journal)`` pairs for the component to offer, and records
-    what the lookup found in ``<key>_last`` so the line under the box can report
-    it on the rerun that follows.
-
-    An empty box returns nothing, which is what keeps the menu shut until
-    something is typed: the component has no results to draw and so draws no
-    menu.  Every call goes through the memoized :func:`doaj_search`, so the
-    prefixes of a word being typed are fetched once each and then replayed from
-    cache as the user carries on or backspaces.
+    Dispatches to whichever directory this list searches, and records what the
+    lookup found in ``<key>_last`` so the line under the box can report it on the
+    rerun that follows.  An empty box returns nothing, which is what keeps the
+    menu shut until something is typed: the component has no results to draw and
+    so draws no menu.
     """
     term = (term or "").strip()
     if term != (st.session_state.get(f"{key}_last") or {}).get("term", ""):
-        st.session_state[f"{key}_limit"] = _DOAJ_LIMIT
-    if not term:
+        # A different search starts from the first page again; only Show more
+        # (which re-runs this with the term unchanged) grows the window.
+        st.session_state[f"{key}_limit"] = _LOOKUP_LIMIT
+    if not term or not source:
         st.session_state[f"{key}_last"] = _LOOKUP_IDLE
         return []
-    index, error = doaj_index()
+
+    limit = st.session_state.get(f"{key}_limit") or _LOOKUP_LIMIT
+    if source == "doaj":
+        index, error = doaj_index()
+        venues, total = ((), 0) if error else doaj.search(index, term, limit)
+        pending = False
+    else:
+        result = openalex_search(term, limit)
+        error, venues, total = result.error, result.venues, result.total
+        # Too short to send is not a failure — it is a question not yet worth a
+        # request from a metered budget.  Said plainly rather than as "no match".
+        pending = len(term) < openalex.MIN_TERM
+
     if error:
         st.session_state[f"{key}_last"] = {"term": term, "shown": 0, "total": 0,
-                                            "error": error}
+                                           "error": error, "pending": False}
         return []
-    limit = st.session_state.get(f"{key}_limit") or _DOAJ_LIMIT
-    journals, total = doaj.search(index, term, limit)
-    # Labels are made unique before they are offered: DOAJ can hold two records
-    # that reduce to the same line, and the component keys its options by label.
+
+    # Labels are made unique before they are offered: a directory can hold two
+    # records that reduce to the same line, and the component keys options by
+    # label.
     options, seen = [], set()
-    for journal in journals:
-        label = _doaj_option_label(journal)
+    for venue in venues:
+        label = venue_lookup.option_label(venue)
         while label in seen:
-            label += "\u2009"                # thin space; invisible, unique
+            label += "\u2009"              # thin space; invisible, unique
         seen.add(label)
-        options.append((label, journal))
+        options.append((label, venue))
     # The rest of the matches are offered rather than dropped.  A menu showing
     # eight of two hundred, silently, claims to be the answer when it is a
     # sample; this last row says how many are missing and fetches the next page.
-    remaining = total - len(journals)
+    remaining = total - len(options)
     if remaining > 0:
-        options.append((f"\u25be  Show {min(remaining, _DOAJ_MORE)} more "
+        options.append((f"▾  Show {min(remaining, _LOOKUP_MORE)} more "
                         f"({remaining} further match(es))", _SHOW_MORE))
-    st.session_state[f"{key}_last"] = {"term": term, "shown": len(journals),
-                                        "total": total, "error": ""}
+    st.session_state[f"{key}_last"] = {"term": term, "shown": len(options) - bool(remaining),
+                                       "total": total, "error": "", "pending": pending}
     return options
 
 
 def _reset_box(key):
-    """Empty the searchbox, the way its own clear-on-submit does.
+    """Empty the venue box, the way its own clear-on-submit does.
 
     The React side is remounted by changing the key it was given, which is why
     the stored key carries a timestamp; writing the search term alone would leave
-    the box still showing it.  Guarded, because this reaches into the
-    component's own state shape: if a future version changes it, the box simply
-    keeps its text instead of the page breaking.
+    the box still showing it.  Guarded, because this reaches into the component's
+    own state shape: if a future version changes it, the box simply keeps its
+    text instead of the page breaking.
     """
     try:
         st.session_state[f"{key}_box"] = {
@@ -575,33 +603,33 @@ def _reset_box(key):
         pass
 
 
-def _refresh_options(key):
+def _refresh_options(key, source):
     """Re-run the current search and hand the result straight to the component.
 
-    ``search_function`` fires on a keystroke, and Show more is a *selection* —
-    so without this the menu would keep the eight options it already had until
-    the user typed another letter.  The component reads its options from these
-    two session-state entries on every render, so rewriting them here is what
-    makes the longer list appear.  ``key_react`` is deliberately left alone: it
-    is what forces a remount, and remounting would clear the term.
+    ``search_function`` fires on a keystroke, and Show more is a *selection* — so
+    without this the menu would keep the options it already had until the user
+    typed another letter.  The component reads its options from these two
+    session-state entries on every render, so rewriting them here is what makes
+    the longer list appear.  ``key_react`` is deliberately left alone: it is what
+    forces a remount, and remounting would clear the term.
     """
     box = st.session_state.get(f"{key}_box")
     if not isinstance(box, dict):
         return
-    options = _doaj_lookup(key, box.get("search") or "")
+    options = _lookup(key, box.get("search") or "", source)
     box["options_js"] = [{"label": label, "value": i}
                          for i, (label, _value) in enumerate(options)]
     box["options_py"] = [value for _label, value in options]
 
 
-def _add_doaj_pick(key, chosen):
-    """The searchbox's ``submit_function`` — something in the menu was chosen."""
+def _add_pick(key, chosen, source):
+    """A venue box's ``submit_function`` — something in the menu was chosen."""
     if chosen == _SHOW_MORE:
         st.session_state[f"{key}_limit"] = (
-            (st.session_state.get(f"{key}_limit") or _DOAJ_LIMIT) + _DOAJ_MORE)
-        _refresh_options(key)
+            (st.session_state.get(f"{key}_limit") or _LOOKUP_LIMIT) + _LOOKUP_MORE)
+        _refresh_options(key, source)
         return                          # a page turn, not a venue
-    if isinstance(chosen, doaj.Journal):
+    if isinstance(chosen, venue_lookup.Venue):
         _add_venue(key, chosen.to_entry())
         _reset_box(key)
         # The box is emptied, so the line under it has to stop reporting the
@@ -614,7 +642,8 @@ def _add_typed_venue(key):
 
     Read from the component's own live search term rather than from a committed
     value, because the whole point of this button is the case where nothing was
-    committed: DOAJ offered nothing to choose, so there is only what was typed.
+    committed: the directory offered nothing to choose, so there is only what was
+    typed.
     """
     if st_searchbox is None:
         term = st.session_state.get(f"{key}_fallback") or ""
@@ -630,50 +659,49 @@ def _add_typed_venue(key):
             _reset_box(key)
 
 
-def _venue_note(key, find_in_doaj):
+def _venue_note(key, source):
     """The one line under the box: what the last keystroke's lookup found."""
-    if not find_in_doaj:
+    if not source:
         return "Added exactly as typed — a name, a website (ieee.org) or an ISSN."
+    directory = _DIRECTORIES[source]
     last = st.session_state.get(f"{key}_last") or _LOOKUP_IDLE
-    term, shown, total = last["term"], last["shown"], last["total"]
     if last["error"]:
         return last["error"]
+    term, shown, total = last["term"], last["shown"], last["total"]
     if not term:
-        return "Start typing — DOAJ's journals are matched as you go."
+        return f"Start typing — {directory['name']} is searched as you go."
+    if last.get("pending"):
+        return (f"Keep typing — {directory['name']} is searched from "
+                f"{openalex.MIN_TERM} letters, or press Add to use “{term}” as typed.")
     if not shown:
-        return f"No DOAJ journal matches “{term}” — press Add to use it as typed."
+        return f"No {directory['name']} match for “{term}” — press Add to use it as typed."
     counted = f"{shown} of {total}" if total > shown else f"{shown}"
-    return (f"{counted} DOAJ match(es) — choose one, or press Add to use "
-            f"“{term}” as typed.")
+    return (f"{counted} {directory['name']} match(es) — choose one, or press Add to "
+            f"use “{term}” as typed.")
 
 
-def _venue_input(key, find_in_doaj):
+def _venue_input(key, source):
     """The one control each list is built with: type a venue, or pick a match.
 
     A search-as-you-type box rather than a dropdown.  Streamlit's own selectbox
     filters *client-side* over options it was given, so it cannot look anything
-    up while a word is being typed — the best it could do was search on Enter and
-    offer the results afterwards, which made finding a journal a two-step
-    operation and left the control's menu opening on an empty box with nothing
-    in it.  ``st_searchbox`` calls back into Python on each keystroke, so "I"
-    already offers IEEE's journals, and the menu exists only when there is
-    something to show.
+    up while a word is being typed.  ``st_searchbox`` calls back into Python on
+    each keystroke, so "I" already offers journals, and the menu exists only when
+    there is something to show.
 
-    The blacklist gets the same box with no lookup behind it — there is no
-    directory of predatory venues to consult, and appearing in a directory of
-    vetted ones is no reason to treat a venue as predatory — so it never offers
-    anything and its Add button is the whole interaction.
+    Returns the one-line note that goes under it, which is always present and
+    always the same height — it is the only feedback the search gives, and a note
+    that appeared only when it had something to say would move the list below it.
     """
+    directory = _DIRECTORIES.get(source)
     entry_help = ("Read as a name, a website (ieee.org) or an ISSN (1234-5678) — which one "
                   "is decided by what you type, and shown on the row it becomes.")
-    # Add belongs to the text, so it appears with it.  On an empty box there is
-    # nothing to add and a button offering to do it is an invitation to press
-    # something that cannot work.  The two columns are laid out either way, so
-    # the box keeps its width and nothing moves sideways when the button arrives.
+    # Add belongs to the text, so it appears with it and sits *inside* the box at
+    # the right-hand end.  On an empty box there is nothing to add and a button
+    # offering to do it is an invitation to press something that cannot work.
     typed = bool((st.session_state.get(f"{key}_box") or {}).get("search")
                  or st.session_state.get(f"{key}_fallback"))
-    row = st.columns([7.2, 2.8], vertical_alignment="bottom")
-    with row[0]:
+    with st.container(key=f"venuebox-{key}"):
         if st_searchbox is None:
             # The component is missing (an un-updated checkout). The list still
             # works by hand and by JSON; only the lookup is gone.
@@ -682,7 +710,7 @@ def _venue_input(key, find_in_doaj):
                           placeholder="Name, website or ISSN", help=entry_help)
         else:
             st_searchbox(
-                (lambda term: _doaj_lookup(key, term)) if find_in_doaj else (lambda _t: []),
+                (lambda term: _lookup(key, term, source)) if source else (lambda _t: []),
                 key=f"{key}_box",
                 placeholder="Name, website or ISSN",
                 label=None,
@@ -706,20 +734,21 @@ def _venue_input(key, find_in_doaj):
                 # away the term whose next page was just asked for.  Both are
                 # turned off and the clearing is done in the handler instead,
                 # which knows the difference between turning a page and choosing
-                # a journal.
+                # a venue.
                 clear_on_submit=False,
                 edit_after_submit="current",
-                debounce=120,          # local lookup: no reason to wait longer
-                submit_function=lambda journal: _add_doaj_pick(key, journal),
-                help=(entry_help + " Typing searches DOAJ as you go; choosing a match adds "
-                      "that journal with its official title and ISSN. Being indexed in DOAJ "
-                      "is not part of any verdict — it only helps name a venue."
-                      if find_in_doaj else entry_help))
-    if typed:
-        row[1].button("＋ Add", key=f"{key}_handadd", width="stretch",
+                debounce=directory["debounce"] if directory else 150,
+                submit_function=lambda chosen: _add_pick(key, chosen, source),
+                help=(entry_help + f" Typing searches {directory['name']} as you go; "
+                      "choosing a match adds that venue with its official title and ISSN. "
+                      f"Being listed in {directory['name']} is not part of any verdict — "
+                      "it only helps name a venue." if directory else entry_help))
+        if typed:
+            st.button("Add", key=f"{key}_handadd",
                       on_click=_add_typed_venue, args=(key,),
-                      help="Add exactly what is in the box, whether or not DOAJ knows it.")
-    return _venue_note(key, find_in_doaj)
+                      help="Add exactly what is in the box, whether or not the "
+                           "directory knows it.")
+    return _venue_note(key, source)
 
 
 def _venue_list_body(key, empty):
@@ -741,7 +770,7 @@ def _venue_list_body(key, empty):
 
 
 def venue_list_editor(label: str, key: str, hint: str, empty: str,
-                      *, find_in_doaj: bool = False):
+                      *, source: str = ""):
     """One venue list, edited as a list. Returns the entries, or None if empty.
 
     The return value is the same JSON-shaped list the old text box parsed to, so
@@ -774,7 +803,7 @@ def venue_list_editor(label: str, key: str, hint: str, empty: str,
     st.markdown(f"<div class='bl-vl-head'><div class='bl-vl-label'>{label}</div>"
                 f"<div class='bl-vl-hint'>{hint}</div></div>", unsafe_allow_html=True)
 
-    note = _venue_input(key, find_in_doaj)
+    note = _venue_input(key, source)
     # Always rendered, always one line: this is the search's only feedback, and a
     # note that appeared only when it had something to say would take the list
     # below it up and down the page as the query changed.
@@ -1378,6 +1407,43 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
 .bl-vl-hint {font-size:.8rem; line-height:1.45; color:var(--bl-fg-faint);}
 .bl-vl-hint code {font-size:.92em; padding:1px 4px; border-radius:4px;
                   background:color-mix(in srgb, currentColor 13%, transparent);}
+/* ── The venue box, and the Add inside it ──────────────────────────────────
+   Add is not a second control beside the box, it is the box's own button: it
+   acts on the text in the box and on nothing else, so it belongs at the right
+   hand end of it rather than in a column of its own taking a quarter of the
+   width away from the thing being typed into.
+
+   It has to be overlaid rather than placed, because the input is inside the
+   component's iframe and no Streamlit widget can be rendered in there. So the
+   container is the positioning context, the iframe fills it, and the button is
+   lifted out of flow onto the right hand end. `z-index` clears the iframe's own
+   10 (set by style_absolute), and the button is only ~64px wide, so the rest of
+   the field is still there to click into and type. */
+div[class*="st-key-venuebox-"] {position:relative;}
+div[class*="st-key-venuebox-"] iframe {width:100% !important;}
+div[class*="st-key-venuebox-"] [data-testid="stElementContainer"]:has(button),
+div[class*="st-key-venuebox-"] [data-testid="stButton"] {
+    position:absolute; top:5px; right:6px; z-index:11; width:max-content;}
+div[class*="st-key-venuebox-"] button {
+    min-height:28px; height:28px; padding:0 12px; width:max-content;
+    font-size:.76rem; font-weight:600; border-radius:6px;
+    background:var(--bl-accent); color:var(--bl-on-accent); border:0;}
+/* Out of flow, the button's container has no width to give its contents, and
+   Streamlit's label is a flex child that will happily shrink to one character
+   per line -- measured at 8px wide and 67px tall inside a 28px button. Every
+   level from the button down is told not to wrap, and to size to its text. */
+div[class*="st-key-venuebox-"] button,
+div[class*="st-key-venuebox-"] button * {
+    white-space:nowrap; overflow:visible; text-overflow:clip;}
+div[class*="st-key-venuebox-"] button > div,
+div[class*="st-key-venuebox-"] button > div * {width:auto; flex:0 0 auto;}
+div[class*="st-key-venuebox-"] button:hover:not(:disabled) {
+    filter:brightness(1.08); transform:none; box-shadow:none;}
+/* The two empty markdown blocks style_absolute adds to reserve the iframe's
+   space carry Streamlit's own block gap, which would leave a hole under a box
+   that is only 38px tall. */
+div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
+
 /* The line under the combobox: what the directory said, or how to use the box.
    Fixed at two lines' worth and clipped, so the longest message DOAJ can return
    — a network error — occupies exactly what the shortest does, and the list
@@ -2028,13 +2094,16 @@ def page_check():
                 # build this list and has no business building the other one:
                 # appearing in DOAJ is evidence a journal was vetted, which is
                 # the opposite of a reason to treat it as predatory.
-                find_in_doaj=True)
+                source="doaj")
         with bl_col:
             bl = venue_list_editor(
                 "Also treat these venues as predatory &nbsp;·&nbsp; <b>blacklist</b>", "bl",
                 "Extends the list. These venues count as predatory for this run in "
                 "addition to everything on Beall's List.",
-                "Empty — Beall's List is used as it stands.")
+                "Empty — Beall's List is used as it stands.",
+                # OpenAlex, not DOAJ: a venue worth blacklisting is one no
+                # directory of vetted journals will have. See _DIRECTORIES.
+                source="openalex")
     aux_lists = {"--whitelist": wl, "--blacklist": bl}
     extra_args = None if crossref else ["--crossref", "off"]
 

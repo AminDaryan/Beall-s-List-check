@@ -34,36 +34,17 @@ import csv
 import io
 import json
 import re
-import sys
 import time
-from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import urlparse
 
 import requests
 
-# The engine's normalizers, so a domain written into the whitelist here is keyed
-# exactly as the matcher will key it later.  Imported defensively (the same shim
-# runners.py uses for STATUS_FILL_COLORS) so this module still imports on its own
-# if the package layout moves under it.
-_BEALLS = Path(__file__).resolve().parent.parent / "src" / "bealls_list_check"
-try:
-    if str(_BEALLS) not in sys.path:
-        sys.path.insert(0, str(_BEALLS))
-    from normalize import normalize_host, normalize_issn
-except Exception:                                   # pragma: no cover - fallback
-    def normalize_host(url_or_host):
-        if not url_or_host:
-            return ""
-        raw = str(url_or_host).strip()
-        if "//" not in raw:
-            raw = "//" + raw
-        host = urlparse(raw).netloc.lower().split("@")[-1].split(":")[0]
-        return host[4:] if host.startswith("www.") else host
+from venue_lookup import ISSN_RE, Venue, normalize_issn, site_is_shared  # noqa: F401
 
-    def normalize_issn(issn):
-        m = re.search(r"\b(\d{4})-?(\d{3}[\dxX])\b", str(issn or ""))
-        return f"{m.group(1)}-{m.group(2).upper()}" if m else ""
+# The venue shape and the shared-host test live in venue_lookup, so this module
+# and openalex.py hand back the same thing. Re-exported under the old name
+# because a DOAJ record is always a journal.
+Journal = Venue
 
 
 # DOAJ's own "all journals as CSV" download — one request, refreshed daily at
@@ -87,106 +68,15 @@ DEFAULT_LIMIT = 8
 # shape as data_quality.py's Crossref agent.
 _UA = "bealls-list-check/1.0 (research tooling; +https://doaj.org/docs/api)"
 
-_ISSN_RE = re.compile(r"\b\d{4}-?\d{3}[\dxX]\b")
-
 # The CSV's column headings, named once here.  DOAJ has renamed these before, so
 # each is looked up with a fallback and a missing one costs that field, not the
 # whole load.
 _COL_TITLE = "Journal title"
-_COL_ALT = "Alternative title"
 _COL_PISSN = "Journal ISSN (print version)"
 _COL_EISSN = "Journal EISSN (online version)"
 _COL_PUBLISHER = "Publisher"
 _COL_COUNTRY = "Country of publisher"
 _COL_URL = "Journal URL"
-
-
-# Hosts known to carry many journals.  The path test in :func:`site_is_shared`
-# catches most of these on its own (the journal is named by the path, so the host
-# is broader than the journal), but a publisher whose journal sits at the root of
-# a subdomain — jenci.springeropen.com — needs telling.  Deliberately short: this
-# only decides how emphatic a caution is, never what the run does.
-_PLATFORM_HOSTS = (
-    "sciencedirect.com", "elsevier.com", "springer.com", "springeropen.com",
-    "biomedcentral.com", "nature.com", "wiley.com", "tandfonline.com",
-    "sagepub.com", "oup.com", "cambridge.org", "ieee.org", "acm.org",
-    "frontiersin.org", "mdpi.com", "hindawi.com", "karger.com",
-    "degruyter.com", "emerald.com", "inderscience.com", "lww.com",
-    "keaipublishing.com", "bmj.com", "plos.org", "wolterskluwer.com",
-    "dovepress.com", "dergipark.org.tr", "dergipark.gov.tr",
-    "jstage.jst.go.jp", "scielo.br", "redalyc.org", "sanad.iau.ir",
-    "digitalcommons.",
-)
-
-
-def site_is_shared(url):
-    """True if *url*'s host looks like it carries journals besides this one.
-
-    Two signals, both structural:
-
-      * the host is a publisher or national platform we know by name;
-      * the journal is identified by the URL's **path** rather than by its host
-        (``www.nature.com/commseng/``), which means the host is the platform and
-        the path is the journal.
-
-    A bare host (``https://www.ejcrim.com/``) and a single-journal OJS install
-    (``https://mlj.goums.ac.ir/index.php``) are the journal's own site and score
-    False.  Sampled against 300 live DOAJ records this errs toward True, which is
-    the harmless direction: the caller adds no domain unless asked, so the worst
-    a false positive does is caution about a site that did not need it.
-    """
-    host = normalize_host(url)
-    if not host:
-        return False
-    if any(p in host for p in _PLATFORM_HOSTS):
-        return True
-    segments = [s for s in (urlparse(str(url)).path or "").split("/") if s]
-    return bool(segments) and segments != ["index.php"]
-
-
-@dataclass(frozen=True)
-class Journal:
-    """One DOAJ journal, reduced to what naming a venue needs."""
-
-    title: str
-    issns: tuple = ()                 # print then electronic, normalized, deduped
-    site: str = ""                    # the journal's own homepage
-    publisher: str = ""
-    country: str = ""
-
-    @property
-    def host(self):
-        """The registrable host of :attr:`site` — what a domain entry would key on."""
-        return normalize_host(self.site)
-
-    @property
-    def site_is_shared(self):
-        return site_is_shared(self.site)
-
-    @property
-    def doaj_url(self):
-        """This journal's page on doaj.org, so a row can be checked at the source."""
-        return f"https://doaj.org/toc/{self.issns[0]}" if self.issns else ""
-
-    def to_entry(self, *, include_site=False):
-        """This journal as a whitelist entry, in ``user_lists.py``'s JSON format.
-
-        Title and ISSNs always; the website only when asked for.  It is left out
-        by default because the entry is meant to name *this journal*, and the
-        matcher keys a domain on its host alone — so adding the site of a journal
-        published on a platform silently widens the run's scope to every other
-        journal on that platform.  See :func:`site_is_shared`.
-
-        The site is written as ``domain`` (the bare host) rather than as ``url``,
-        even though both keys are accepted, so that the JSON says what the run
-        will actually match on instead of implying the path matters.
-        """
-        entry = {"name": self.title}
-        if self.issns:
-            entry["issns"] = list(self.issns)
-        if include_site and self.host:
-            entry["domain"] = self.host
-        return entry
 
 
 def _row_to_journal(row):
@@ -199,12 +89,13 @@ def _row_to_journal(row):
     title = (row.get(_COL_TITLE) or "").strip()
     if not (title or issns):
         return None
-    return Journal(
+    return Venue(
         title=title,
         issns=tuple(issns),
         site=(row.get(_COL_URL) or "").strip(),
         publisher=(row.get(_COL_PUBLISHER) or "").strip(),
         country=(row.get(_COL_COUNTRY) or "").strip(),
+        kind="journal",
     )
 
 
@@ -216,7 +107,8 @@ def _read_cache():
         if time.time() - CACHE_FILE.stat().st_mtime > MAX_CACHE_AGE_SECONDS:
             return None
         with io.open(CACHE_FILE, encoding="utf-8") as fh:
-            return [Journal(title=t, issns=tuple(i), site=s, publisher=p, country=c)
+            return [Venue(title=t, issns=tuple(i), site=s, publisher=p,
+                          country=c, kind="journal")
                     for t, i, s, p, c in json.load(fh)["journals"]]
     except Exception:
         return None                     # a damaged cache is a missing cache
@@ -310,10 +202,10 @@ def search(index, term, limit=DEFAULT_LIMIT):
     term = (term or "").strip().lower()
     if not term or not index:
         return [], 0
-    if isinstance(index[0], Journal):
+    if isinstance(index[0], Venue):
         index = build_index(index)
 
-    issn = normalize_issn(term) if _ISSN_RE.search(term) else ""
+    issn = normalize_issn(term) if ISSN_RE.search(term) else ""
     if issn:
         exact = [j for _h, _t, j in index if issn in j.issns]
         return exact[:limit], len(exact)
