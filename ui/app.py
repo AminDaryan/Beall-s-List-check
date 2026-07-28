@@ -295,11 +295,21 @@ _MAX_SHOWN_VENUES = 25
 # Roughly six rows, which covers the great majority of lists without scrolling.
 _VENUE_BOX_HEIGHT = 190
 
-# How many DOAJ hits one search puts on screen.  DOAJ ranks by relevance and the
-# wanted journal is normally first, so this is a shortlist to choose from rather
-# than a results page to page through — `total` is reported beside it so the
-# shortlist never reads as the whole answer.
+# How many matches the menu opens with, and how many more each Show more adds.
+# The wanted journal is normally in the first few, so this is a shortlist rather
+# than a results page — but it says how many it is holding back, and the last row
+# of the menu fetches them, so the shortlist never passes for the whole answer.
 _DOAJ_LIMIT = 8
+_DOAJ_MORE = 20
+
+# The value behind that last row.  A plain string rather than a sentinel object
+# because it travels through the component's own option state.
+_SHOW_MORE = "__bl_show_more__"
+
+# What the last lookup found, as a mapping rather than a positional tuple: it is
+# written from four places and read in one, and a tuple that grew a field once
+# already broke the reader from a site that had not been updated with it.
+_LOOKUP_IDLE = {"term": "", "shown": 0, "total": 0, "error": ""}
 
 
 @st.cache_resource(show_spinner=False)
@@ -498,6 +508,9 @@ def _doaj_option_label(journal):
 def _doaj_lookup(key, term):
     """The searchbox's ``search_function`` — run on every keystroke.
 
+    Resets the page size whenever the term changes, so a widened menu belongs to
+    the search it was widened for and the next word starts from eight again.
+
     Returns ``(label, Journal)`` pairs for the component to offer, and records
     what the lookup found in ``<key>_last`` so the line under the box can report
     it on the rerun that follows.
@@ -509,14 +522,18 @@ def _doaj_lookup(key, term):
     cache as the user carries on or backspaces.
     """
     term = (term or "").strip()
+    if term != (st.session_state.get(f"{key}_last") or {}).get("term", ""):
+        st.session_state[f"{key}_limit"] = _DOAJ_LIMIT
     if not term:
-        st.session_state[f"{key}_last"] = ("", 0, "")
+        st.session_state[f"{key}_last"] = _LOOKUP_IDLE
         return []
     index, error = doaj_index()
     if error:
-        st.session_state[f"{key}_last"] = (term, 0, error)
+        st.session_state[f"{key}_last"] = {"term": term, "shown": 0, "total": 0,
+                                            "error": error}
         return []
-    journals = doaj.search(index, term, _DOAJ_LIMIT)
+    limit = st.session_state.get(f"{key}_limit") or _DOAJ_LIMIT
+    journals, total = doaj.search(index, term, limit)
     # Labels are made unique before they are offered: DOAJ can hold two records
     # that reduce to the same line, and the component keys its options by label.
     options, seen = [], set()
@@ -526,7 +543,15 @@ def _doaj_lookup(key, term):
             label += "\u2009"                # thin space; invisible, unique
         seen.add(label)
         options.append((label, journal))
-    st.session_state[f"{key}_last"] = (term, len(options), "")
+    # The rest of the matches are offered rather than dropped.  A menu showing
+    # eight of two hundred, silently, claims to be the answer when it is a
+    # sample; this last row says how many are missing and fetches the next page.
+    remaining = total - len(journals)
+    if remaining > 0:
+        options.append((f"\u25be  Show {min(remaining, _DOAJ_MORE)} more "
+                        f"({remaining} further match(es))", _SHOW_MORE))
+    st.session_state[f"{key}_last"] = {"term": term, "shown": len(journals),
+                                        "total": total, "error": ""}
     return options
 
 
@@ -550,14 +575,38 @@ def _reset_box(key):
         pass
 
 
-def _add_doaj_pick(key, journal):
-    """The searchbox's ``submit_function`` — a match was chosen, so add it."""
-    if isinstance(journal, doaj.Journal):
-        _add_venue(key, journal.to_entry())
-        # The box empties itself on submit, so the line under it has to stop
-        # reporting the search that filled it — otherwise an empty box sits
-        # under "8 best matches shown".
-        st.session_state[f"{key}_last"] = ("", 0, "")
+def _refresh_options(key):
+    """Re-run the current search and hand the result straight to the component.
+
+    ``search_function`` fires on a keystroke, and Show more is a *selection* —
+    so without this the menu would keep the eight options it already had until
+    the user typed another letter.  The component reads its options from these
+    two session-state entries on every render, so rewriting them here is what
+    makes the longer list appear.  ``key_react`` is deliberately left alone: it
+    is what forces a remount, and remounting would clear the term.
+    """
+    box = st.session_state.get(f"{key}_box")
+    if not isinstance(box, dict):
+        return
+    options = _doaj_lookup(key, box.get("search") or "")
+    box["options_js"] = [{"label": label, "value": i}
+                         for i, (label, _value) in enumerate(options)]
+    box["options_py"] = [value for _label, value in options]
+
+
+def _add_doaj_pick(key, chosen):
+    """The searchbox's ``submit_function`` — something in the menu was chosen."""
+    if chosen == _SHOW_MORE:
+        st.session_state[f"{key}_limit"] = (
+            (st.session_state.get(f"{key}_limit") or _DOAJ_LIMIT) + _DOAJ_MORE)
+        _refresh_options(key)
+        return                          # a page turn, not a venue
+    if isinstance(chosen, doaj.Journal):
+        _add_venue(key, chosen.to_entry())
+        _reset_box(key)
+        # The box is emptied, so the line under it has to stop reporting the
+        # search that filled it — otherwise an empty box sits under "8 of 214".
+        st.session_state[f"{key}_last"] = _LOOKUP_IDLE
 
 
 def _add_typed_venue(key):
@@ -574,7 +623,7 @@ def _add_typed_venue(key):
     entry = _entry_from_text(term)
     if entry:
         _add_venue(key, entry)
-        st.session_state[f"{key}_last"] = ("", 0, "")
+        st.session_state[f"{key}_last"] = _LOOKUP_IDLE
         if st_searchbox is None:
             st.session_state[f"{key}_fallback"] = ""
         else:
@@ -585,14 +634,16 @@ def _venue_note(key, find_in_doaj):
     """The one line under the box: what the last keystroke's lookup found."""
     if not find_in_doaj:
         return "Added exactly as typed — a name, a website (ieee.org) or an ISSN."
-    term, shown, error = st.session_state.get(f"{key}_last") or ("", 0, "")
-    if error:
-        return error
+    last = st.session_state.get(f"{key}_last") or _LOOKUP_IDLE
+    term, shown, total = last["term"], last["shown"], last["total"]
+    if last["error"]:
+        return last["error"]
     if not term:
         return "Start typing — DOAJ's journals are matched as you go."
     if not shown:
         return f"No DOAJ journal matches “{term}” — press Add to use it as typed."
-    return (f"{shown} best match(es) shown — choose one, or press Add to use "
+    counted = f"{shown} of {total}" if total > shown else f"{shown}"
+    return (f"{counted} DOAJ match(es) — choose one, or press Add to use "
             f"“{term}” as typed.")
 
 
@@ -615,6 +666,12 @@ def _venue_input(key, find_in_doaj):
     """
     entry_help = ("Read as a name, a website (ieee.org) or an ISSN (1234-5678) — which one "
                   "is decided by what you type, and shown on the row it becomes.")
+    # Add belongs to the text, so it appears with it.  On an empty box there is
+    # nothing to add and a button offering to do it is an invitation to press
+    # something that cannot work.  The two columns are laid out either way, so
+    # the box keeps its width and nothing moves sideways when the button arrives.
+    typed = bool((st.session_state.get(f"{key}_box") or {}).get("search")
+                 or st.session_state.get(f"{key}_fallback"))
     row = st.columns([7.2, 2.8], vertical_alignment="bottom")
     with row[0]:
         if st_searchbox is None:
@@ -629,7 +686,6 @@ def _venue_input(key, find_in_doaj):
                 key=f"{key}_box",
                 placeholder="Name, website or ISSN",
                 label=None,
-                clear_on_submit=True,
                 # The menu lives *inside* the component's iframe, so the frame
                 # has to grow to ~350px to show it — and in normal flow that
                 # pushes the list and the JSON fold a third of a screen down
@@ -637,15 +693,32 @@ def _venue_input(key, find_in_doaj):
                 # different heights.  Positioned absolutely it overlays what is
                 # beneath instead, which is what a dropdown should do anyway.
                 style_absolute=True,
+                # The box is a box, not a menu that happens to accept typing.
+                # A chevron promises a list to open, and on an empty box there
+                # is none — the same reason "No options" is hidden rather than
+                # shown under a control nobody has typed into yet.
+                style_overrides={
+                    "dropdown": {"width": 0, "height": 0, "fill": "transparent"},
+                    "searchbox": {"optionEmpty": "hidden"},
+                },
+                # Show more is a selection, and a selection normally ends the
+                # search — it would empty the box and close the menu, throwing
+                # away the term whose next page was just asked for.  Both are
+                # turned off and the clearing is done in the handler instead,
+                # which knows the difference between turning a page and choosing
+                # a journal.
+                clear_on_submit=False,
+                edit_after_submit="current",
                 debounce=120,          # local lookup: no reason to wait longer
                 submit_function=lambda journal: _add_doaj_pick(key, journal),
                 help=(entry_help + " Typing searches DOAJ as you go; choosing a match adds "
                       "that journal with its official title and ISSN. Being indexed in DOAJ "
                       "is not part of any verdict — it only helps name a venue."
                       if find_in_doaj else entry_help))
-    row[1].button("＋ Add", key=f"{key}_handadd", width="stretch",
-                  on_click=_add_typed_venue, args=(key,),
-                  help="Add exactly what is in the box, whether or not DOAJ knows it.")
+    if typed:
+        row[1].button("＋ Add", key=f"{key}_handadd", width="stretch",
+                      on_click=_add_typed_venue, args=(key,),
+                      help="Add exactly what is in the box, whether or not DOAJ knows it.")
     return _venue_note(key, find_in_doaj)
 
 

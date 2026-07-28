@@ -356,11 +356,15 @@ enough to see IEEE's journals.
 
 **Choose one and it is added**, with its official title and ISSN, so you do not
 have to look either up. There is no Add button beside each match; choosing is the
-action. The line under the box says how many were found.
+action. The line under the box says how many were found — `8 of 138`, say.
+
+The menu shows the eight best matches. If there are more, its last row offers
+them: **▾ Show 20 more** keeps what you typed and lengthens the list.
 
 **If nothing matches, press ＋ Add and your text is added as typed.** So a venue
 DOAJ has never heard of goes into the same box as one it has: type `WOl`, see
-that nothing matched, press Add.
+that nothing matched, press Add. The **＋ Add** button appears beside the box as
+soon as you type something, and is not there while the box is empty.
 
 The journal's website is *not* added — only its title and ISSN. That is
 deliberate: many journals are published on a shared platform, so adding the

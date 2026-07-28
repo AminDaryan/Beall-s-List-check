@@ -285,7 +285,11 @@ def build_index(journals):
 
 
 def search(index, term, limit=DEFAULT_LIMIT):
-    """The best *limit* matches for *term*, most relevant first.
+    """The best *limit* matches for *term*, and how many there were in all.
+
+    Returns ``(hits, total)``.  *total* is every journal that matched, not just
+    the ones returned, so a caller can offer the rest rather than silently
+    truncating — "8 of 214" is a different statement from "8".
 
     *index* is what :func:`build_index` returned (a bare journal list is also
     accepted, and indexed on the spot).  Ranking is by how early and how cleanly
@@ -297,16 +301,22 @@ def search(index, term, limit=DEFAULT_LIMIT):
       4. it appears in the publisher's name
 
     An ISSN is matched exactly instead, against either of a journal's two.
+
+    Every match is scanned and ranked, with no cap: a one-letter term does match
+    thousands, and stopping early would make *total* a number that depends on
+    where the scan happened to stop rather than on how many journals there are.
+    Measured at ~40 ms over the whole directory, which a keystroke can afford.
     """
     term = (term or "").strip().lower()
     if not term or not index:
-        return []
-    if index and isinstance(index[0], Journal):
+        return [], 0
+    if isinstance(index[0], Journal):
         index = build_index(index)
 
     issn = normalize_issn(term) if _ISSN_RE.search(term) else ""
     if issn:
-        return [j for _h, _t, j in index if issn in j.issns][:limit]
+        exact = [j for _h, _t, j in index if issn in j.issns]
+        return exact[:limit], len(exact)
 
     hits = []
     for haystack, title, journal in index:
@@ -323,7 +333,5 @@ def search(index, term, limit=DEFAULT_LIMIT):
         # Shorter titles first within a rank: a search for "nature" should offer
         # *Nature* before *Nature Reviews Methods Primers*.
         hits.append((rank, len(title), journal))
-        if len(hits) > 4000:            # a one-letter term matches thousands
-            break
     hits.sort(key=lambda h: (h[0], h[1]))
-    return [j for _r, _l, j in hits[:limit]]
+    return [j for _r, _l, j in hits[:limit]], len(hits)

@@ -503,19 +503,40 @@ then the publisher. Shorter titles win ties, so "nature" offers *Nature* before
 `st.selectbox` cannot do this: it filters options **client-side** over a list it
 was given, so it can never look anything up while a word is being typed. The box
 is therefore [`streamlit-searchbox`](https://pypi.org/project/streamlit-searchbox/),
-which calls back into Python per keystroke. That also gets two things the native
-widget could not: a real **text cursor**, and a menu that exists **only when
-something has been typed** — an empty box opens nothing.
+which calls back into Python per keystroke.
 
-The component renders in an iframe, and its menu lives *inside* that iframe, so
-the frame grows to ~350 px to show it. In normal flow that pushed the list and
-the JSON fold a third of a screen down on every keystroke and left the two
-columns at different heights, so it is given `style_absolute=True` and overlays
-what is beneath instead — which is what a dropdown should do anyway.
+Four things about it are deliberate, and each was wrong before it was fixed:
 
-It is an optional import: a checkout whose venv predates the dependency still
-runs, with the box falling back to plain text entry and the lookup simply absent.
-`requirements.txt` and both `run_ui` launchers install it.
+| | Why |
+|---|---|
+| No chevron (`dropdown: {width: 0, height: 0}`) | A chevron promises a list to open. On an empty box there is none — this is a box you type into, not a menu that tolerates typing. |
+| No "No options" message (`optionEmpty: "hidden"`) | It was being drawn under an untouched box, announcing the absence of results for a search nobody had run. |
+| **＋ Add** only once something is typed | Add belongs to the text. On an empty box it offers to do something that cannot work. Both columns are laid out either way, so the box keeps its width and nothing moves sideways when the button arrives. |
+| `style_absolute=True` | The menu lives *inside* the component's iframe, so the frame grows to ~350 px to show it. In normal flow that pushed the list and the JSON fold a third of a screen down on every keystroke and left the two columns at different heights; positioned absolutely it overlays instead, which is what a dropdown should do. |
+
+#### Show more, rather than a silent top-eight
+
+The menu opens with eight matches and its last row says how many it is holding
+back — `▾ Show 20 more (130 further match(es))`. Choosing it widens the window by
+twenty and re-runs the search; the term stays, and nothing is added.
+
+That row exists because `doaj.search` returns `(hits, total)` rather than just
+the slice. A menu showing eight of a hundred and thirty-eight, silently, claims
+to be the answer when it is a sample. The scan is uncapped so the total is exact
+— measured at ~42 ms for a one-letter term over the whole directory, which a
+keystroke can afford.
+
+Two component defaults have to be turned off for it: `clear_on_submit` and
+`edit_after_submit`. Show more *is* a selection, so both would fire — emptying
+the box and closing the menu, throwing away the very term whose next page was
+just requested. The clearing is done in the handler instead, which knows the
+difference between turning a page and choosing a journal.
+
+`search_function` only fires on a keystroke, so after a Show more the component
+would still be holding its previous eight options. `_refresh_options` writes the
+longer list straight into the component's `options_js` / `options_py` state,
+which it re-reads on every render. Its `key_react` is deliberately left alone —
+changing that is what forces a remount, and a remount would clear the term.
 
 **Adding a journal contributes its title and ISSN, not its website.** A domain is
 matched by host, so adding the site of a journal published on a platform
