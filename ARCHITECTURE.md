@@ -81,7 +81,7 @@ script.)
 | `scrape_bealls_list/scrape_bealls_list.py` ([`README`](src/bealls_list_check/scrape_bealls_list/README.md)) | Produces the vendored `data/bealls_snapshot.json` from the archived Beall's List. Run only when refreshing the snapshot. |
 | `bealls_llm_check.py` | Optional language-model pass over the `review` papers. Reuses the conductor (`import bealls_list_check as det`) for matching and for the workbook writer. |
 | `batch_check/batch_check.py` ([`README`](src/bealls_list_check/batch_check/README.md)) | Machine-readable entry point for server integration: reads one `.jsonl`/`.json` file of Semantic Scholar records, writes a CSV of `SS-ID, DOI, Status` (one row per record, input order). Reuses `build_index`/`resolve_crossref_mode` from the conductor plus `match_paper` and `resolve_review`; skips the data-quality validation and the Excel writer. |
-| `ui/app.py`, `ui/runners.py` ([`README`](ui/README.md)) | Streamlit front end for local, single-user runs, offering the fast, thorough and batch-CSV checks. `app.py` is the page; `runners.py` is the Streamlit-free adapter that executes each check. |
+| `ui/app.py`, `ui/runners.py`, `ui/doaj.py` ([`README`](ui/README.md)) | Streamlit front end for local, single-user runs, offering the fast, thorough and batch-CSV checks. `app.py` is the page; `runners.py` is the Streamlit-free adapter that executes each check; `doaj.py` is a Streamlit-free DOAJ client used only to look up a journal's title and ISSN when building a venue list. DOAJ takes no part in any verdict, and nothing in `src/` imports it. |
 
 The UI deliberately does **not** import the checks in-process: they use flat
 module names (`config`, `match`, …) that would collide. `runners.py` instead

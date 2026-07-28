@@ -428,12 +428,18 @@ def _venue_json_edited(key):
     st.session_state.pop(f"{key}_jsonerr", None)
 
 
-def _sig_chips(entry):
-    """The pills saying what an entry will be matched on, strongest first."""
+def _sig_chips(entry, shown=""):
+    """The pills saying what an entry will be matched on, strongest first.
+
+    *shown* is the row's display name.  An entry carrying nothing but an ISSN is
+    displayed *as* that ISSN, and repeating it in the pill beside itself read as
+    two identifiers where there is one — so that pill says the word instead.
+    """
     chips = []
     for issn in entry.get("issns") or []:
         chips.append(f"<span class='bl-sig bl-sig-issn' title='Matches this journal's "
-                     f"ISSN exactly — the most precise signal there is.'>{issn}</span>")
+                     f"ISSN exactly — the most precise signal there is.'>"
+                     f"{'ISSN' if issn == shown else issn}</span>")
     if entry.get("domain"):
         shared = doaj.site_is_shared(f"https://{entry['domain']}")
         why = ("Matches this host and its subdomains. This looks like a shared "
@@ -450,14 +456,16 @@ def _sig_chips(entry):
 
 
 def _venue_row_html(entry):
+    shown = _venue_name(entry)
     return (f"<div class='bl-vl-row'><span class='bl-vl-name'>"
-            f"{html.escape(_venue_name(entry))}</span>{_sig_chips(entry)}</div>")
+            f"{html.escape(shown)}</span>{_sig_chips(entry, shown)}</div>")
 
 
 def _doaj_row_html(journal, with_site):
     """One DOAJ hit: what it is, who publishes it, and what adding it would key on."""
     meta = " · ".join(filter(None, [journal.publisher, journal.country]))
     issn = ", ".join(journal.issns) or "no ISSN"
+    shown = journal.title or issn
     site = ""
     if journal.host:
         warn = " ⚠ shared platform" if journal.site_is_shared else ""
@@ -466,8 +474,9 @@ def _doaj_row_html(journal, with_site):
         site = (f"<span class='bl-sig bl-sig-site{cls}'>"
                 f"{html.escape(journal.host)}{warn}{state}</span>")
     return (f"<div class='bl-vl-row'>"
-            f"<span class='bl-vl-name'>{html.escape(journal.title or issn)}</span>"
-            f"<span class='bl-sig bl-sig-issn'>{html.escape(issn)}</span>{site}"
+            f"<span class='bl-vl-name'>{html.escape(shown)}</span>"
+            f"<span class='bl-sig bl-sig-issn'>"
+            f"{'ISSN' if issn == shown else html.escape(issn)}</span>{site}"
             + (f"<div class='bl-vl-meta'>{html.escape(meta)}</div>" if meta else "")
             + "</div>")
 
@@ -518,24 +527,32 @@ def _doaj_finder(key):
                    + ("" if shown >= result.total else
                       " Narrow the search if the journal you want is not here."))
         existing = {_venue_key(v) for v in (st.session_state.get(f"{key}_venues") or [])}
-        for journal in result.journals:
+        for i, journal in enumerate(result.journals):
             entry = journal.to_entry(include_site=with_site)
             row = st.columns([7.3, 2.7], vertical_alignment="center")
             row[0].markdown(_doaj_row_html(journal, with_site), unsafe_allow_html=True)
             already = _venue_key(entry) in existing
+            # Keyed by position, not by anything DOAJ supplied: two records with
+            # the same id would be a duplicate widget key, which is an exception
+            # rather than a cosmetic problem.
             row[1].button(
                 "✓ Added" if already else "＋ Add", width="stretch", disabled=already,
-                key=f"{key}_doajadd_{journal.doaj_id or journal.title}",
-                on_click=_add_venue, args=(key, entry),
+                key=f"{key}_doajadd_{i}", on_click=_add_venue, args=(key, entry),
                 help=None if already else f"Add {journal.title} to the list above.")
 
 
-def venue_list_editor(label: str, key: str, hint: str, *, find_in_doaj: bool = False):
+def venue_list_editor(label: str, key: str, hint: str, empty: str,
+                      *, find_in_doaj: bool = False):
     """One venue list, edited as a list. Returns the entries, or None if empty.
 
     The return value is the same JSON-shaped list the old text box parsed to, so
     everything downstream — the run summary, the temp file, the CLI flag — is
     unchanged.
+
+    *empty* is what the list says when it holds nothing, and the two lists must
+    say different things: an empty whitelist means every paper is checked, while
+    an empty blacklist means Beall's List is used as it stands.  One sentence
+    covering both would have to be vague about the only fact worth stating.
     """
     st.session_state.setdefault(f"{key}_venues", [])
     st.session_state.setdefault(key, "")
@@ -546,8 +563,7 @@ def venue_list_editor(label: str, key: str, hint: str, *, find_in_doaj: bool = F
 
     with st.container(key=f"venuelist-{key}"):
         if not venues:
-            st.markdown("<div class='bl-vl-empty'>Empty — no venue restriction from this "
-                        "list.</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='bl-vl-empty'>{empty}</div>", unsafe_allow_html=True)
         for i, entry in enumerate(venues[:_MAX_SHOWN_VENUES]):
             row = st.columns([8.4, 1.6], vertical_alignment="center")
             row[0].markdown(_venue_row_html(entry), unsafe_allow_html=True)
@@ -1143,6 +1159,44 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
                        border-radius:6px; padding:0 8px;}
 .st-key-runsummary [data-testid="stMarkdownContainer"] {margin-bottom:0;}
 
+/* ── Step 3's venue lists ──────────────────────────────────────────────────
+   A row per venue, and on each row a pill per identifier it carries.  The pills
+   are smaller and squarer than .bl-chip: those are labels on a comparison table
+   and want to be read, these are identifiers stacked several to a line and want
+   to be scanned.  Monospaced digits, because most of them are ISSNs and a
+   column of proportional figures does not line up. */
+.bl-vl-label {font-size:.95rem; font-weight:600; color:var(--bl-fg); margin-bottom:.1rem;}
+.bl-vl-row {display:flex; align-items:center; gap:.4rem; flex-wrap:wrap;
+            padding:.1rem 0; line-height:1.5;}
+.bl-vl-name {font-size:.9rem; font-weight:600; color:var(--bl-fg);
+             overflow-wrap:anywhere;}
+.bl-vl-meta {flex-basis:100%; font-size:.74rem; color:var(--bl-fg-faint);}
+.bl-sig {display:inline-block; padding:1px 7px; border-radius:6px;
+         font-size:.72rem; font-weight:600; line-height:1.5;
+         font-variant-numeric:tabular-nums; white-space:nowrap;
+         background:var(--bl-mute-bg); color:var(--bl-fg-muted); cursor:help;}
+.bl-sig-issn {background:var(--bl-ok-bg); color:var(--bl-fg);}
+.bl-sig-site {background:var(--bl-accent-soft); color:var(--bl-fg);}
+/* The one that means "this covers more than the journal named beside it".  Amber
+   is the page's existing "look at this before you rely on it" — the same wash
+   Step 4 puts behind an unverified model — and not red, which is a verdict. */
+.bl-sig-wide {background:var(--bl-warn-bg); color:var(--bl-fg);}
+.bl-vl-empty {font-size:.85rem; color:var(--bl-fg-faint); font-style:italic;
+              padding:.15rem 0 .3rem;}
+
+/* Streamlit puts 1rem between the elements of a vertical block, which is right
+   between the parts of a form and much too much between the rows of a list --
+   eight venues came to a column of text separated by whitespace rather than to
+   a list.  Tightened only inside these containers, and only for the rows. */
+div[class*="st-key-venuelist-"] > div > div[data-testid="stVerticalBlock"] {gap:.2rem;}
+div[class*="st-key-venuelist-"] [data-testid="stMarkdownContainer"] {margin-bottom:0;}
+/* The ✕ next to each row: square, quiet, and the row's height rather than a
+   button's, so a list of them reads as a column of rows and not as a keypad. */
+div[class*="st-key-venuelist-"] button[data-testid^="stBaseButton"] {
+    min-height:1.9rem; padding:0 .3rem; color:var(--bl-fg-faint);}
+div[class*="st-key-venuelist-"] button[data-testid^="stBaseButton"]:hover:not(:disabled) {
+    color:var(--bl-fg); border-color:var(--bl-accent-line);}
+
 /* ── The upload dropzone ───────────────────────────────────────────────────
    Streamlit's own is a 68px strip with a Browse button and a size limit, which
    does not say that a file can be dropped on it.  Turned here into a target
@@ -1483,8 +1537,13 @@ def _options_state(checker):
         bits.append(f"{selected_provider()} / {model}" if model else selected_provider())
     bits.append("Crossref on" if st.session_state.get("cr", True) else "Crossref off")
     if checker.kind != "csv":                 # batch mode ignores both lists
-        bits += [name for name, key in (("whitelist", "wl"), ("blacklist", "bl"))
-                 if (st.session_state.get(key) or "").strip()]
+        # Counted from the list itself rather than from the JSON box's text, so
+        # the pill says how many venues are in force instead of only that the box
+        # is not empty — and cannot disagree with the rows drawn below it.
+        for name, key in (("whitelist", "wl"), ("blacklist", "bl")):
+            n = len(st.session_state.get(f"{key}_venues") or [])
+            if n:
+                bits.append(f"{name} ({n})")
     return " · ".join(bits)
 
 
@@ -1735,18 +1794,23 @@ def page_check():
         # easily as "venues I consider safe", which is the opposite of what
         # it does.
         with wl_col:
-            wl = venue_list_input(
-                "Only check these venues  ·  **whitelist**", "wl",
-                hint="Restricts the run. A paper from any venue not listed here is reported as "
-                     "`out_of_scope` rather than checked. Leave empty to check every paper.")
+            wl = venue_list_editor(
+                "Only check these venues &nbsp;·&nbsp; <b>whitelist</b>", "wl",
+                "Restricts the run. A paper from any venue not listed here is reported as "
+                "`out_of_scope` — **not examined**, which is not the same as cleared. "
+                "Leave empty to check every paper.",
+                "Empty — every paper is checked.",
+                # DOAJ indexes journals, not predatory publishers, so it can help
+                # build this list and has no business building the other one:
+                # appearing in DOAJ is evidence a journal was vetted, which is
+                # the opposite of a reason to treat it as predatory.
+                find_in_doaj=True)
         with bl_col:
-            bl = venue_list_input(
-                "Also treat these venues as predatory  ·  **blacklist**", "bl",
-                hint="Extends the list. These venues count as predatory for this run in "
-                     "addition to everything on Beall's List.")
-        st.caption('Both boxes take the same JSON: a list like '
-                   '`[{"name": "IEEE", "domain": "ieee.org"}]`, or just `"Nature"` to match '
-                   'by name.')
+            bl = venue_list_editor(
+                "Also treat these venues as predatory &nbsp;·&nbsp; <b>blacklist</b>", "bl",
+                "Extends the list. These venues count as predatory for this run in "
+                "addition to everything on Beall's List.",
+                "Empty — Beall's List is used as it stands.")
     aux_lists = {"--whitelist": wl, "--blacklist": bl}
     extra_args = None if crossref else ["--crossref", "off"]
 

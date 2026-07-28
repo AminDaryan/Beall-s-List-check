@@ -317,20 +317,61 @@ check and the thorough check. They are empty on almost every run, and being able
 to see that they are empty is the point of their being on the page:
 
 - **Only check these venues** *(whitelist)* — narrows the run. A paper from a
-  venue that is not in the box is reported as `out_of_scope` instead of being
+  venue that is not on the list is reported as `out_of_scope` instead of being
   checked.
 - **Also treat these venues as predatory** *(blacklist)* — adds venues to the
   list, for this run only.
 
-Both boxes take the same JSON that the command line reads from a file, pasted
-directly:
+`out_of_scope` means the paper was **not examined**. It does not mean the paper
+is fine, and putting a venue on the whitelist never hides a finding about it: a
+whitelisted venue that is on Beall's List still comes back `on_list`.
+
+### Adding a venue
+
+Type into the **Name, website or ISSN** box and press **＋ Add**. What you type
+decides how it is matched, and the row that appears says which:
+
+| What you type | Example | What it matches |
+|---|---|---|
+| An ISSN | `2666-2485` | That one journal, exactly. |
+| A website | `ieee.org` | That site and everything under it — so a publisher's address covers all of its journals. |
+| Anything else | `Journal of Widgets` | Any venue name containing those words. |
+
+An ISSN is the most precise, so prefer it when you mean one particular journal.
+A website or a name is the right choice when you mean a whole publisher.
+
+Remove an entry with the **✕** beside it.
+
+### Finding a journal in DOAJ
+
+If you know the journal but not its ISSN, open **🔍 Find a journal in DOAJ**
+under the whitelist and search for it by name. The
+[Directory of Open Access Journals](https://doaj.org) lists about 20,000 vetted
+open-access journals; **＋ Add** puts the one you pick on the list with its
+official title and ISSN, so you do not have to look either up.
+
+The journal's website is *not* added unless you tick **Also add the journal's
+website**. That is deliberate: many journals are published on a shared platform,
+so adding the website of one Elsevier journal would put every Elsevier journal in
+scope. Results whose address looks like a shared platform are marked
+**⚠ shared platform**.
+
+> Searching DOAJ only helps you *name* a journal. Whether a journal is in DOAJ
+> has no effect on any verdict — the check asks whether the venue is on Beall's
+> List, which is a different question.
+
+### Editing the list as JSON
+
+**{ } Edit as JSON** shows the same list in the format the command line reads
+from a file. Paste one in and it appears as rows; edit the rows and the JSON
+follows.
 
 ```json
-[{ "name": "IEEE", "domain": "ieee.org" }, "Nature"]
+[{ "name": "IEEE", "domain": "ieee.org" }, { "issns": ["2666-2485"] }, "Nature"]
 ```
 
 A plain text entry is matched by name. An object can carry a `name`, a `domain`,
-or both. The format is described in full in
+`issns`, or any combination. The format is described in full in
 [user_lists/README.md](../src/bealls_list_check/user_lists/README.md).
 
 ## 7 · Common problems

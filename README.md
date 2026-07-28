@@ -25,8 +25,10 @@ report you can audit line by line.
 - **DOI resolution via Crossref** — settles the uncertain `review` verdicts and
   names the real journal for merged-venue records, using the paper's DOI. On by
   default; falls back to offline automatically. → [`resolve/`](src/bealls_list_check/resolve/README.md)
-- **Whitelist / blacklist** — narrow the scope, or add your own predatory venues.
-  → [`user_lists/`](src/bealls_list_check/user_lists/README.md)
+- **Whitelist / blacklist** — narrow the scope, or add your own predatory venues,
+  by name, website or ISSN. The app builds them as editable lists and can look a
+  journal up in the [DOAJ](https://doaj.org) so its exact title and ISSN need not
+  be found by hand. → [`user_lists/`](src/bealls_list_check/user_lists/README.md)
 - **Input data-quality checks** — flag unreliable Semantic Scholar records
   (missing/merged venue, malformed DOI/ISSN, encoding artifacts) on a dedicated
   sheet.
@@ -181,12 +183,17 @@ supplying data. An **Input data quality** panel appears as soon as the papers
 load: an offline check of the metadata *before* anything runs, downloadable as
 `input_data_quality.xlsx`.
 
-**Step 3 · Options.** Nothing here is folded away. One checkbox controls
+**Step 3 · Options.** No setting here is folded away. One checkbox controls
 **Crossref**; clearing it is equivalent to `--crossref off`. Under **Venue
 lists**, a whitelist (*only check these venues*) and a blacklist (*also treat
-these venues as predatory*) sit side by side, pasted as JSON rather than passed
-as file paths, and apply to the Fast and Thorough checks only — Batch CSV
-classifies every record. The Thorough check
+these venues as predatory*) sit side by side and apply to the Fast and Thorough
+checks only — Batch CSV classifies every record. Each is built as a list of rows:
+add a venue by typing a name, a website or an ISSN, or — on the whitelist —
+search the [DOAJ](https://doaj.org) for a journal and add it with its official
+title and ISSN. Every row states which of the three identifiers it carries,
+because that is what decides the run's scope; the same list is editable as JSON,
+in the format the CLI flags read from a file, under **{ } Edit as JSON**.
+The Thorough check
 additionally gets an **LLM provider** picker and a **Model / deployment** picker,
 which decide what answers this run: the provider list is the six supported
 backends, and the model list is the names `.env` gives for whichever is selected,

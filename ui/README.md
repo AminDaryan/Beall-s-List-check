@@ -1,6 +1,7 @@
 # The web app
 
-> Deep-dive companion to [`app.py`](app.py) and [`runners.py`](runners.py). The
+> Deep-dive companion to [`app.py`](app.py), [`runners.py`](runners.py) and
+> [`doaj.py`](doaj.py). The
 > main [README](../README.md) gives the short version and links here.
 > For how a verdict is reached, see [`match/`](../src/bealls_list_check/match/README.md)
 > and [`resolve/`](../src/bealls_list_check/resolve/README.md).
@@ -256,7 +257,7 @@ reload the app and discard the loaded papers.
 |---|---|
 | 1 · Choose a check | the selected check, always green |
 | 2 · Provide the papers | `✅ N paper(s)`, or amber `waiting for papers` |
-| 3 · Options | the options in force, e.g. `Crossref on · whitelist` |
+| 3 · Options | the options in force, e.g. `Crossref on · whitelist (3)` |
 | 4 · Run | green `ready`, or amber `add papers first` |
 
 ### Step 1 · Choose a check
@@ -410,8 +411,77 @@ decides what the run spends money on.
   pair, one narrowing the run and the other widening it, so a row reads them as
   the opposites they are.
 
-Nothing in Step 3 is folded away. A step whose header claims to summarise the
-settings in force cannot do that while some of them are behind a click.
+No *setting* in Step 3 is folded away. A step whose header claims to summarise
+the settings in force cannot do that while some of them are behind a click. The
+whitelist's DOAJ search sits in a fold and is not an exception to that rule: what
+is behind the click is a **finder**, not a setting. Whatever it finds lands in
+the list above it, in the open, where it can be read and removed.
+
+### The venue lists are edited as lists
+
+Each list is a column of rows with a ✕ on each, built by typing or by searching
+DOAJ, with the JSON it serialises to kept underneath in an **Edit as JSON** fold.
+
+It was previously a 90px textarea holding raw JSON, which made the format the
+interface. Every add was text surgery and every removal was careful text
+surgery; past half a dozen entries the box was a wall of braces that no longer
+answered the only question it exists to answer, which is *which venues is this
+run scoped to*. The JSON has not been demoted to a preview — it is still a real
+editor, it still takes a list pasted from a colleague or a previous run, and it
+stays in sync both ways. It is simply no longer the only way in.
+
+Every row states **which identifiers it carries**, because that, and not the
+venue's name, is what decides which papers the run looks at:
+
+| Pill | Meaning |
+|---|---|
+| an ISSN, green | Matches that journal exactly. The signal to prefer. |
+| a host, blue | Matches the host **and its subdomains**. |
+| a host, amber, with ⚠ | The same, but the host looks like a shared publisher platform, so it covers every journal hosted there. |
+| `name` | Matches as a whole-word phrase inside a paper's venue name. |
+
+Three behaviours are worth stating because they are the ones a list editor
+usually gets wrong:
+
+- **Invalid JSON does not empty the list.** The last list that parsed stays in
+  force and the box says so. Silently dropping a run's scope because a comma went
+  missing is the one behaviour this must not have.
+- **Adding the same venue twice is a no-op**, reported as a toast rather than
+  ignored in silence.
+- **Past 15 entries the rows stop being drawn** and the list says how many are
+  not shown. All of them are still in force, and the fold holds the full list.
+
+### Finding a journal in DOAJ
+
+Under the whitelist, **🔍 Find a journal in DOAJ** searches the
+[Directory of Open Access Journals](https://doaj.org) — ~20,000 vetted
+open-access journals — so a journal can be added without looking up its exact
+title or ISSN. Plain text is searched across title, publisher and subject; an
+ISSN is looked up exactly; a field-scoped query (`bibjson.publisher.name:Elsevier`)
+is passed through as typed. The client is [`doaj.py`](doaj.py), which is
+Streamlit-free and returns its failures rather than raising, so they can be
+cached — Streamlit reruns the script on every click, and an uncached search would
+re-query DOAJ each time a checkbox moved three steps away.
+
+**Adding a journal contributes its title and ISSN, not its website.** A domain is
+matched by host, so adding the site of a journal published on a platform
+(`sciencedirect.com`, `nature.com`, a shared OJS install) would put every other
+journal on that platform in scope. A checkbox adds it deliberately, and each
+result marks its host `⚠ shared platform` when it looks like one.
+
+Two things DOAJ is deliberately *not* used for:
+
+- **It has no part in any verdict.** Being indexed in DOAJ means a journal
+  passed DOAJ's editorial screening; the question this tool asks is whether the
+  venue is on Beall's List. The search only helps *name* a venue.
+- **It is offered on the whitelist alone.** Appearing in a directory of vetted
+  journals is no reason to add a venue to a blacklist.
+
+That distinction is why the whitelist's caption spells out that `out_of_scope`
+means **not examined** rather than cleared. DOAJ is the canonical index of
+*legitimate* journals, so putting a DOAJ search next to a box called "whitelist"
+invites reading the box as *venues I trust, so don't flag them* — which is the
+opposite of what it does.
 
 The two lists are labelled by what they do, with the familiar term kept as a
 secondary identifier. "Whitelist" alone is ambiguous in this domain — it reads
@@ -420,13 +490,14 @@ does:
 
 | Box | Effect | CLI |
 |---|---|---|
-| **Only check these venues** *(whitelist)* | Restricts the run. A paper from any venue not listed is reported as `out_of_scope` rather than checked. | `--whitelist` |
+| **Only check these venues** *(whitelist)* | Restricts the run. A paper from any venue not listed is reported as `out_of_scope` — **not examined**, which is not the same as cleared. | `--whitelist` |
 | **Also treat these venues as predatory** *(blacklist)* | Extends the list, for this run only. | `--blacklist` |
 
-Both take the same JSON the CLI flags take as a *file*, pasted directly:
+Both fold open to the same JSON the CLI flags take as a *file*, editable in
+place:
 
 ```json
-[{"name": "IEEE", "domain": "ieee.org"}, "Nature"]
+[{"name": "IEEE", "domain": "ieee.org"}, {"issns": ["2666-2485"]}, "Nature"]
 ```
 
 The format is documented in
@@ -442,10 +513,12 @@ apologise for having neither. The fact is not lost: Step 4's summary reports
 `Whitelist: not used here` with the reason as hover text, which states it as a
 property of the run rather than as a dead end, and costs no click to find.
 
-Because the lists are collapsed, the step's pill names the options actually in
-force — read from `st.session_state` rather than from the widgets, since the
-header is drawn above the expander that holds them, and Streamlit has already
-written the current rerun's values there.
+The step's pill names the options actually in force, each list with the number of
+venues on it (`whitelist (3)`) rather than merely the fact that it is not empty.
+It is read from `st.session_state` rather than from the widgets: the header is
+drawn above the controls it summarises, and Streamlit has already written the
+current rerun's values there. It counts the *list*, not the JSON box's text, so
+the pill and the rows drawn below it cannot disagree.
 
 ### Step 4 · Run
 
