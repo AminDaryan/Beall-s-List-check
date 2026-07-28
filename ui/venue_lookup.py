@@ -5,14 +5,18 @@ Step 3's boxes look venues up in two different places, for two different reasons
   * the **whitelist** searches the DOAJ (``doaj.py``), which lists vetted
     open-access journals — the venues someone narrowing a run to "the journals I
     care about" is naming;
-  * the **blacklist** searches OpenAlex (``openalex.py``), which indexes *every*
-    source it can find, vetted or not — which is the only kind of directory that
-    can help name a venue someone believes is predatory, since such a venue is
-    by definition not in a directory of screened ones.
+  * the **blacklist** searches Crossref (``crossref.py``), the DOI registry,
+    which lists whichever journals their publisher pays to register and screens
+    none of them — which is the only kind of directory that can help name a venue
+    someone believes is predatory, since such a venue is by definition not in a
+    directory of screened ones.
 
 Both hand back the same :class:`Venue`, and both have to answer the same
 question about a website before offering it, so those two things live here
-rather than in whichever module happened to need them first.
+rather than in whichever module happened to need them first.  Only DOAJ's
+records actually carry one — a Crossref journal record has no homepage field —
+so a venue from the blacklist's directory arrives with an empty :attr:`Venue.site`
+and :func:`site_is_shared` simply answers False for it.
 
 Import-safe: no Streamlit, no network.
 """

@@ -29,8 +29,8 @@ import openpyxl
 import streamlit as st
 from dotenv import load_dotenv
 
+import crossref
 import doaj
-import openalex
 import runners
 import venue_lookup
 
@@ -313,18 +313,18 @@ _SHOW_MORE = "__bl_show_more__"
 # DOAJ lists journals that PASSED an editorial screening, which is the right
 # catalogue for naming the venues a run should be narrowed to — and the wrong one
 # for a blacklist, where the venue being named is by definition not in a
-# directory of vetted ones.  OpenAlex indexes every source it can find, screened
-# or not, so it is the only one of the two that can help name a venue nobody
-# vouches for.
+# directory of vetted ones.  Crossref registers a DOI for whoever pays to be a
+# member and screens nobody, so it holds the venues a blacklist is for: paying to
+# register DOIs is part of looking established.
 #
 # The debounce differs because the cost of a keystroke does.  DOAJ is a local
 # index — the whole list is downloaded once — so a lookup is a dictionary scan
-# and there is no reason to wait.  OpenAlex is a metered API, ~100 searches per
-# window (see openalex.py), so its keystrokes are coalesced harder and it does
-# not start until there are three letters to send.
+# and there is no reason to wait.  Crossref is answered over the network in about
+# half a second and rate-limited per second (see crossref.py), so its keystrokes
+# are coalesced and it does not start until there are two letters to send.
 _DIRECTORIES = {
     "doaj": {"name": "DOAJ", "debounce": 120},
-    "openalex": {"name": "OpenAlex", "debounce": 400},
+    "crossref": {"name": "Crossref", "debounce": 300},
 }
 
 # What the last lookup found, as a mapping rather than a positional tuple: it is
@@ -352,18 +352,93 @@ def doaj_index():
     return doaj.build_index(journals), error
 
 
-@st.cache_data(show_spinner=False, ttl=3600)
-def openalex_search(term: str, limit: int):
-    """Memoized :func:`openalex.search` — one request per distinct term per hour.
+def searchbox_styles():
+    """Colours for the search menu, in the theme that is actually on screen.
 
-    Caching is what makes a metered API usable behind a box that searches while
-    a name is typed: Streamlit reruns the whole script on every click anywhere on
-    the page, and the prefixes of a word are re-sent as it is extended and
-    backspaced.  ``openalex.search`` returns its failures rather than raising
-    precisely so they land in this cache too — an exception is not cacheable, so
-    a refused query would otherwise be re-sent forever.
+    The menu is drawn by react-select inside the component's iframe, where this
+    file's stylesheet cannot reach it, so everything it needs has to be passed in
+    as values — and a value has to name one theme.
+
+    **What was wrong, and why a background could not fix it.**  The open menu had
+    no edge: the component already fills its list with Streamlit's *page*
+    background, so a panel the exact colour of the page was being drawn over the
+    note and the venue list with nothing to mark where it started or stopped.
+    Below its last row the page simply carried on — the list box's border resumed
+    mid-panel — so it read as text showing through a transparent dropdown.  What
+    it was missing is not a fill but an **edge and an elevation**: a 1px ring and
+    a real shadow, which is what makes an overlay look like one thing lying on
+    top of another instead of two sets of text sharing a space.
+
+    Two mechanics decide how that is written:
+
+      * The ring is an ``inset`` box-shadow rather than a ``border``.  A border
+        would change the list's box, and the list has to stay exactly the size of
+        the container react-select draws behind it — see the radius note below.
+      * ``borderRadius`` is **4px, matching react-select's own menu**.  The
+        component forwards only the keys it documents and `menu` is not one of
+        them, so that container keeps react-select's white `neutral0`; the list
+        sits in the same box and hides it.  Round the list *more* than 4px and
+        the white reappears at all four corners — measured, and the reason this
+        does not simply use the app's 8px.
+
+    ``st.context.theme.type`` is what makes the palette answerable.  The rest of
+    this app's styling is written not to need it — see the note above ``_TOKENS``
+    — because CSS cannot ask; but here the question is asked in Python, once per
+    render, and it reports the theme *in force* including the user's ⚙ override
+    rather than the one `.streamlit/config.toml` starts from.
+
+    Guarded: on a Streamlit without ``st.context.theme`` the menu is styled for
+    the app's own default base rather than losing its edge again.
     """
-    return openalex.search(term, limit=limit)
+    try:
+        dark = st.context.theme.type == "dark"
+    except Exception:
+        dark = True                      # the app's own default base
+    surface = "#0f172a" if dark else "#ffffff"      # slate-900 / white
+    text = "#f1f5f9" if dark else "#1e293b"         # slate-100 / slate-800
+    hover = "#1e293b" if dark else "#f1f5f9"        # slate-800 / slate-100
+    edge = "#475569" if dark else "#cbd5e1"         # slate-600 / slate-300
+    # Deeper on the dark theme, where a shadow has less to darken.
+    lift = ("0 14px 32px rgba(2,6,23,.72), 0 2px 8px rgba(2,6,23,.55)" if dark else
+            "0 14px 32px rgba(15,23,42,.20), 0 2px 8px rgba(15,23,42,.12)")
+    return {
+        "dropdown": {"width": 0, "height": 0, "fill": "transparent"},
+        "searchbox": {
+            "menuList": {
+                "backgroundColor": surface,
+                "borderRadius": "4px",
+                "boxShadow": f"inset 0 0 0 1px {edge}, {lift}",
+                # 4px keeps the first and last row off the ring; the band is the
+                # list's own background, so nothing shows through it.
+                "padding": "4px 0",
+                "overflow": "auto",
+            },
+            "control": {"backgroundColor": surface},
+            "singleValue": {"color": text},
+            "input": {"color": text},
+            # `color` and `highlightColor` only.  The component computes an
+            # option's background from its state — the row under the cursor gets
+            # the secondary background — and these overrides are spread *over*
+            # that, so naming a backgroundColor here would flatten every row to
+            # one colour and take the hover highlight with it.
+            "option": {"color": text, "highlightColor": hover},
+            "optionEmpty": "hidden",
+        },
+    }
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def crossref_search(term: str, limit: int):
+    """Memoized :func:`crossref.search` — one request per distinct term per hour.
+
+    Caching is what makes a networked directory usable behind a box that searches
+    while a name is typed: Streamlit reruns the whole script on every click
+    anywhere on the page, and the prefixes of a word are re-sent as it is
+    extended and backspaced.  ``crossref.search`` returns its failures rather
+    than raising precisely so they land in this cache too — an exception is not
+    cacheable, so a refused query would otherwise be re-sent forever.
+    """
+    return crossref.search(term, limit=limit)
 
 
 def _venue_key(entry):
@@ -550,11 +625,11 @@ def _lookup(key, term, source):
         venues, total = ((), 0) if error else doaj.search(index, term, limit)
         pending = False
     else:
-        result = openalex_search(term, limit)
+        result = crossref_search(term, limit)
         error, venues, total = result.error, result.venues, result.total
         # Too short to send is not a failure — it is a question not yet worth a
-        # request from a metered budget.  Said plainly rather than as "no match".
-        pending = len(term) < openalex.MIN_TERM
+        # round trip.  Said plainly rather than as "no match".
+        pending = len(term) < crossref.MIN_TERM
 
     if error:
         st.session_state[f"{key}_last"] = {"term": term, "shown": 0, "total": 0,
@@ -672,7 +747,7 @@ def _venue_note(key, source):
         return f"Start typing — {directory['name']} is searched as you go."
     if last.get("pending"):
         return (f"Keep typing — {directory['name']} is searched from "
-                f"{openalex.MIN_TERM} letters, or press Add to use “{term}” as typed.")
+                f"{crossref.MIN_TERM} letters, or press Add to use “{term}” as typed.")
     if not shown:
         return f"No {directory['name']} match for “{term}” — press Add to use it as typed."
     counted = f"{shown} of {total}" if total > shown else f"{shown}"
@@ -724,11 +799,10 @@ def _venue_input(key, source):
                 # The box is a box, not a menu that happens to accept typing.
                 # A chevron promises a list to open, and on an empty box there
                 # is none — the same reason "No options" is hidden rather than
-                # shown under a control nobody has typed into yet.
-                style_overrides={
-                    "dropdown": {"width": 0, "height": 0, "fill": "transparent"},
-                    "searchbox": {"optionEmpty": "hidden"},
-                },
+                # shown under a control nobody has typed into yet. The menu's
+                # own colours come with it, because the stylesheet cannot reach
+                # inside the component's iframe (see searchbox_styles).
+                style_overrides=searchbox_styles(),
                 # Show more is a selection, and a selection normally ends the
                 # search — it would empty the box and close the menu, throwing
                 # away the term whose next page was just asked for.  Both are
@@ -1419,11 +1493,26 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
    lifted out of flow onto the right hand end. `z-index` clears the iframe's own
    10 (set by style_absolute), and the button is only ~64px wide, so the rest of
    the field is still there to click into and type. */
-div[class*="st-key-venuebox-"] {position:relative;}
+div[class*="st-key-venuebox-"] {position:relative; --bl-venuefield:38px;}
 div[class*="st-key-venuebox-"] iframe {width:100% !important;}
-div[class*="st-key-venuebox-"] [data-testid="stElementContainer"]:has(button),
+/* Exactly ONE box in the chain is positioned. Streamlit nests the button inside
+   an element container, and absolutely positioning both stacked their offsets:
+   5px + 5px put a 28px button 10px down a 38px row, which is 5px below centre.
+   The container is placed; everything inside it goes back to being in flow.
+
+   The container is then given the input's own height and told to centre what is
+   in it, rather than being offset by a hand-computed top. A `top` in pixels is
+   only correct while the button is exactly 28px and the field exactly 38px --
+   one font size, one zoom level, one Streamlit version -- and it goes visibly
+   off-centre the moment either changes. Centring in the band is right whatever
+   height the button turns out to be. `--bl-venuefield` is declared above with
+   the container's own `position`, because it is the same fact about the same
+   element: the height react-select gives the field this button sits in. */
+div[class*="st-key-venuebox-"] [data-testid="stElementContainer"]:has(button) {
+    position:absolute; top:0; right:6px; z-index:11; width:max-content;
+    height:var(--bl-venuefield); display:flex; align-items:center;}
 div[class*="st-key-venuebox-"] [data-testid="stButton"] {
-    position:absolute; top:5px; right:6px; z-index:11; width:max-content;}
+    position:static; width:max-content;}
 div[class*="st-key-venuebox-"] button {
     min-height:28px; height:28px; padding:0 12px; width:max-content;
     font-size:.76rem; font-weight:600; border-radius:6px;
@@ -2101,9 +2190,10 @@ def page_check():
                 "Extends the list. These venues count as predatory for this run in "
                 "addition to everything on Beall's List.",
                 "Empty — Beall's List is used as it stands.",
-                # OpenAlex, not DOAJ: a venue worth blacklisting is one no
-                # directory of vetted journals will have. See _DIRECTORIES.
-                source="openalex")
+                # Crossref, not DOAJ: a venue worth blacklisting is one no
+                # directory of vetted journals will have, and the DOI registry
+                # screens nobody. See _DIRECTORIES.
+                source="crossref")
     aux_lists = {"--whitelist": wl, "--blacklist": bl}
     extra_args = None if crossref else ["--crossref", "off"]
 

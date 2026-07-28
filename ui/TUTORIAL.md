@@ -358,10 +358,11 @@ things:
 
 - **Whitelist** — the [Directory of Open Access Journals](https://doaj.org),
   about 23,000 journals that passed its editorial screening.
-- **Blacklist** — [OpenAlex](https://openalex.org), which lists every journal it
-  knows of, screened or not. A venue you want to mark as predatory will not be in
-  a directory of vetted journals, so the blacklist needs the wider one. OpenAlex
-  starts searching once you have typed three letters.
+- **Blacklist** — [Crossref](https://www.crossref.org), the registry publishers
+  pay to register DOIs with. Nobody is screened to be in it, so it lists journals
+  a directory of vetted ones never would — and a venue you want to mark as
+  predatory will not be in a directory of vetted journals. Crossref starts
+  searching once you have typed two letters.
 
 **Choose one and it is added**, with its official title and ISSN, so you do not
 have to look either up. There is no Add button beside each match; choosing is the
@@ -377,17 +378,18 @@ appears as soon as you type something.
 
 The journal's website is *not* added — only its title and ISSN. That is
 deliberate: many journals are published on a shared platform, so adding the
-website of one Elsevier journal would put every Elsevier journal in scope.
-Matches whose address looks like a shared platform are marked with a **⚠**. If
-you do want a publisher's whole site, type its domain into the box instead.
+website of one Elsevier journal would put every Elsevier journal in scope. DOAJ
+matches whose address looks like a shared platform are marked with a **⚠**;
+Crossref does not record an address at all. If you do want a publisher's whole
+site, type its domain into the box instead.
 
 The first time you use the whitelist's search, the app downloads DOAJ's journal
 list once (about 25 MB, a few seconds) and keeps it, so every search after that
 is instant and works without internet. It refreshes itself every couple of weeks.
-The blacklist asks OpenAlex as you type, so it needs a connection.
+The blacklist asks Crossref as you type, so it needs a connection.
 
 > These searches only help you *name* a venue. Whether a journal is in DOAJ or
-> OpenAlex has no effect on any verdict — the check asks whether the venue is on
+> Crossref has no effect on any verdict — the check asks whether the venue is on
 > Beall's List, which is a different question.
 
 ### Editing the list as JSON

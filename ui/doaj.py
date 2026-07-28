@@ -42,7 +42,7 @@ import requests
 from venue_lookup import ISSN_RE, Venue, normalize_issn, site_is_shared  # noqa: F401
 
 # The venue shape and the shared-host test live in venue_lookup, so this module
-# and openalex.py hand back the same thing. Re-exported under the old name
+# and crossref.py hand back the same thing. Re-exported under the old name
 # because a DOAJ record is always a journal.
 Journal = Venue
 

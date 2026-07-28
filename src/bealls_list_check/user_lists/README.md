@@ -95,17 +95,18 @@ Step 3 edits each list as a **list of rows**, built with a single box: type a
 name, a website or an ISSN and press Add. Typing also searches a venue directory as you
 go and offers its venues underneath, so one can be added with its official title
 and ISSN without either being looked up — choosing a match adds it. The whitelist
-searches the [DOAJ](https://doaj.org); the blacklist searches
-[OpenAlex](https://openalex.org), since a venue worth blacklisting is by
-definition not in a directory of vetted journals. If nothing matches, Add takes
-the text as typed. Each
+searches the [DOAJ](https://doaj.org); the blacklist searches the
+[Crossref](https://www.crossref.org) journal registry, since a venue worth
+blacklisting is by definition not in a directory of vetted journals, while
+Crossref screens nobody — a publisher is in it because it pays to register DOIs.
+If nothing matches, Add takes the text as typed. Each
 row states which of the three identifiers it carries, because that is what
 decides the run's scope.
 
-Adding from DOAJ contributes the title and ISSN but **not** the journal's
-website, since a domain is matched by host and many journals share a publisher
-platform. A publisher domain is added deliberately, by typing it into the same
-box.
+Adding from either directory contributes the title and ISSN but **not** the
+journal's website, since a domain is matched by host and many journals share a
+publisher platform. (Crossref's journal records carry no website in any case.) A
+publisher domain is added deliberately, by typing it into the same box.
 
 The JSON is still there, in an **Edit as JSON** fold, in this same format and
 synced both ways, so a list can still be pasted in or copied out. The app writes
@@ -114,6 +115,6 @@ same CLI flags, so behaviour is identical to the command line. See
 [`ui/README.md`](../../../ui/README.md).
 
 > Both directories are used only to *name* a venue. Being listed in either is not
-> part of any verdict: DOAJ membership says a journal passed a screening, and an
-> OpenAlex entry says only that OpenAlex has heard of it. Neither answers the
-> question this tool asks.
+> part of any verdict: DOAJ membership says a journal passed a screening, and a
+> Crossref entry says only that someone paid to register its DOIs. Neither
+> answers the question this tool asks.

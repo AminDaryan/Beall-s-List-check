@@ -468,7 +468,7 @@ reason is the one that makes the two lists opposites:
 | List | Directory | Why that one |
 |---|---|---|
 | **whitelist** | [DOAJ](https://doaj.org) | Lists journals that *passed* an editorial screening — the venues someone narrowing a run is naming. |
-| **blacklist** | [OpenAlex](https://openalex.org) | Indexes every source it can find, screened or not. A venue worth blacklisting is by definition **not** in a directory of vetted ones, so DOAJ cannot help name it. |
+| **blacklist** | [Crossref](https://www.crossref.org) | The DOI registry: a journal is in it because its publisher pays to register DOIs, which screens for nothing. A venue worth blacklisting is by definition **not** in a directory of vetted ones, so DOAJ cannot help name it — while registering DOIs is part of *looking* established, so the venues a blacklist is for are here. |
 
 Both hand back the same [`Venue`](venue_lookup.py), so the box that offers it and
 the entry it becomes never have to know which directory it came from. Choosing a
@@ -503,31 +503,41 @@ with it, then a *word* of the title starting with it, then anywhere in the title
 then the publisher. Shorter titles win ties, so "nature" offers *Nature* before
 *Nature Reviews Methods Primers*. An ISSN is matched exactly instead.
 
-#### OpenAlex: a metered API, so a floor and a longer debounce
+#### Crossref: a live API, so a floor and a longer debounce
 
-OpenAlex has no bulk file small enough to be worth downloading here, so
-[`openalex.py`](openalex.py) queries it live — and it meters requests. Every
-response carries the budget:
+Crossref publishes no bulk journal file small enough to be worth downloading
+here, so [`crossref.py`](crossref.py) queries `/journals` live. It meters by
+**rate** rather than by budget, and every response says so:
 
 ```
-X-RateLimit-Limit: 1000   X-RateLimit-Credits-Used: 10   X-RateLimit-Reset: 26255
+X-Rate-Limit-Limit: 5   X-Rate-Limit-Interval: 1s   X-Concurrency-Limit: 1
 ```
 
-Ten credits a search, a thousand per window — **about a hundred searches per
-~7 hours** without an account. Ample for adding venues to a list, nowhere near
-enough for a request per keystroke, so this side:
+Five requests a second anonymously — doubled to ten, and three concurrent, for a
+caller that identifies itself. That is far more headroom than OpenAlex's ~100
+searches per 7 hours (what this box used to query), but a search still costs a
+~0.55 s round trip and ~3 KB per journal returned, so this side:
 
-- **does not search below three characters.** One or two letters match tens of
-  thousands of sources, so the answer is useless *and* it spends a request. The
-  note says so rather than pretending nothing matched.
-- **debounces at 400 ms** rather than DOAJ's 120, because a keystroke here costs
-  something. Normal typing comes to one or two requests per word.
+- **does not search below two characters.** A single letter is a real query —
+  `w` answers with 342 journals — but not an answer anyone can use, and it costs
+  a round trip. The note says so rather than pretending nothing matched.
+- **debounces at 300 ms** rather than DOAJ's 120, because a keystroke here goes
+  over the network. Normal typing comes to one or two requests per word.
 - **caches every term for an hour**, so extending and backspacing a word replays
   from cache.
-- **reports the budget** (`SearchResult.budget_left`) and says plainly when it is
-  gone, instead of going quiet.
+- **treats a 404 on the ISSN path as an answer**, not a fault: no journal is
+  registered under that ISSN.
 
-Set `OPENALEX_MAILTO` in `.env` to join OpenAlex's polite pool; harmless if unset.
+Set `CROSSREF_MAILTO` in `.env` to join Crossref's polite pool; harmless if
+unset. It is the **same variable** the run's own DOI cross-check reads
+(`src/bealls_list_check/data_quality.py`) — one address, two unrelated uses of
+one service, and no new dependency for this box.
+
+**A Crossref journal record carries no website.** Its fields are the title, the
+ISSNs, the publisher and usage statistics; there is no homepage. So a venue added
+from the blacklist's directory is a name and its ISSNs, never a domain — which is
+the safe direction anyway, and why the ⚠ shared-platform marker below is a DOAJ
+matter. A publisher domain is still added deliberately, by typing it in.
 
 #### The control
 
@@ -536,7 +546,7 @@ list it was given, so it can never look anything up while a word is being typed.
 The box is therefore [`streamlit-searchbox`](https://pypi.org/project/streamlit-searchbox/),
 which calls back into Python per keystroke.
 
-Five things about it are deliberate, and each was wrong before it was fixed:
+Six things about it are deliberate, and each was wrong before it was fixed:
 
 | | Why |
 |---|---|
@@ -545,6 +555,28 @@ Five things about it are deliberate, and each was wrong before it was fixed:
 | **Add** inside the box, at the right-hand end | It acts on the text in the box and nothing else, so it is the box's own button rather than a second control taking a quarter of the width from the thing being typed into. It has to be *overlaid* — the input is inside the component's iframe and no Streamlit widget can be rendered in there — so the container is the positioning context and the button is lifted out of flow onto the right edge, clearing the iframe's `z-index`. Out of flow it has no width to inherit, and Streamlit's label will shrink to one character per line (measured: 8 px wide, 67 px tall, inside a 28 px button), so every level from the button down is pinned to `nowrap` and `max-content`. |
 | Add only once something is typed | On an empty box it offers to do something that cannot work. |
 | `style_absolute=True` | The menu lives *inside* the iframe, so the frame grows to ~350 px to show it. In normal flow that pushed the list and the JSON fold a third of a screen down on every keystroke and left the two columns at different heights; positioned absolutely it overlays instead. |
+| The open menu has an **edge and an elevation** (`searchbox_styles`) | The component already fills its list with Streamlit's *page* background, so the panel was the exact colour of the page with nothing marking where it started or stopped: below its last row the page simply carried on, the venue list box's border resuming mid-panel, which read as text showing through a transparent dropdown. What it was missing is not a fill but a 1 px ring and a real shadow. |
+
+Two mechanics decide how the second of those is written, and neither is a
+preference:
+
+- **The ring is an `inset` box-shadow, not a `border`.** A border would change the
+  list's box, and the list has to stay exactly the size of the container
+  react-select draws behind it.
+- **`borderRadius` is 4 px, matching react-select's own menu**, not the app's 8.
+  The component forwards only the style keys it documents and `menu` is not one
+  of them, so that container keeps react-select's white `neutral0`; the list sits
+  in the same box and hides it. Round the list *more* than 4 px and the white
+  reappears at all four corners — measured.
+
+Two further details of the Add button are structural rather than cosmetic. Its
+container is given the field's own height (`--bl-venuefield: 38px`) and centres
+what is in it, instead of being offset by a hand-computed `top`: a pixel offset
+is correct only while the button is exactly 28 px and the field exactly 38, and
+goes visibly off-centre the moment a font size, a zoom level or a Streamlit
+version changes either. And exactly **one** box in the chain is positioned —
+absolutely positioning both the element container and `stButton` stacked their
+offsets, putting the button 5 px below centre.
 
 #### Show more, rather than a silent top-eight
 
@@ -555,7 +587,7 @@ twenty and re-runs the search; the term stays, and nothing is added.
 That row exists because both searches report a **total**, not just the slice. A
 menu showing eight of a hundred and thirty-eight, silently, claims to be the
 answer when it is a sample. DOAJ's scan is uncapped so its total is exact;
-OpenAlex reports `meta.count`.
+Crossref reports `message.total-results`.
 
 Two component defaults have to be turned off for it: `clear_on_submit` and
 `edit_after_submit`. Show more *is* a selection, so both would fire — emptying
@@ -572,14 +604,14 @@ that forces a remount, and a remount would clear the term.
 **Adding a venue contributes its title and ISSN, not its website.** A domain is
 matched by host, so adding the site of a journal published on a platform
 (`sciencedirect.com`, `nature.com`, a shared OJS install) would put every other
-journal on that platform in scope; matches whose host looks like a platform are
-marked with a warning sign. A publisher domain is added deliberately, by typing
-it into the same box.
+journal on that platform in scope; DOAJ matches whose host looks like a platform
+are marked with a warning sign. A publisher domain is added deliberately, by
+typing it into the same box.
 
 Neither directory takes any part in a verdict. Being listed in DOAJ means a
-journal passed its screening; being in OpenAlex means only that OpenAlex has
-heard of it. The question this tool asks is whether the venue is on Beall's List,
-which neither answers. The search only helps *name* a venue.
+journal passed its screening; being in Crossref means only that someone paid to
+register its DOIs. The question this tool asks is whether the venue is on Beall's
+List, which neither answers. The search only helps *name* a venue.
 
 That distinction is why the whitelist's caption spells out that `out_of_scope`
 means **not examined** rather than cleared. DOAJ is the canonical index of

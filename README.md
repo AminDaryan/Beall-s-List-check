@@ -190,8 +190,9 @@ these venues as predatory*) sit side by side and apply to the Fast and Thorough
 checks only — Batch CSV classifies every record. Each is built as a list of rows from a single box: type a name, a website or an
 ISSN and press Add. Typing also searches a venue directory as you go and offers its journals
 underneath, so one can be added with its official title and ISSN: the whitelist
-searches the [DOAJ](https://doaj.org), the blacklist [OpenAlex](https://openalex.org),
-because a venue worth blacklisting is not in a directory of vetted journals. If
+searches the [DOAJ](https://doaj.org), the blacklist the
+[Crossref](https://www.crossref.org) journal registry, because a venue worth
+blacklisting is not in a directory of vetted journals. If
 nothing matches, Add takes the text as typed. Every row states which of the three identifiers it carries,
 because that is what decides the run's scope; the same list is editable as JSON,
 in the format the CLI flags read from a file, under **{ } Edit as JSON**.
