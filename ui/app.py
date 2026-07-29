@@ -69,6 +69,24 @@ def notify(msg, icon=None):
         pass
 
 
+def notify_next_run(msg, icon=None):
+    """Queue a popup for the render that is about to start, not this one.
+
+    ``_add_pick`` reruns the moment it has added a venue — it has to, because the
+    box only empties when the component is remounted — and everything this run
+    had drawn, a toast included, is abandoned with it.  Queued here and emitted
+    by :func:`flush_notices` at the top of the next render instead, so "Added X"
+    survives the rerun that makes it true.
+    """
+    st.session_state.setdefault("_notices", []).append((msg, icon))
+
+
+def flush_notices():
+    """Show anything :func:`notify_next_run` left for this render."""
+    for msg, icon in st.session_state.pop("_notices", []):
+        notify(msg, icon)
+
+
 _S2_EXAMPLE = json.dumps(
     [{"title": "Example paper", "venue": "Journal of X", "year": 2023,
       "externalIds": {"DOI": "10.1234/x"},
@@ -648,14 +666,20 @@ def _sync_venue_json(key):
 
 
 def _add_venue(key, entry):
-    """Append one entry unless an identical one is already there."""
+    """Append one entry unless an identical one is already there.
+
+    Both messages are queued rather than shown, because one of the two callers
+    (:func:`_add_pick`) reruns immediately afterwards and would take a toast down
+    with it.  The other caller loses nothing by it: a queued notice appears on
+    the render that follows a callback, which is the same moment.
+    """
     venues = st.session_state.setdefault(f"{key}_venues", [])
     if any(_venue_key(v) == _venue_key(entry) for v in venues):
-        notify(f"{_venue_name(entry)} is already on the list.", icon="•")
+        notify_next_run(f"{_venue_name(entry)} is already on the list.", icon="•")
         return
     venues.append(entry)
     _sync_venue_json(key)
-    notify(f"Added {_venue_name(entry)}.", icon="✅")
+    notify_next_run(f"Added {_venue_name(entry)}.", icon="✅")
 
 
 def _remove_venue(key, index):
@@ -828,6 +852,41 @@ def _reset_box(key):
         pass
 
 
+def _remount_box(key):
+    """Rebuild the React side while keeping everything Python knows about it.
+
+    Changing ``key_react`` is what remounts the component; unlike
+    :func:`_reset_box` this keeps the term and the options, because the one case
+    that needs it — turning a page of results — must throw away neither.
+
+    Why a page turn needs it at all: the React side holds the option the user
+    chose, and re-sends it on the next render.  ``_refresh_options`` has just
+    made that option's *index* mean something else — the row that said "Show 20
+    more" is now the ninth of twenty-nine venues — so the re-send resolves to a
+    venue nobody picked and adds it.  Measured: turning one page of a "journal
+    of" search put *Journal of Fungi* on the list.  Remounting drops the pending
+    selection, which is the only way to stop the re-send; ``result`` is cleared
+    with it so a later, deliberate pick of the same venue still registers.
+
+    The term survives because it is handed back to the component as
+    ``default_searchterm`` on every render — see :func:`_venue_input`.
+
+    **What it costs.**  A remount is the only lever there is: the value a
+    component last sent is replayed from Streamlit's widget state on every
+    render, and only a new widget id — which is what ``key_react`` is — retires
+    it.  A remounted react-select has no focus, so the menu comes back *closed*:
+    after Show more the note reads "28 of 4521" and the longer list is one click
+    on the box away.  The alternative was to leave the menu open and suppress the
+    replay by pretending the venue at that index had already been chosen, which
+    would have made that one venue silently unpickable until the user picked
+    something else — an extra click is better than a control that ignores you.
+    """
+    box = st.session_state.get(f"{key}_box")
+    if isinstance(box, dict):
+        box["result"] = None
+        box["key_react"] = f"{key}_box_react_{time.time()}"
+
+
 def _refresh_options(key, source):
     """Re-run the current search and hand the result straight to the component.
 
@@ -867,12 +926,34 @@ def _add_pick(key, chosen, source):
         message, nothing in the log: "I click a match and nothing appears".
 
     So the test is what the value can do, and the failure says so out loud.
+
+    **And it reruns before it returns.**  This is a ``submit_function``, which the
+    component calls *while the page is being drawn* — the box above it has already
+    been rendered by the time this is reached.  So everything written here lands
+    in session state one render too late:
+
+      * ``_reset_box`` changes the key that remounts the React side, which is the
+        only thing that empties the box.  Without a rerun the box keeps the term,
+        and empties later, in the middle of whatever the user typed next — the
+        "randomly empties the input", and the remount arriving late is the shift
+        up and down that comes with it.
+      * The state it leaves behind is inconsistent in a way the *next* click
+        trips over: ``_reset_box`` writes no ``options_py``, and the component
+        falls back to handing on the raw option index when that key is missing.
+        An integer has no ``to_entry``, so the click after an add was dropped —
+        "it doesn't add, then next time it does".
+
+    Rerunning here settles all of it at the moment of the click: the component
+    remounts empty, and the options it holds and the options recorded for it are
+    written in the same pass.  The searchbox does the same thing for its own
+    ``clear_on_submit``, from this same place.
     """
     if chosen == _SHOW_MORE:
         st.session_state[f"{key}_limit"] = (
             (st.session_state.get(f"{key}_limit") or _LOOKUP_LIMIT) + _LOOKUP_MORE)
         _refresh_options(key, source)
-        return                          # a page turn, not a venue
+        _remount_box(key)               # or the stale index re-resolves — see there
+        st.rerun()                      # a page turn, not a venue
     entry = None
     if hasattr(chosen, "to_entry"):
         try:
@@ -889,8 +970,9 @@ def _add_pick(key, chosen, source):
         # Nothing usable came back. Whatever the cause, the one thing this must
         # not do is what it used to: swallow the click and leave the list looking
         # as though the user had not chosen anything.
-        notify("That match could not be read. Type the venue and press Add instead.",
-               icon="⚠️")
+        notify_next_run("That match could not be read. Type the venue and press "
+                        "Add instead.", icon="⚠️")
+    st.rerun()
 
 
 def _add_typed_venue(key):
@@ -980,6 +1062,13 @@ def _venue_input(key, source):
                 key=f"{key}_box",
                 placeholder="Name, website or ISSN",
                 label=None,
+                # What the box comes back holding whenever the React side is
+                # remounted. It is the term the component itself last recorded,
+                # so a remount that is meant to keep the search keeps it
+                # (_remount_box, after a page turn) and one that is meant to
+                # clear it clears it (_reset_box, after a venue is added, which
+                # sets this to ""). Without it every remount emptied the box.
+                default_searchterm=(st.session_state.get(f"{key}_box") or {}).get("search") or "",
                 # The menu lives *inside* the component's iframe, so the frame
                 # has to grow to ~350px to show it — and in normal flow that
                 # pushes the list and the JSON fold a third of a screen down
@@ -2192,6 +2281,8 @@ def page_check():
                "venues? Add your papers as JSON, run, and download the Excel report. "
                "Step-by-step instructions are on the **Tutorial** page.")
     st.markdown(_PAGE_CSS, unsafe_allow_html=True)
+    # Anything the previous render queued on its way out — see notify_next_run.
+    flush_notices()
 
     if st.session_state.get("checker_id") not in runners.CHECKERS_BY_ID:
         st.session_state["checker_id"] = runners.CHECKERS[0].id

@@ -723,8 +723,41 @@ difference between turning a page and choosing a venue.
 `search_function` only fires on a keystroke, so after a Show more the component
 would still be holding its previous options. `_refresh_options` writes the longer
 list straight into the component's `options_js` / `options_py` state, which it
-re-reads on every render. Its `key_react` is deliberately left alone — changing
-that forces a remount, and a remount would clear the term.
+re-reads on every render.
+
+#### Why choosing a match has to rerun
+
+`submit_function` is called **while the page is being drawn** — the box above it
+has already been rendered by the time the handler runs. Everything the handler
+writes therefore lands one render too late, and that one fact caused three
+separate complaints:
+
+| Symptom | Cause |
+|---|---|
+| "it doesn't add, then next time it does" | `_reset_box` writes no `options_py`, and the component falls back to handing on the **raw option index** when that key is missing. An integer has no `to_entry`, so the click after an add was dropped. |
+| "randomly empties the input" | `_reset_box` changes the key that remounts the React side, which is the only thing that empties the box. With no rerun the box kept the term and emptied later, in the middle of whatever was typed next. |
+| "the input shifts down and up" | that late remount, arriving during the next interaction rather than at the click. |
+
+So the handler reruns as soon as it has acted. The component does exactly this
+for its own `clear_on_submit`, from the same place. Confirmations are queued with
+`notify_next_run` and emitted by `flush_notices` at the top of the next render,
+because a toast raised in the run being abandoned goes with it.
+
+The rerun exposed one more thing, latent until then. Streamlit **replays a
+component's last value on every render**, so after a page turn the component
+re-sends the option index the user clicked — and `_refresh_options` has just made
+that index mean something else, the row that said *Show 20 more* now being the
+ninth of twenty-nine venues. Measured: turning one page of a `journal of` search
+put *Journal of Fungi* on the list unasked. A remount (`_remount_box`) is the
+only lever, because only a new widget id retires the stored value; the term
+survives it by being handed back as `default_searchterm`.
+
+> A remounted react-select has no focus, so **after Show more the menu comes back
+> closed** — the note reads `28 of 4521` and the longer list is one click on the
+> box away. The alternative was to leave it open and suppress the replay by
+> pretending the venue at that index had already been chosen, which makes that one
+> venue silently unpickable until the user picks something else. An extra click
+> beats a control that ignores you.
 
 **Adding a venue contributes its title and ISSN, not its website.** A domain is
 matched by host, so adding the site of a journal published on a platform
