@@ -848,18 +848,49 @@ def _refresh_options(key, source):
 
 
 def _add_pick(key, chosen, source):
-    """A venue box's ``submit_function`` — something in the menu was chosen."""
+    """A venue box's ``submit_function`` — something in the menu was chosen.
+
+    What arrives is whatever ``search_function`` put in the option's slot, and it
+    is accepted on the strength of **what it can do** rather than which class it
+    is.  ``isinstance(chosen, venue_lookup.Venue)`` was the obvious test and was
+    wrong twice over:
+
+      * It can be False for a value that really is a venue.  ``doaj_index`` is a
+        ``cache_resource``, so the journals in it are built once and live for the
+        process; reload ``venue_lookup`` — which Streamlit does when a local
+        module it imported changes — and the class object is replaced while those
+        instances still answer to the previous one.  The whitelist is the list
+        exposed to this, because the blacklist's matches come through
+        ``cache_data``, which rebuilds its values against whatever class is
+        current.
+      * When it was False, this function simply **returned**.  No row, no
+        message, nothing in the log: "I click a match and nothing appears".
+
+    So the test is what the value can do, and the failure says so out loud.
+    """
     if chosen == _SHOW_MORE:
         st.session_state[f"{key}_limit"] = (
             (st.session_state.get(f"{key}_limit") or _LOOKUP_LIMIT) + _LOOKUP_MORE)
         _refresh_options(key, source)
         return                          # a page turn, not a venue
-    if isinstance(chosen, venue_lookup.Venue):
-        _add_venue(key, chosen.to_entry())
+    entry = None
+    if hasattr(chosen, "to_entry"):
+        try:
+            entry = chosen.to_entry()
+        except Exception:
+            entry = None
+    if entry:
+        _add_venue(key, entry)
         _reset_box(key)
         # The box is emptied, so the line under it has to stop reporting the
         # search that filled it — otherwise an empty box sits under "8 of 214".
         st.session_state[f"{key}_last"] = _LOOKUP_IDLE
+    else:
+        # Nothing usable came back. Whatever the cause, the one thing this must
+        # not do is what it used to: swallow the click and leave the list looking
+        # as though the user had not chosen anything.
+        notify("That match could not be read. Type the venue and press Add instead.",
+               icon="⚠️")
 
 
 def _add_typed_venue(key):
