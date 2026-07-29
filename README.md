@@ -193,7 +193,7 @@ underneath, so one can be added with its official title and ISSN: the whitelist
 searches the [DOAJ](https://doaj.org), the blacklist the
 [Crossref](https://www.crossref.org) journal registry, because a venue worth
 blacklisting is not in a directory of vetted journals. If
-nothing matches, Add takes the text as typed. Every row states which of the three identifiers it carries,
+nothing matches, Add takes the text as typed. Every row reads **matches on · ISSN 1234-5678 · venue name** — naming each identifier it carries and its value,
 because that is what decides the run's scope; the same list is editable as JSON,
 in the format the CLI flags read from a file, under **{ } Edit as JSON**.
 The Thorough check

@@ -100,8 +100,9 @@ searches the [DOAJ](https://doaj.org); the blacklist searches the
 blacklisting is by definition not in a directory of vetted journals, while
 Crossref screens nobody — a publisher is in it because it pays to register DOIs.
 If nothing matches, Add takes the text as typed. Each
-row states which of the three identifiers it carries, because that is what
-decides the run's scope.
+row reads `matches on · ISSN 1234-5678 · venue name`, naming each identifier it
+carries and its value, because that is what decides the run's scope. Hovering a
+pill says what that signal will match and how widely.
 
 Adding from either directory contributes the title and ISSN but **not** the
 journal's website, since a domain is matched by host and many journals share a

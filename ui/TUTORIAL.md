@@ -347,6 +347,26 @@ venue instead.
 
 Added venues appear in the box underneath. Remove one with the **✕** beside it.
 
+Each row says **what the check will look for**, not just what the venue is
+called:
+
+> **IEEE Open Journal of Systems Engineering**
+> MATCHES ON · `ISSN 2771-9987` · `venue name`
+
+That row will match a paper whose ISSN is exactly `2771-9987`, and also any paper
+whose venue name contains that title as a whole phrase. Hover a label to read
+what it matches and how widely. The labels are worth a glance, because they
+differ in how much they cover:
+
+| Label | Matches | How wide |
+|---|---|---|
+| `ISSN 1234-5678` | papers with exactly that ISSN | one journal, and nothing else |
+| `site example.com` | papers whose venue is on that host, or any host under it | every journal on that site |
+| `venue name` | papers whose venue name contains this name as a whole word | depends on the name — a short or common one catches journals you did not mean |
+
+A **⚠** on a site label means the address looks like a shared publisher platform,
+so it covers every journal hosted there rather than just this one.
+
 ### Finding a venue in a directory
 
 If you know the venue but not its ISSN, just start typing its name. Matches

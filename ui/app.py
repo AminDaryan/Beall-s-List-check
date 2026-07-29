@@ -745,28 +745,44 @@ def _venue_json_edited(key):
 def _sig_chips(entry, shown=""):
     """The pills saying what an entry will be matched on, strongest first.
 
+    Each pill names **the kind of identifier and its value**, and the run of them
+    is introduced by a label.  Both were missing and both were needed: a bare
+    ``2771-9987`` is not obviously an ISSN, and a pill reading only ``name`` says
+    nothing whatever on its own.  Read with the label in front — *matches on ·
+    ISSN 2771-9987 · name* — each pill finishes the sentence it started, which is
+    the whole of what these are for: this row is not a description of a journal,
+    it is a statement of what the run will look for.
+
     *shown* is the row's display name.  An entry carrying nothing but an ISSN is
-    displayed *as* that ISSN, and repeating it in the pill beside itself read as
-    two identifiers where there is one — so that pill says the word instead.
+    displayed *as* that ISSN, and repeating the number in the pill beside itself
+    read as two identifiers where there is one — so that pill says the word only.
     """
     chips = []
     for issn in entry.get("issns") or []:
-        chips.append(f"<span class='bl-sig bl-sig-issn' title='Matches this journal's "
-                     f"ISSN exactly — the most precise signal there is.'>"
-                     f"{'ISSN' if issn == shown else issn}</span>")
+        chips.append(
+            f"<span class='bl-sig bl-sig-issn' title='The journal&#39;s ISSN. A paper "
+            f"is matched when its own ISSN is exactly this — the surest of the three, "
+            f"because an ISSN belongs to one journal and nothing else.'>"
+            f"{'ISSN' if issn == shown else f'ISSN {html.escape(issn)}'}</span>")
     if entry.get("domain"):
         shared = venue_lookup.site_is_shared(f"https://{entry['domain']}")
-        why = ("Matches this host and its subdomains. This looks like a shared "
-               "publisher platform, so it covers every journal hosted there."
+        why = ("The venue's website. A paper is matched when its venue sits on this "
+               "host or any host under it — and this one looks like a shared publisher "
+               "platform, so it covers every journal hosted there, not just this one."
                if shared else
-               "Matches this host and any of its subdomains.")
+               "The venue's website. A paper is matched when its venue sits on this "
+               "host or any host under it.")
         chips.append(f"<span class='bl-sig bl-sig-site{' bl-sig-wide' if shared else ''}' "
                      f"title='{html.escape(why, quote=True)}'>"
-                     f"{'⚠ ' if shared else ''}{html.escape(entry['domain'])}</span>")
+                     f"{'⚠ ' if shared else ''}site {html.escape(entry['domain'])}</span>")
     if entry.get("name"):
-        chips.append("<span class='bl-sig' title='Matches as a whole-word phrase inside a "
-                     "paper&#39;s venue name.'>name</span>")
-    return "".join(chips)
+        chips.append("<span class='bl-sig' title='The venue&#39;s name. A paper is matched "
+                     "when this name appears as a whole word inside the paper&#39;s own "
+                     "venue name — so a short or common name can also match journals you "
+                     "did not mean.'>venue name</span>")
+    if not chips:
+        return ""
+    return "<span class='bl-vl-on'>matches on</span>" + "".join(chips)
 
 
 def _venue_row_html(entry):
@@ -1848,6 +1864,13 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
 .bl-vl-name {font-size:.9rem; font-weight:600; color:var(--bl-fg);
              overflow-wrap:anywhere;}
 .bl-vl-meta {flex-basis:100%; font-size:.74rem; color:var(--bl-fg-faint);}
+/* What introduces the pills, and what makes them legible: a pill reading "name"
+   says nothing by itself, and reads as a statement of intent after this. Not a
+   pill itself — it is the label on the row, so it carries no fill and no border
+   and does not compete with the identifiers it introduces. */
+.bl-vl-on {font-size:.7rem; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:var(--bl-fg-faint);
+           white-space:nowrap; margin-right:.05rem;}
 .bl-sig {display:inline-block; padding:1px 7px; border-radius:6px;
          font-size:.72rem; font-weight:600; line-height:1.5;
          font-variant-numeric:tabular-nums; white-space:nowrap;
