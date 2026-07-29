@@ -641,18 +641,51 @@ Five mechanics decide how that is written, and none is a preference:
   eight matches. The cost is a part-empty panel for one or two matches; the
   alternative is a sliced row, and a stable edge is worth more.
 
-The height is summed from the bands between the two, in `rem` where the band is
-set in `rem`, so it still lands on the same edge if the reader's font size is not
-16 px:
+The height is summed from the bands between the two:
 
 | | |
 |---|---|
-| `3rem` | the two empty blocks `style_absolute` leaves to reserve the frame's space |
-| `1rem` | Streamlit's gap between elements |
-| `2.5rem` | the note band (`.bl-vl-note`) |
+| 48 px | the two empty blocks `style_absolute` leaves to reserve the frame's space |
+| 16 px | Streamlit's gap between elements |
+| 40 px | the note band (`.bl-vl-note`) |
 | `_VENUE_BOX_HEIGHT` | the list box itself |
 | less `_MENU_OFFSET` | the 38 px field and the menu's own 8 px top margin |
 | less `_MENU_GAP` | the gap below the panel |
+
+**In pixels, and it has to be.** The height is applied *inside* the component's
+iframe, whose document has its own root font size — Bootstrap's 16 px, which the
+page's does not change. So `rem` there does not mean what `rem` means in the
+bands it is matched against: written as `calc(6.5rem + …)` it stayed at 294 px
+while a page at a 20 px root font grew its bands to 320 px, and the overlay fell
+26 px short.
+
+> **Known limit.** Two of the three bands are set in `rem` by Streamlit itself
+> (the reserved band, and the gap between elements) and are not ours to pin —
+> rules that set them are matched but lose to Streamlit's own, measured. So a
+> reader whose browser default font size is not 16 px gets an overlay a little
+> short of the list box (16 px at a 20 px root) or a little past it (12 px at
+> 13 px). Short is the one that shows. At the default, which is what almost every
+> reader has, it lands exactly.
+
+##### The overlay has to win the stacking contest
+
+`style_absolute` gives the iframe `z-index: 10`, and for a long time that looked
+sufficient — Chromium hit-tests the iframe on top and nothing appears wrong. It
+is not sufficient, because **a `z-index` only competes inside its own stacking
+context**, and Streamlit wraps every element in a layout wrapper of its own.
+Where that traps it, the note and the venue list's own text paint straight over
+an open dropdown — reported and photographed, with
+`8 of 31 DOAJ match(es) — choose one…` printed across the first match.
+
+So the box **and** the wrapper Streamlit puts it in are both lifted to
+`z-index: 30`. They are siblings of the note and the list within one block, so
+lifting this subtree puts it above them whatever any wrapper does. Verified by
+giving every layout wrapper and element container a competing `z-index` — the
+overlay still wins with the lift, and reproduces the reported artifact exactly
+without it.
+
+The `:has()` rule degrades safely: a browser without it drops that selector and
+keeps the container's own lift.
 
 Naming an option's `backgroundColor` **flattens its hover**: the overrides are
 spread over a value the component computes from the row's state, so the row under

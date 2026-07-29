@@ -368,11 +368,26 @@ _MENU_OFFSET = 46
 #   2.5rem               the note band (`.bl-vl-note`)
 #   _VENUE_BOX_HEIGHT    the list box itself
 #
-# less what sits above the panel and the gap below it.  In `rem` where the band
-# is set in `rem`, so the sum still lands on the same edge if the reader's font
-# size is not 16px.  Content taller than this scrolls, which is what the box did
-# anyway past eight matches.
-_MENU_HEIGHT = f"calc(6.5rem + {_VENUE_BOX_HEIGHT - _MENU_OFFSET - _MENU_GAP}px)"
+# less what sits above the panel and the gap below it.
+#
+# **In pixels, and it has to be.**  This value is applied inside the component's
+# iframe, whose document has its own root font size — Bootstrap's 16px, which the
+# page's does not change.  So `rem` here does not mean what `rem` means in the
+# bands it is being matched against: written as `calc(6.5rem + …)` it stayed at
+# 294px while a page at a 20px root font grew its bands to 320px, and the overlay
+# fell 26px short.
+#
+# **Known limit.**  Two of the three bands above are still set in `rem` by
+# Streamlit itself (the reserved band and the gap between elements), and they are
+# not ours to pin — rules that set them are matched but lose to Streamlit's own,
+# measured.  So a reader whose browser default font size is not 16px gets an
+# overlay that is a little short of the list box (16px at a 20px root) or a little
+# past it (12px at 13px root).  Short is the one that shows, as a sliver of the
+# row underneath; at the default, which is what almost every reader has, it lands
+# exactly.  Fixing it properly means owning those two bands, which is a larger
+# change to how the column is laid out than this note is worth.
+_OVERLAY_REACH = 3 * 16 + 16 + 40 + _VENUE_BOX_HEIGHT   # container, gap, note, list
+_MENU_HEIGHT = f"{_OVERLAY_REACH - _MENU_OFFSET - _MENU_GAP}px"
 
 
 @st.cache_resource(show_spinner=False)
@@ -1638,7 +1653,24 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
    lifted out of flow onto the right hand end. `z-index` clears the iframe's own
    10 (set by style_absolute), and the button is only ~64px wide, so the rest of
    the field is still there to click into and type. */
-div[class*="st-key-venuebox-"] {position:relative; --bl-venuefield:38px;}
+/* The open menu is an overlay, and it has to win against everything that comes
+   after it in the column: the note, the list box, the JSON fold. `style_absolute`
+   gives the iframe `z-index: 10`, which is enough *within one stacking context* —
+   but Streamlit wraps every element in a layout wrapper of its own, and a z-index
+   only competes inside the context it is in. Where that traps it, the note and
+   the list's own text paint straight over an open dropdown; reported and
+   photographed against a browser that sorts them that way, while Chromium hit-
+   tests the iframe on top and shows nothing wrong. Lifting the box *and* the
+   wrapper Streamlit puts it in takes the whole subtree — iframe and Add button
+   with it — above its siblings whatever any of them do, because they are
+   siblings in one block and this one is now the higher of the two.
+
+   The `:has()` rule degrades safely: a browser without it drops that selector
+   and keeps the container's own lift. */
+div[data-testid="stLayoutWrapper"]:has(> div[class*="st-key-venuebox-"]),
+div[class*="stLayoutWrapper"]:has(> div[class*="st-key-venuebox-"]) {
+    position:relative; z-index:30;}
+div[class*="st-key-venuebox-"] {position:relative; z-index:30; --bl-venuefield:38px;}
 div[class*="st-key-venuebox-"] iframe {width:100% !important;}
 /* Exactly ONE box in the chain is positioned. Streamlit nests the button inside
    an element container, and absolutely positioning both stacked their offsets:
@@ -1682,7 +1714,13 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
    Fixed at two lines' worth and clipped, so the longest message DOAJ can return
    — a network error — occupies exactly what the shortest does, and the list
    below never moves.  The full text is on the control's own tooltip. */
-.bl-vl-note {min-height:2.5rem; max-height:2.5rem; overflow:hidden;
+/* 40px rather than 2.5rem, and the same for the two bands around it: the open
+   dropdown has to end exactly on the venue list's bottom edge, and its height is
+   set *inside* the component's iframe, where `rem` is the iframe's own root font
+   size and not the page's. A page at a 20px root font grew these bands by 26px
+   while the overlay stayed put, and the overlay fell 26px short — measured. Held
+   to pixels on both sides, they cannot drift apart. */
+.bl-vl-note {min-height:40px; max-height:40px; overflow:hidden;
              font-size:.78rem; line-height:1.25rem; color:var(--bl-fg-faint);
              padding-top:.3rem;}
 .bl-vl-row {display:flex; align-items:center; gap:.4rem; flex-wrap:wrap;
