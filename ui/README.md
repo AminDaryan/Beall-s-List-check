@@ -546,7 +546,7 @@ list it was given, so it can never look anything up while a word is being typed.
 The box is therefore [`streamlit-searchbox`](https://pypi.org/project/streamlit-searchbox/),
 which calls back into Python per keystroke.
 
-Seven things about it are deliberate, and each was wrong before it was fixed:
+Eight things about it are deliberate, and each was wrong before it was fixed:
 
 | | Why |
 |---|---|
@@ -557,6 +557,36 @@ Seven things about it are deliberate, and each was wrong before it was fixed:
 | `style_absolute=True` | The menu lives *inside* the iframe, so the frame grows to ~350 px to show it. In normal flow that pushed the list and the JSON fold a third of a screen down on every keystroke and left the two columns at different heights; positioned absolutely it overlays instead. |
 | A **box that looks like a box** (`searchbox_styles`) | The component leaves an unfocused control with `1px transparent`, which on this page is a field with no edge at all — placeholder text floating where a control should be. It is given the fill and border Streamlit gives its own inputs. Its `&:hover` has to be replaced too, or hovering puts the transparent border back. |
 | The open menu is a **raised plane**, not a bordered region (`searchbox_styles`) | See below — this is the one that took three attempts. |
+| An empty box **opens nothing** (`wrapper: {overflow: hidden}`) | See below. |
+
+##### An empty box must not open an empty menu
+
+The component decides for itself whether the menu is open:
+
+```js
+menuIsOpen: this.props.args.options && this.state.menu
+```
+
+`state.menu` is true from the moment the box has focus, so the whole guard is
+`args.options` — an **empty JavaScript array, which is truthy**. Clicking an
+untouched box therefore opened a menu holding nothing. Invisible for as long as
+the menu was drawn in the page's own colour; a raised plane turned it into a
+small empty panel appearing under an empty field.
+
+Nothing can be done from the options side. Making them falsy does close the menu,
+but `openMenu` maps over them *outside* that guard, so a falsy value throws —
+measured, `Cannot read properties of null (reading 'map')` on the first click. No
+JavaScript value is both falsy and mappable.
+
+So the menu is left to open and is **clipped away instead**: `overflow: hidden`
+on the component's own wrapper, which is an ancestor of the box the menu is
+positioned against, and only for as long as there is nothing to show. A clipped
+menu also adds no scrollable overflow, so the frame stays exactly the height of
+the field (measured: 38 px with nothing to list, 366 px with eight matches).
+
+That clip is why the focus ring is drawn `inset`. An outset ring would be clipped
+along with the menu, and the field would lose its focus state exactly when it is
+empty — which is when it is most likely to be focused.
 
 ##### Why the dropdown read as transparent
 

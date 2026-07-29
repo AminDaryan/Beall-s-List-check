@@ -362,8 +362,12 @@ def doaj_index():
     return doaj.build_index(journals), error
 
 
-def searchbox_styles():
+def searchbox_styles(*, has_matches=True):
     """Colours for the search menu, in the theme that is actually on screen.
+
+    *has_matches* says whether the component is holding anything to list.  When
+    it is not, the whole component is clipped to the field so that no menu can
+    show below it — see **An empty box must not open an empty menu** below.
 
     The menu is drawn by react-select inside the component's iframe, where this
     file's stylesheet cannot reach it, so everything it needs has to be passed in
@@ -410,6 +414,29 @@ def searchbox_styles():
         has to name one, so the hover is given back as a nested ``:hover`` — the
         styles reach react-select through emotion, which honours it.
 
+    **An empty box must not open an empty menu.**  The component decides that for
+    itself, with ``menuIsOpen: this.props.args.options && this.state.menu`` — and
+    ``state.menu`` is true from the moment the box has focus, so the whole guard
+    is ``args.options``, which is an **empty JavaScript array**, which is
+    **truthy**.  Clicking an untouched box therefore opened a menu holding
+    nothing.  That was invisible while the menu was the page's own colour; a
+    raised plane turned it into a small empty panel appearing under an empty
+    field.
+
+    Nothing can be done from the options side: making them falsy would close the
+    menu, but ``openMenu`` maps over them *outside* that guard, so a falsy value
+    throws (measured — ``Cannot read properties of null (reading 'map')`` on the
+    first click).  No JavaScript value is both falsy and mappable.  So the menu
+    is left to open and is **clipped away instead**: ``overflow: hidden`` on the
+    component's own wrapper, which is an ancestor of the box the menu is
+    positioned against, and only for as long as there is nothing to show.  It
+    also keeps the frame at the height of the field, since a clipped menu adds
+    no scrollable overflow for Streamlit to size the iframe to.
+
+    That clip is why the focus ring is drawn ``inset``.  An outset ring would be
+    clipped along with the menu, and the field would lose its focus state exactly
+    when it is empty — which is when it is most likely to be focused.
+
     ``st.context.theme.type`` is what makes the palette answerable.  The rest of
     this app's styling is written not to need it — see the note above ``_TOKENS``
     — because CSS cannot ask; but here the question is asked in Python, once per
@@ -442,6 +469,10 @@ def searchbox_styles():
             "0 12px 30px rgba(15,23,42,.18), 0 2px 6px rgba(15,23,42,.10)")
     return {
         "dropdown": {"width": 0, "height": 0, "fill": "transparent"},
+        # The clip, applied to the component's outermost element. Only while
+        # there is nothing to list — with matches it has to be off, or the menu
+        # it is there to suppress would be suppressed too.
+        "wrapper": {} if has_matches else {"overflow": "hidden"},
         "searchbox": {
             "menuList": {
                 "backgroundColor": raised,
@@ -477,8 +508,10 @@ def searchbox_styles():
                 "border": f"1px solid {edge}",
                 "boxShadow": "none",
                 "&:hover": {"border": f"1px solid {edge}"},
+                # Inset, because the wrapper above may be clipping. See the
+                # docstring: an outset ring would be cut off on an empty box.
                 ":focus-within": {"border": f"1px solid {accent}",
-                                  "boxShadow": f"0 0 0 3px rgba(59,130,246,.25)"},
+                                  "boxShadow": f"inset 0 0 0 2px rgba(59,130,246,.45)"},
             },
             "singleValue": {"color": text},
             "input": {"color": text},
@@ -819,6 +852,16 @@ def _venue_note(key, source):
             f"use “{term}” as typed.")
 
 
+def _has_matches(key):
+    """Whether the component is currently holding anything to put in a menu.
+
+    Read from the component's own option state, in the same render that styles
+    the component, so the two cannot disagree.  Absent on the first render, which
+    is exactly the untouched box — and the right answer for it.
+    """
+    return bool((st.session_state.get(f"{key}_box") or {}).get("options_js"))
+
+
 def _venue_input(key, source):
     """The one control each list is built with: type a venue, or pick a match.
 
@@ -866,7 +909,7 @@ def _venue_input(key, source):
                 # shown under a control nobody has typed into yet. The menu's
                 # own colours come with it, because the stylesheet cannot reach
                 # inside the component's iframe (see searchbox_styles).
-                style_overrides=searchbox_styles(),
+                style_overrides=searchbox_styles(has_matches=_has_matches(key)),
                 # Show more is a selection, and a selection normally ends the
                 # search — it would empty the box and close the menu, throwing
                 # away the term whose next page was just asked for.  Both are
