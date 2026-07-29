@@ -332,6 +332,16 @@ _DIRECTORIES = {
 # already broke the reader from a site that had not been updated with it.
 _LOOKUP_IDLE = {"term": "", "shown": 0, "total": 0, "error": "", "pending": False}
 
+# How far the open menu stands clear of whatever is under it.  The gap is a
+# margin *below the list*, which grows the container the list sits in — and that
+# container is white (see searchbox_styles), so the extra band is white unless
+# something is painted over it.  What paints over it is a copy of the list's own
+# shape, in the page's colour, offset down by exactly this much: it lands on the
+# band and nowhere else.  A spread would have been simpler and was wrong — it
+# reaches *upwards* too, and 26px of it covered the bottom of the field.
+# In pixels, because it is given to react-select as a CSS value.
+_MENU_GAP = 20
+
 
 @st.cache_resource(show_spinner=False)
 def doaj_index():
@@ -359,17 +369,31 @@ def searchbox_styles():
     file's stylesheet cannot reach it, so everything it needs has to be passed in
     as values — and a value has to name one theme.
 
-    **What was wrong, and why a background could not fix it.**  The open menu had
-    no edge: the component already fills its list with Streamlit's *page*
-    background, so a panel the exact colour of the page was being drawn over the
-    note and the venue list with nothing to mark where it started or stopped.
-    Below its last row the page simply carried on — the list box's border resumed
-    mid-panel — so it read as text showing through a transparent dropdown.  What
-    it was missing is not a fill but an **edge and an elevation**: a 1px ring and
-    a real shadow, which is what makes an overlay look like one thing lying on
-    top of another instead of two sets of text sharing a space.
+    **What was wrong, and why neither a background nor a hairline fixed it.**  The
+    component fills its menu with Streamlit's *page* background, so the open
+    dropdown was drawn in the exact colour of the page it was covering.  It sizes
+    itself to its contents, so a two-line match covers the note and the top of the
+    venue list and stops: the list box's border resumes immediately underneath and
+    its rows carry on in the same colour, at the same width, in the same kind of
+    row.  The two panels merge into one, and the list's entries read as more
+    matches — "the text behind the dropdown, showing on the dropdown".  A 1px ring
+    was not enough, because the list box below has a 1px border too.
 
-    Two mechanics decide how that is written:
+    What separates an overlay from what it covers is **elevation**, and elevation
+    is not the same thing in the two themes:
+
+      * **Dark** — a shadow has almost nothing to darken against slate-900, so the
+        lift has to be a *lighter surface*: the menu and the field sit on
+        slate-800, one step above the page, the way every dark UI marks a raised
+        plane.  That is what makes the dropdown a different object from the page,
+        rather than a bordered region of it.
+      * **Light** — white on white needs the opposite: the surface stays white and
+        the depth comes from a real shadow, which does show on a light page.
+
+    Both also get a ring a shade stronger than the venue list's border, so where
+    the two panels do meet the edge belongs to the one in front.
+
+    Three mechanics decide how that is written:
 
       * The ring is an ``inset`` box-shadow rather than a ``border``.  A border
         would change the list's box, and the list has to stay exactly the size of
@@ -380,6 +404,11 @@ def searchbox_styles():
         sits in the same box and hides it.  Round the list *more* than 4px and
         the white reappears at all four corners — measured, and the reason this
         does not simply use the app's 8px.
+      * Naming an option's ``backgroundColor`` **flattens its hover**: these
+        overrides are spread over a value the component computes from the row's
+        state, so the row under the cursor stops changing colour.  A raised menu
+        has to name one, so the hover is given back as a nested ``:hover`` — the
+        styles reach react-select through emotion, which honours it.
 
     ``st.context.theme.type`` is what makes the palette answerable.  The rest of
     this app's styling is written not to need it — see the note above ``_TOKENS``
@@ -388,40 +417,75 @@ def searchbox_styles():
     rather than the one `.streamlit/config.toml` starts from.
 
     Guarded: on a Streamlit without ``st.context.theme`` the menu is styled for
-    the app's own default base rather than losing its edge again.
+    the app's own default base rather than losing its elevation again.
     """
     try:
         dark = st.context.theme.type == "dark"
     except Exception:
         dark = True                      # the app's own default base
-    surface = "#0f172a" if dark else "#ffffff"      # slate-900 / white
+    # Named by the job each colour does, not by where it happens to be used: the
+    # point of the fix is that `page` and `raised` are *different*.
+    raised = "#1e293b" if dark else "#ffffff"       # the open menu — one plane up
+    field = "#1e293b" if dark else "#f1f5f9"        # the box, as Streamlit fills its own
+    rowhover = "#334155" if dark else "#f1f5f9"     # slate-700 / slate-100
     text = "#f1f5f9" if dark else "#1e293b"         # slate-100 / slate-800
-    hover = "#1e293b" if dark else "#f1f5f9"        # slate-800 / slate-100
     edge = "#475569" if dark else "#cbd5e1"         # slate-600 / slate-300
-    # Deeper on the dark theme, where a shadow has less to darken.
-    lift = ("0 14px 32px rgba(2,6,23,.72), 0 2px 8px rgba(2,6,23,.55)" if dark else
-            "0 14px 32px rgba(15,23,42,.20), 0 2px 8px rgba(15,23,42,.12)")
+    page = "#0f172a" if dark else "#ffffff"         # what the overlay is lying on
+    accent = "#3b82f6"                              # blue-500, as everywhere else
+    # What the typed letters are marked with inside a match. The app's blue at low
+    # opacity rather than a grey block: it says "this is the bit you typed" in the
+    # colour the page already uses for "this one", and it works on either surface.
+    mark = "rgba(59,130,246,.32)" if dark else "rgba(59,130,246,.20)"
+    # Depth for the light theme, where it reads; on dark it is only a settling
+    # shadow under a surface that is already doing the lifting.
+    lift = ("0 10px 26px rgba(2,6,23,.55)" if dark else
+            "0 12px 30px rgba(15,23,42,.18), 0 2px 6px rgba(15,23,42,.10)")
     return {
         "dropdown": {"width": 0, "height": 0, "fill": "transparent"},
         "searchbox": {
             "menuList": {
-                "backgroundColor": surface,
+                "backgroundColor": raised,
                 "borderRadius": "4px",
-                "boxShadow": f"inset 0 0 0 1px {edge}, {lift}",
+                # Three shadows, and the order is the point — the first is painted
+                # on top.  The ring, then the lift, then the hard copy of the
+                # panel in the page's colour that hides the white band and gives
+                # the lift something to fall on.  See _MENU_GAP.
+                "boxShadow": (f"inset 0 0 0 1px {edge}, {lift}, "
+                              f"0 {_MENU_GAP}px 0 1px {page}"),
                 # 4px keeps the first and last row off the ring; the band is the
                 # list's own background, so nothing shows through it.
                 "padding": "4px 0",
                 "overflow": "auto",
+                # The one line that lets the shadow exist at all.  Streamlit sizes
+                # the component's iframe to `document.body.scrollHeight`, which
+                # ended at the menu's bottom edge — so a drop shadow, which paints
+                # *outside* that edge, was clipped away entirely, and the panel met
+                # the venue list box with nothing in between.  This margin is
+                # counted rather than collapsed away, because a scrolling list is
+                # its own formatting context (measured: scrollHeight 118 → 142), so
+                # the frame grows past the panel and there is somewhere for the
+                # shadow and the gap to be.
+                "marginBottom": f"{_MENU_GAP}px",
             },
-            "control": {"backgroundColor": surface},
+            # A box that looks like a box. The component leaves an unfocused
+            # control with `1px transparent`, which on this page is a field with
+            # no edge at all — placeholder text floating where a control should
+            # be. Its own `&:hover` has to be replaced too, or hovering puts the
+            # transparent border back.
+            "control": {
+                "backgroundColor": field,
+                "border": f"1px solid {edge}",
+                "boxShadow": "none",
+                "&:hover": {"border": f"1px solid {edge}"},
+                ":focus-within": {"border": f"1px solid {accent}",
+                                  "boxShadow": f"0 0 0 3px rgba(59,130,246,.25)"},
+            },
             "singleValue": {"color": text},
             "input": {"color": text},
-            # `color` and `highlightColor` only.  The component computes an
-            # option's background from its state — the row under the cursor gets
-            # the secondary background — and these overrides are spread *over*
-            # that, so naming a backgroundColor here would flatten every row to
-            # one colour and take the hover highlight with it.
-            "option": {"color": text, "highlightColor": hover},
+            "option": {"backgroundColor": raised, "color": text,
+                       "highlightColor": mark,
+                       ":hover": {"backgroundColor": rowhover},
+                       ":active": {"backgroundColor": rowhover}},
             "optionEmpty": "hidden",
         },
     }

@@ -546,7 +546,7 @@ list it was given, so it can never look anything up while a word is being typed.
 The box is therefore [`streamlit-searchbox`](https://pypi.org/project/streamlit-searchbox/),
 which calls back into Python per keystroke.
 
-Six things about it are deliberate, and each was wrong before it was fixed:
+Seven things about it are deliberate, and each was wrong before it was fixed:
 
 | | Why |
 |---|---|
@@ -555,10 +555,28 @@ Six things about it are deliberate, and each was wrong before it was fixed:
 | **Add** inside the box, at the right-hand end | It acts on the text in the box and nothing else, so it is the box's own button rather than a second control taking a quarter of the width from the thing being typed into. It has to be *overlaid* — the input is inside the component's iframe and no Streamlit widget can be rendered in there — so the container is the positioning context and the button is lifted out of flow onto the right edge, clearing the iframe's `z-index`. Out of flow it has no width to inherit, and Streamlit's label will shrink to one character per line (measured: 8 px wide, 67 px tall, inside a 28 px button), so every level from the button down is pinned to `nowrap` and `max-content`. |
 | Add only once something is typed | On an empty box it offers to do something that cannot work. |
 | `style_absolute=True` | The menu lives *inside* the iframe, so the frame grows to ~350 px to show it. In normal flow that pushed the list and the JSON fold a third of a screen down on every keystroke and left the two columns at different heights; positioned absolutely it overlays instead. |
-| The open menu has an **edge and an elevation** (`searchbox_styles`) | The component already fills its list with Streamlit's *page* background, so the panel was the exact colour of the page with nothing marking where it started or stopped: below its last row the page simply carried on, the venue list box's border resuming mid-panel, which read as text showing through a transparent dropdown. What it was missing is not a fill but a 1 px ring and a real shadow. |
+| A **box that looks like a box** (`searchbox_styles`) | The component leaves an unfocused control with `1px transparent`, which on this page is a field with no edge at all — placeholder text floating where a control should be. It is given the fill and border Streamlit gives its own inputs. Its `&:hover` has to be replaced too, or hovering puts the transparent border back. |
+| The open menu is a **raised plane**, not a bordered region (`searchbox_styles`) | See below — this is the one that took three attempts. |
 
-Two mechanics decide how the second of those is written, and neither is a
-preference:
+##### Why the dropdown read as transparent
+
+The component fills its menu with Streamlit's *page* background, so the open
+dropdown was drawn in the exact colour of the page it was covering. It sizes
+itself to its contents, so a two-line match covers the note and the top of the
+venue list and stops — and the list box's border resumes immediately underneath,
+its rows carrying on in the same colour, at the same width, in the same kind of
+row. The two panels merge into one and the list's entries read as more matches.
+
+A 1 px ring did not fix it, because the venue list box has a 1 px border too.
+What separates an overlay from what it covers is **elevation**, and elevation is
+not the same thing in the two themes:
+
+- **Dark** — a shadow has almost nothing to darken against slate-900, so the lift
+  is a *lighter surface*: menu and field on slate-800, one step above the page.
+- **Light** — white on white needs the opposite: the surface stays white and the
+  depth comes from a shadow, which does show on a light page.
+
+Four mechanics decide how that is written, and none is a preference:
 
 - **The ring is an `inset` box-shadow, not a `border`.** A border would change the
   list's box, and the list has to stay exactly the size of the container
@@ -568,6 +586,25 @@ preference:
   of them, so that container keeps react-select's white `neutral0`; the list sits
   in the same box and hides it. Round the list *more* than 4 px and the white
   reappears at all four corners — measured.
+- **The list carries a bottom margin (`_MENU_GAP`), or there is no shadow at
+  all.** Streamlit sizes the iframe to `document.body.scrollHeight`, which ended
+  at the menu's bottom edge — so a drop shadow, which paints *outside* that edge,
+  was clipped away entirely and the panel met the list box with nothing in
+  between. The margin is counted rather than collapsed away, because a scrolling
+  list is its own formatting context (measured: `scrollHeight` 118 → 142).
+- **That margin grows the white container, so it is masked.** The extra band
+  belongs to `menu`, which is white. It is covered by a third box-shadow: a copy
+  of the list's own shape, in the page's colour, offset down by exactly
+  `_MENU_GAP` so it lands on the band and nowhere else. A `spread` would have
+  been simpler and was wrong — it reaches *upwards* too, and 26 px of it painted
+  over the bottom of the field.
+
+Naming an option's `backgroundColor` **flattens its hover**: the overrides are
+spread over a value the component computes from the row's state, so the row under
+the cursor stops changing colour. A raised menu has to name one, so the hover is
+given back as a nested `:hover` — the styles reach react-select through emotion,
+which honours it (verified in the generated rule:
+`.css-…-option:hover { background-color: rgb(51,65,85) }`).
 
 Two further details of the Add button are structural rather than cosmetic. Its
 container is given the field's own height (`--bl-venuefield: 38px`) and centres
