@@ -342,6 +342,38 @@ _LOOKUP_IDLE = {"term": "", "shown": 0, "total": 0, "error": "", "pending": Fals
 # In pixels, because it is given to react-select as a CSS value.
 _MENU_GAP = 20
 
+# What is above the open menu inside the component: react-select's 38px control
+# and the 8px margin it puts between the control and the menu.
+_MENU_OFFSET = 46
+
+# The height of the open menu — **fixed**, rather than following the number of
+# matches, and that is the whole point of it.
+#
+# The menu is an opaque overlay, and what it overlays is the venue list: a box of
+# rows, each with a ✕ button.  Sized to its contents, its bottom edge lands
+# wherever the match count happens to put it — and when that is *inside* a row,
+# the part of the row below the edge stays on screen.  Measured: a two-line DOAJ
+# match ended the overlay at y=479 while the first row's ✕ ran from 462 to 493,
+# leaving the bottom 14px of a button sitting under the panel looking like part
+# of it.  That is what "the text behind the dropdown appears on it" is.
+#
+# An edge that always lands in the same place cannot land inside a row, so the
+# menu is given the exact height that puts it on the list box's bottom edge.  The
+# bands between the two are named as they are laid out rather than as one number,
+# so a change to any of them can be followed here:
+#
+#   3rem                 the two empty blocks `style_absolute` leaves behind to
+#                        reserve the frame's space in the flow
+#   1rem                 Streamlit's gap between elements
+#   2.5rem               the note band (`.bl-vl-note`)
+#   _VENUE_BOX_HEIGHT    the list box itself
+#
+# less what sits above the panel and the gap below it.  In `rem` where the band
+# is set in `rem`, so the sum still lands on the same edge if the reader's font
+# size is not 16px.  Content taller than this scrolls, which is what the box did
+# anyway past eight matches.
+_MENU_HEIGHT = f"calc(6.5rem + {_VENUE_BOX_HEIGHT - _MENU_OFFSET - _MENU_GAP}px)"
+
 
 @st.cache_resource(show_spinner=False)
 def doaj_index():
@@ -477,6 +509,12 @@ def searchbox_styles(*, has_matches=True):
             "menuList": {
                 "backgroundColor": raised,
                 "borderRadius": "4px",
+                # Fixed, not `max`: react-select's own 300px cap would still let
+                # the panel be shorter than that, and a panel whose height
+                # follows the match count puts its bottom edge inside a row of
+                # the list underneath. See _MENU_HEIGHT.
+                "height": _MENU_HEIGHT,
+                "maxHeight": _MENU_HEIGHT,
                 # Three shadows, and the order is the point — the first is painted
                 # on top.  The ring, then the lift, then the hard copy of the
                 # panel in the page's colour that hides the white band and gives

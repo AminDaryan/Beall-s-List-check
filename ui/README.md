@@ -606,7 +606,7 @@ not the same thing in the two themes:
 - **Light** — white on white needs the opposite: the surface stays white and the
   depth comes from a shadow, which does show on a light page.
 
-Four mechanics decide how that is written, and none is a preference:
+Five mechanics decide how that is written, and none is a preference:
 
 - **The ring is an `inset` box-shadow, not a `border`.** A border would change the
   list's box, and the list has to stay exactly the size of the container
@@ -628,6 +628,31 @@ Four mechanics decide how that is written, and none is a preference:
   `_MENU_GAP` so it lands on the band and nowhere else. A `spread` would have
   been simpler and was wrong — it reaches *upwards* too, and 26 px of it painted
   over the bottom of the field.
+- **The menu's height is fixed (`_MENU_HEIGHT`), not sized to the match count.**
+  This is the one that finally settled it. An opaque overlay sized to its
+  contents ends wherever the number of matches puts it — and when that is
+  *inside* a row of the list underneath, the part of the row below the edge stays
+  on screen. Measured: a two-line DOAJ match ended the overlay at y=479 while the
+  first row's ✕ ran from 462 to 493, leaving the bottom 14 px of a button sitting
+  under the panel, looking like part of it. An edge that always lands in the same
+  place cannot land inside a row, so the menu is given the exact height that puts
+  it on the list box's bottom edge (measured: 294 px below the top of the search
+  box, hit exactly). Content taller than that scrolls, which it did anyway past
+  eight matches. The cost is a part-empty panel for one or two matches; the
+  alternative is a sliced row, and a stable edge is worth more.
+
+The height is summed from the bands between the two, in `rem` where the band is
+set in `rem`, so it still lands on the same edge if the reader's font size is not
+16 px:
+
+| | |
+|---|---|
+| `3rem` | the two empty blocks `style_absolute` leaves to reserve the frame's space |
+| `1rem` | Streamlit's gap between elements |
+| `2.5rem` | the note band (`.bl-vl-note`) |
+| `_VENUE_BOX_HEIGHT` | the list box itself |
+| less `_MENU_OFFSET` | the 38 px field and the menu's own 8 px top margin |
+| less `_MENU_GAP` | the gap below the panel |
 
 Naming an option's `backgroundColor` **flattens its hover**: the overrides are
 spread over a value the component computes from the row's state, so the row under
