@@ -25,6 +25,20 @@ from typing import NamedTuple
 import streamlit as st
 from dotenv import load_dotenv
 
+import sys
+from pathlib import Path
+
+# Flat imports across ui/'s feature folders — `import styles`, not
+# `from ui.styles import styles`.  ui/ is not a package (Streamlit runs app.py as
+# a script), so every folder is put on the path first.  Repeated per module
+# rather than shared, so each still imports when it is the thing being run: from
+# a shell, or by anything that never touched app.py.  Same shim the check
+# engine's own foldered modules use — see src/bealls_list_check/*/.
+_UI = Path(__file__).resolve().parent
+for _p in [_UI, *(d for d in _UI.iterdir() if d.is_dir() and any(d.glob("*.py")))]:
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
+
 import notices
 import results
 import runners

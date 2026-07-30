@@ -151,7 +151,7 @@ flow summarised below; **Tutorial** is a guided path through a first verified ru
 against the bundled example corpus, whose expected result is published — the
 fastest way to learn the app and to confirm that the installation works. Each
 step of the flow carries an **ⓘ** into the matching section of it. It renders
-[`ui/TUTORIAL.md`](ui/TUTORIAL.md), which is equally readable here on GitHub.
+[`ui/TUTORIAL.md`](ui/tutorial/TUTORIAL.md), which is equally readable here on GitHub.
 
 ![The web app, with papers loaded and the input data-quality panel open](ui/static/ui-main.png)
 

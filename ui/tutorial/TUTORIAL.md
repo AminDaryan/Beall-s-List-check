@@ -7,7 +7,7 @@
 > Your own papers come after that. Every step says what should appear on screen,
 > so a run can be checked instead of assumed.
 >
-> Every control is described in [ui/README.md](README.md). The project as a whole
+> Every control is described in [ui/README.md](../README.md). The project as a whole
 > is described in the main [README](../README.md).
 
 ## What this tool checks
@@ -86,7 +86,7 @@ The project includes eight example papers whose correct result is written down i
 advance, so a new installation can be tested without any real data. Together they
 produce every verdict except `out_of_scope`.
 
-![The app after startup, with the example papers loaded](static/ui-main.png)
+![The app after startup, with the example papers loaded](../static/ui-main.png)
 
 The sidebar holds two things: the links to the three pages (**Run a check**,
 **Tutorial** and **Settings**) and one line on what the app does. Everything about the LLM is in
@@ -152,11 +152,11 @@ on 2026-06-10; a newer copy may give a different answer for some venues.
 With Crossref on, the totals are 3 `on_list`, 1 `review`, 2 `clean` and 2
 `no_venue`. Those numbers are the installation test: if they match, the whole
 process works from end to end, Crossref included. Each paper is explained in full
-in [examples/README.md](../examples/README.md).
+in [examples/README.md](../../examples/README.md).
 
 ## 2 · Understanding the report
 
-![A finished run, with the workbook preview](static/ui-report.png)
+![A finished run, with the workbook preview](../static/ui-report.png)
 
 The preview on screen shows the **first 40 rows of the first sheet**. The
 workbook itself has five sheets, and the download button gives you the whole
@@ -285,7 +285,7 @@ browser. For a small trial run, use the command line:
 
 ## 5 · Batch CSV, for scripts and servers
 
-![Batch CSV mode, with colour-coded statuses](static/ui-batch.png)
+![Batch CSV mode, with colour-coded statuses](../static/ui-batch.png)
 
 The third check returns three columns: `SS-ID`, `DOI` and `Status`. There is
 **one row per supplied record, in the order supplied, and nothing is merged**.
@@ -452,7 +452,7 @@ follows.
 
 A plain text entry is matched by name. An object can carry a `name`, a `domain`,
 `issns`, or any combination. The format is described in full in
-[user_lists/README.md](../src/bealls_list_check/user_lists/README.md).
+[user_lists/README.md](../../src/bealls_list_check/user_lists/README.md).
 
 ## 7 · Common problems
 
@@ -472,12 +472,12 @@ A plain text entry is matched by name. An object can carry a `name`, a `domain`,
 
 ## Where to go next
 
-- [ui/README.md](README.md) — the reference: every control, both downloads, and
+- [ui/README.md](../README.md) — the reference: every control, both downloads, and
   the table of differences between the app and the command line.
 - [README.md](../README.md) — the project: the verdicts, the workbook, the list
   copy, and the limits to keep in mind when using the results.
-- [examples/README.md](../examples/README.md) — the example papers, and the rule
+- [examples/README.md](../../examples/README.md) — the example papers, and the rule
   each one demonstrates.
-- [match/README.md](../src/bealls_list_check/match/README.md) and
-  [resolve/README.md](../src/bealls_list_check/resolve/README.md) — how a verdict
+- [match/README.md](../../src/bealls_list_check/match/README.md) and
+  [resolve/README.md](../../src/bealls_list_check/resolve/README.md) — how a verdict
   is actually reached.
