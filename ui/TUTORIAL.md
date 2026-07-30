@@ -419,19 +419,22 @@ than finished with nothing to show.
 
 ### Working without internet — the Settings page
 
-Both directories publish their whole journal list as one file, and the
-**Settings** page can download them so the searches happen on your own machine:
-instant, and working with no internet at all.
+The **Settings** page has one switch per directory. On means its journal list is
+held on your machine and searched there: instant, and working with no internet.
 
 | | DOAJ (whitelist) | Crossref (blacklist) |
 |---|---|---|
-| Download | about 25 MB | about 51 MB |
+| Download, once | about 25 MB | about 51 MB |
+| Kept on disk | about 4 MB | about 18 MB |
 | Takes | a few seconds | about 20 seconds |
-| Without it | downloaded automatically the first time you use the box — it has no other way to search | the blacklist asks Crossref over the internet instead, about half a second per search |
+| Switched off | the whitelist cannot search — type venues and press Add | the blacklist asks Crossref over the internet, about half a second a search |
 
-Crossref is **never** downloaded unless you ask for it on that page. That is
-deliberate: a first run should not cost 51 MB, and the live search works well.
-Download it if you search venues often, or if the machine has no internet.
+**Nothing is downloaded until you switch it on.** Hover the ⓘ beside a switch for
+what that directory contains and what it costs.
+
+One difference worth knowing when building a list: DOAJ records a website for
+every journal, and Crossref records none at all. So a venue added from the
+blacklist's directory matches on its name and ISSN, never on a domain.
 
 Nothing on that page changes any verdict. Both directories only help you *name* a
 venue.

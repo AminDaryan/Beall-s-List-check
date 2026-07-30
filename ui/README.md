@@ -506,52 +506,70 @@ then the publisher. Shorter titles win ties, so "nature" offers *Nature* before
 
 ### Settings · offline venue directories
 
-Both directories publish their whole journal list as one file, so both *can* be
-held on this machine — after which a search is a scan of a list in memory:
-instant, and working with no internet. The Settings page is where that is chosen,
-and the reason it is a choice rather than a default is that the default has to
-stay cheap. Measured:
+Two switches, one per directory: on means the journal list is held on this
+machine and searched here, off means it is not. There is no separate Remove and
+no separate Refresh - off removes it, and a copy older than a fortnight is
+replaced on its own. Everything else is on the info icon beside each switch,
+because a settings page is read when something needs deciding and the decision is
+the switch.
+
+**Nothing is downloaded until it is switched on**, including DOAJ. That is a
+change: DOAJ used to be fetched the first time anyone typed into the whitelist
+box, which made a first run cost 25 MB it never mentioned. `doaj_index()` and
+`crossref_index()` both read the disk cache and never fetch; with DOAJ off, the
+whitelist box says where the switch is rather than reporting "no match" for a
+directory it never consulted.
 
 | | DOAJ | Crossref |
 |---|---|---|
 | Searched by | whitelist | blacklist |
-| Journals | 23,117 | 167,307 |
+| Journals | 23,118 | 167,307 |
 | Download | ~25 MB CSV | ~51 MB CSV |
-| Fetch + reduce | a few seconds | **18–21 s** |
-| On disk, reduced | 3.6 MB | 17.6 MB |
-| One search | 2–34 ms | **14–23 ms** (261 ms worst case, a single letter) |
-| Without it | the whitelist cannot search at all | the blacklist asks the live API: ~550 ms a search, needs a connection |
+| Fetch + reduce | a few seconds | **18-21 s** |
+| Kept on disk | 3.6 MB | 17.6 MB |
+| One search | 2-34 ms | **14-23 ms** |
+| Off | the whitelist cannot search at all | the live API: ~550 ms a search, needs a connection |
 
-**Why the file and not the API.** `/journals` refuses `select` (a 400 — measured),
+Two numbers, and both are true: the **download** is the directory's full CSV, the
+**kept** figure is what is left after reducing it to the five fields a venue entry
+uses. Only the kept figure is on the page; the download cost is in the tooltip,
+next to the sentence that explains the difference.
+
+**Is either enough to build a list with?** An entry matches on ISSN, domain or
+name, so what matters is coverage of those. Measured over the whole of both:
+
+| | name | ISSN | publisher | website |
+|---|---|---|---|---|
+| DOAJ | 100% | 100% | 100% | 100% |
+| Crossref | 100% | **82.1%** | 99.9% | **0%** |
+
+So DOAJ can produce any of the three identifiers, and Crossref produces name and
+ISSN but never a domain - Crossref records no websites at all. The status line on
+the Settings page says exactly this, because it decides what a list built from
+each can key on.
+
+**Why the file and not the API.** `/journals` refuses `select` (a 400 - measured),
 so it returns every field it holds, statistics included: 169 pages of ~3.7 MB is
 about **630 MB and five and a half minutes** for the same data the title file
 gives in one 50 MB request. That difference is the whole reason an offline
 Crossref is practical.
 
-DOAJ is downloaded automatically the first time the whitelist box is used, because
-it has no other way to search; the page's button just does it deliberately instead
-of mid-typing. Crossref is **never** fetched implicitly — `crossref_index()` reads
-the disk cache and, finding none, would start a 51 MB download from inside a
-keystroke. That is a thing to offer, not to do.
-
 With a local Crossref copy the box also drops its two-character floor and its
 300 ms debounce down to DOAJ's 120 ms, because both existed to save a request and
-there is no request. `directory_of()` decides that per render, so downloading or
-removing the copy changes the box on the next interaction. The switch is visible
-in the totals: `IEE` answers `8 of 432` from the local copy and `8 of 415` from
-the live API — two genuinely different code paths over two snapshots of one
+there is no request. `directory_of()` decides that per render. The switch is
+visible in the totals: `IEE` answers `8 of 432` from the local copy and `8 of 415`
+from the live API - two genuinely different code paths over two snapshots of one
 registry.
 
-The parts that do not depend on *which* directory it is — the cache on disk, the
-pre-lowered index, the ranking — live in [`venue_lookup.py`](venue_lookup.py), so
+The parts that do not depend on *which* directory it is - the cache on disk, the
+pre-lowered index, the ranking - live in [`venue_lookup.py`](venue_lookup.py), so
 [`doaj.py`](doaj.py) and [`crossref.py`](crossref.py) hold only what differs:
 where the file is and how to read a row of it.
 
-> One measured speedup worth keeping: the ranking scan now rejects a row with a
+> One measured speedup worth keeping: the ranking scan rejects a row with a
 > single `in` test on the pre-lowered haystack before it runs any regex. Every
-> rank implies the term is somewhere in that haystack, so it changes no result —
-> and it took a Crossref search from **250 ms to 14 ms**, because the word-boundary
-> search now runs only on the few hundred rows that already matched.
+> rank implies the term is somewhere in that haystack, so it changes no result -
+> and it took a Crossref search from **250 ms to 14 ms**.
 
 #### Crossref: a live API, so a floor and a longer debounce
 

@@ -101,6 +101,12 @@ def status():
     return cache_status(CACHE_FILE)
 
 
+def have_local():
+    """Whether a local copy exists. Read from the file's own stat, so it is cheap
+    enough to ask on every render."""
+    return bool(cache_status(CACHE_FILE)["present"])
+
+
 def delete():
     """Remove the local copy. Returns True if a file was actually removed."""
     try:

@@ -204,13 +204,13 @@ backends, and the model list is the names `.env` gives for whichever is selected
 plus *Other* for a name typed in. Neither switching provider nor switching model
 means editing `.env` and restarting.
 
-**Settings.** One optional page: whether the two venue directories are held on
-this machine. Both publish their whole journal list as one file, so both can be
-downloaded once and searched locally — instant, and working with no internet. It
-is a choice rather than a default because the default has to stay cheap: DOAJ is
-~25 MB and Crossref ~51 MB, and nobody should pay that to run a check once.
-Without a local Crossref copy the blacklist simply asks its live API instead.
-Neither directory takes any part in any verdict.
+**Settings.** Two switches, one per venue directory: on means its journal list is
+held on this machine and Step 3 searches it there — instantly, with no internet.
+**Nothing is downloaded until it is switched on**, so a first run costs nothing it
+was not asked for (DOAJ is ~25 MB and keeps 3.6 MB; Crossref is ~51 MB and keeps
+17.6 MB). With Crossref off the blacklist asks its live API instead; with DOAJ off
+the whitelist cannot search and says so. Neither directory takes any part in any
+verdict.
 
 **Step 4 · Run.** A labelled summary restates what is about to run — the check,
 how many papers, Crossref, the two lists, and what comes back — and the button

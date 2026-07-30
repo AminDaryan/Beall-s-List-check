@@ -450,15 +450,16 @@ _MENU_HEIGHT = f"{_OVERLAY_REACH - _MENU_OFFSET - _MENU_GAP}px"
 
 @st.cache_resource(show_spinner=False)
 def doaj_index():
-    """DOAJ's whole journal list, fetched once and kept for the life of the process.
+    """DOAJ's whole journal list, read from the local copy and kept for the process.
 
     ``cache_resource`` rather than ``cache_data``: this is one large object that
-    every session should share, not a per-call value worth copying.  The fetch
-    behind it happens at most once per process and, thanks to the module's own
-    disk cache, at most once a fortnight per machine — which is what lets the
-    box search on every keystroke without sending anything to DOAJ.  See
-    ``doaj.py``'s module docstring for why a request per keystroke is not an
-    option.
+    every session should share, not a per-call value worth copying.
+
+    It **never downloads**.  ``load_journals`` reads the disk cache and, finding
+    none, would fetch 25 MB from inside a keystroke — which used to be exactly
+    what happened the first time anyone used the whitelist box.  Both directories
+    are now downloaded only where a download is asked for, on the Settings page,
+    so the first run of this app costs nothing it did not ask for.
 
     Returns ``(index, error)``; *error* is shown under the box and is empty on
     success.
@@ -914,6 +915,15 @@ def _lookup(key, term, source):
 
     limit = st.session_state.get(f"{key}_limit") or _LOOKUP_LIMIT
     if source == "doaj":
+        if not doaj.have_local():
+            # Nothing to search, and nothing this box can do about it: say where
+            # the switch is rather than reporting "no match" for a directory that
+            # was never consulted.
+            st.session_state[f"{key}_last"] = {
+                "term": term, "shown": 0, "total": 0, "pending": False,
+                "error": "DOAJ is not on this machine — switch it on in Settings, "
+                         "or type the venue and press Add."}
+            return []
         index, error = doaj_index()
         venues, total = ((), 0) if error else doaj.search(index, term, limit)
         pending = False
@@ -2070,9 +2080,9 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
                font-variant-numeric:tabular-nums; margin:.15rem 0 .25rem;}
 .bl-dir-present {background:var(--bl-ok-bg); color:var(--bl-fg);}
 .bl-dir-absent {background:var(--bl-mute-bg); color:var(--bl-fg-muted);}
-/* The two panels are a pair and are read side by side, so they are given one
-   height rather than each taking the height of its own sentence. */
-div[class*="st-key-dir-"] {min-height:15.5rem;}
+/* The switch and its one line of fact read as one thing, so the line is pulled
+   up under the label rather than sitting a full block gap below it. */
+.bl-dir-state {margin-top:-.35rem;}
 .bl-vl-empty {font-size:.85rem; color:var(--bl-fg-faint); font-style:italic;
               padding:.15rem 0 .3rem;}
 
@@ -3063,49 +3073,47 @@ def _age_human(days):
     return f"{int(days)} day(s) ago"
 
 
-def _directory_panel(module, *, title, url, used_by, needed, key):
-    """One directory's status and its three buttons, on the Settings page.
+def _para(*paragraphs):
+    """Join paragraphs for a tooltip, which renders Markdown and wants blank lines."""
+    return "\n\n".join(paragraphs)
 
-    *module* is ``doaj`` or ``crossref`` — both expose the same four functions
-    (``status``, ``load_journals``, ``delete``, ``DOWNLOAD_MB``), which is what
-    lets one panel serve both.  *needed* says what happens with no local copy,
-    and it is the one line that genuinely differs between them: the whitelist has
-    no other way to search, while the blacklist falls back to Crossref's live API.
+
+def _directory_row(module, *, title, key, offered, coverage, off_state, help_text):
+    """One directory, as a switch and one line of fact.
+
+    A switch rather than a Download button and its retinue, because there are only
+    two states worth having and the switch *is* both of them: on means the list is
+    held here and searched here; off means it is not.  There is no separate Remove
+    and no separate Refresh — off removes it, and a copy older than a fortnight is
+    replaced on its own.
+
+    Everything that used to be said in paragraphs is on the ⓘ beside the switch.
+    A settings page is read when something needs deciding, and the decision is the
+    switch; the reasoning should be there for whoever wants it and out of the way
+    of whoever does not.
     """
     state = module.status()
-    with st.container(border=True, key=f"dir-{key}"):
-        st.markdown(f"**{title}** &nbsp;·&nbsp; [{url}](https://{url})")
-        st.caption(used_by)
+    held = state["present"]
+    want = st.toggle(f"**{title}** — searched by the {offered}", value=held,
+                     key=f"hold_{key}", help=help_text)
 
-        if not state["present"]:
-            st.markdown(f"<div class='bl-dir-state bl-dir-absent'>Not downloaded</div>",
-                        unsafe_allow_html=True)
-            st.caption(needed)
-        else:
-            count = (f"{state['journals']:,} journals" if state["journals"] >= 0
-                     else "unreadable — download it again")
-            st.markdown(
-                f"<div class='bl-dir-state bl-dir-present'>{count} &nbsp;·&nbsp; "
-                f"{_bytes_human(state['bytes'])} on disk &nbsp;·&nbsp; "
-                f"fetched {_age_human(state['age_days'])}</div>",
-                unsafe_allow_html=True)
-            if state["stale"]:
-                st.caption("More than a fortnight old. It still works; a journal added "
-                           "since then has to be typed by hand.")
+    if want and not held:
+        _fetch_directory(module, title)         # reruns when it lands
+    elif held and not want:
+        module.delete()
+        clear_directory_caches()
+        notify_next_run(f"{title} removed from this machine.", icon="🗑️")
+        st.rerun()
 
-        row = st.columns([1, 1, 1.2])
-        label = "⬇️ Download" if not state["present"] else "🔄 Refresh"
-        if row[0].button(label, key=f"dl_{key}", width="stretch",
-                         help=f"About {module.DOWNLOAD_MB} MB over the network, once."):
-            _fetch_directory(module, title)
-        if row[1].button("🗑️ Remove", key=f"rm_{key}", width="stretch",
-                         disabled=not state["present"],
-                         help="Delete the local copy from this machine."):
-            module.delete()
-            clear_directory_caches()
-            notify_next_run(f"Removed the local {title} copy.", icon="🗑️")
-            st.rerun()
-        row[2].caption(f"~{module.DOWNLOAD_MB} MB download")
+    if held:
+        count = (f"{state['journals']:,} journals" if state["journals"] >= 0
+                 else "unreadable — switch it off and on again")
+        line = (f"{count} &nbsp;·&nbsp; {_bytes_human(state['bytes'])} stored "
+                f"&nbsp;&nbsp;—&nbsp;&nbsp; {coverage}")
+        tone = "bl-dir-present"
+    else:
+        line, tone = off_state, "bl-dir-absent"
+    st.markdown(f"<div class='bl-dir-state {tone}'>{line}</div>", unsafe_allow_html=True)
 
 
 def _fetch_directory(module, title):
@@ -3119,7 +3127,6 @@ def _fetch_directory(module, title):
                          text=f"Fetching {title}…"
                               + (f" {int(fraction * 100)}%" if fraction else ""))
 
-        bar.progress(0.0, text=f"Fetching {title}…")
         journals, error = module.load_journals(refresh=True, progress=on_progress)
         bar.progress(1.0, text=f"Reducing {len(journals):,} journals…")
     except Exception as exc:                      # a download must not break the page
@@ -3130,68 +3137,68 @@ def _fetch_directory(module, title):
     if error:
         st.error(error)
     else:
-        notify_next_run(f"{title}: {len(journals):,} journals held locally.", icon="✅")
+        notify_next_run(f"{title}: {len(journals):,} journals held here.", icon="✅")
         st.rerun()
 
 
 def page_settings():
-    """Offline copies of the two venue directories — the one thing to configure.
+    """Two switches: whether each venue directory is held on this machine.
 
-    The page exists because the *default* has to stay cheap.  Step 3's boxes work
-    with no local data at all: the blacklist asks Crossref's live API, half a
-    second a search.  Holding Crossref's whole list instead makes those searches
-    local and instant and works with no internet — but it is a 51 MB download, and
-    nobody should pay that to run a check once.  So it is offered here rather than
-    taken on the first run.
-
-    Nothing on this page can change a verdict, and the page says so: both
-    directories exist only to help *name* a venue when building a list.
+    The page exists because the default has to stay cheap.  Nothing here is
+    downloaded until it is switched on, which is the whole point — a first run of
+    this app should cost nothing it was not asked for.
     """
     st.markdown(_PAGE_CSS, unsafe_allow_html=True)
     st.markdown(field_placeholder_css(), unsafe_allow_html=True)
     flush_notices()
 
     st.title("⚙️ Settings")
-    st.caption("One thing to decide, and only if you want to: whether the venue "
-               "directories Step 3 searches are held on this machine.")
+    st.caption("Hold a venue directory on this machine and Step 3 searches it here — "
+               "instantly, with no internet. Nothing is downloaded until you switch it "
+               "on. Neither directory takes any part in any verdict.")
 
-    step_header(1, "Offline venue directories", "download once, search without internet",
-                "optional", "idle")
-    st.markdown(
-        "Step 3's two venue boxes search a directory as you type, so a journal can "
-        "be added with its official title and ISSN instead of being typed by hand. "
-        "Each directory publishes its whole journal list as one file. With that file "
-        "on this machine a search is a scan of a list in memory — **instant, and it "
-        "works with no internet**. Without it, the blacklist asks Crossref over the "
-        "network instead, about half a second a search.")
-    st.info("Neither directory takes any part in any verdict. Being listed in DOAJ "
-            "means a journal passed DOAJ's screening; being in Crossref means someone "
-            "paid to register its DOIs. The check asks whether the venue is on "
-            "Beall's List, which is a different question — these only help you *name* "
-            "a venue.", icon="ℹ️")
+    _directory_row(
+        doaj, title="DOAJ", key="doaj", offered="**whitelist**",
+        coverage="every one has a name, an ISSN, a publisher and a website",
+        off_state="Not on this machine — the whitelist cannot search until you switch this on",
+        help_text=_para(
+            "The Directory of Open Access Journals: about 23,000 journals that passed "
+            "its editorial screening, each with its name, ISSN, publisher and website. "
+            "That is everything a whitelist entry can match on.",
 
-    left, right = st.columns(2)
-    with left:
-        _directory_panel(
-            doaj, title="DOAJ", url="doaj.org", key="doaj",
-            used_by="Searched by the **whitelist** — *Only check these venues*. "
-                    "About 23,000 vetted open-access journals, with their websites.",
-            needed="The whitelist has no other way to search, so it is downloaded "
-                   "automatically the first time that box is used. Downloading it "
-                   "here just does it now, on purpose, rather than mid-typing.")
-    with right:
-        _directory_panel(
-            crossref, title="Crossref", url="crossref.org", key="crossref",
-            used_by="Searched by the **blacklist** — *Also treat these venues as "
-                    "predatory*. About 167,000 journals, screened by nobody, which is "
-                    "what a blacklist needs. No websites: Crossref does not record them.",
-            needed="Not required. Without it the blacklist searches Crossref live, "
-                   "which works well and needs no download — but needs a connection, "
-                   "waits about half a second, and starts from two letters.")
+            "Switching this on downloads about 25 MB once and keeps about 4 MB of it — "
+            "the rest is fields a venue list has no use for. A few seconds.",
 
-    st.caption(f"Both files live in `{venue_lookup.CACHE_DIR}`, are ignored by git, "
-               "and are safe to delete by hand. They are re-fetched automatically "
-               "once they are more than a fortnight old.")
+            "There is no online alternative for this box: DOAJ's search endpoint "
+            "answers a request per keystroke with a 502, so the whitelist can only "
+            "search a local copy. With this off, type the venue and press Add.",
+
+            "Being listed in DOAJ is not part of any verdict — it only helps name a "
+            "venue."))
+
+    _directory_row(
+        crossref, title="Crossref", key="crossref", offered="**blacklist**",
+        coverage="every one has a name, 82% an ISSN, almost all a publisher — no websites",
+        off_state="Searching Crossref online — about half a second a search, "
+                  "needs a connection, starts from two letters",
+        help_text=_para(
+            "The DOI registry: about 167,000 journals, screened by nobody, which is "
+            "what a blacklist needs. Every one has a name and almost all a publisher; "
+            "82% carry an ISSN. Crossref records no websites at all, so an entry added "
+            "from here matches on name and ISSN, never on a domain.",
+
+            "Switching this on downloads about 51 MB once and keeps about 18 MB. "
+            "Twenty seconds or so.",
+
+            "With it off the blacklist still works — it asks Crossref's live API "
+            "instead, which needs a connection and takes about half a second a search. "
+            "With it on, searches are local and instant, and start from one letter.",
+
+            "Being registered with Crossref is not part of any verdict — it only helps "
+            "name a venue."))
+
+    st.caption(f"Stored in `{venue_lookup.CACHE_DIR}` · ignored by git · safe to delete "
+               "by hand · replaced automatically once older than a fortnight.")
 
 
 # ── Navigation ──────────────────────────────────────────────────────────────
