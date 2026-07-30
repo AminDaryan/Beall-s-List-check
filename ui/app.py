@@ -16,6 +16,7 @@ below) and **Tutorial**, which renders ``ui/TUTORIAL.md`` — the same walkthrou
 that is readable on GitHub, so the instructions exist in exactly one place.
 """
 
+import hashlib
 import html
 import json
 import os
@@ -209,8 +210,45 @@ def _load_example_corpus():
     st.session_state["mode"] = "Paste JSON"
 
 
+# ── The corpus, read once per file rather than once per rerun ────────────────
+# Streamlit reruns the whole script on every interaction, and Step 2 used to
+# re-read and re-parse whatever was in it each time.  On a real corpus that is
+# not a rounding error.  Measured on a 60 MB, 18,482-paper export, one keystroke
+# in Step 3's venue box cost 0.9s to decode and parse, 7.5s to validate and 3.1s
+# to build the quality workbook — 11.5s of script run, against 0.25s with
+# nothing loaded.  For all of it Streamlit holds every element it has not
+# redrawn yet at its stale opacity (0.33, after a 0.5s delay), which is why
+# everything below Step 2 went dim and stayed dim for as long as anyone typed.
+#
+# So the corpus is now identified rather than re-derived: *token* names which
+# corpus this is — the uploader's own file id, or a digest of the pasted text —
+# and the three expensive steps are keyed on it.  A rerun that changes neither
+# does no work at all.
+#
+# ``cache_resource`` and not ``cache_data``, for the reason ``doaj_index`` gives:
+# cache_data serialises its value and hands back a copy on every access, and a
+# parsed copy of that corpus is 117 MB.  One shared list is safe here because
+# nothing downstream mutates the records — a run writes them out with
+# ``json.dumps`` and reads them nowhere else.  ``max_entries=1`` keeps the corpus
+# on screen and lets the one before it go.
+@st.cache_resource(show_spinner=False, max_entries=1)
+def _parse_corpus(_source, token):
+    """The papers *token* names, parsed once.
+
+    *_source* is the uploaded file or the pasted text; it is underscored so that
+    Streamlit leaves it out of the cache key — hashing 60 MB on every rerun is
+    the cost this exists to avoid, and *token* already answers "which corpus".
+    """
+    raw = _source.getvalue().decode("utf-8") if hasattr(_source, "getvalue") else _source
+    return runners.normalize_upload(json.loads(raw))
+
+
 def get_papers():
-    """Render the input widgets and return a parsed list of papers, or None.
+    """Render the input widgets and return ``(papers, token)``.
+
+    *papers* is the parsed list, or None when there is nothing loaded; *token*
+    names the corpus for the caches keyed on it (see :func:`_parse_corpus`) and
+    is empty when *papers* is None.
 
     The widget keys are deliberately independent of the selected check, so
     switching between the three rows in Step 1 keeps the loaded papers.
@@ -222,15 +260,25 @@ def get_papers():
         st.code(_S2_EXAMPLE, language="json")
     mode = st.radio("Provide papers via", ["Upload a file", "Paste JSON"],
                     horizontal=True, key="mode")
-    raw = None
+    source, token = None, ""
     if mode == "Upload a file":
         up = st.file_uploader("Papers file (.json)", type=["json"], key="file",
                               label_visibility="collapsed")
-        if up is not None:
-            raw = up.getvalue().decode("utf-8")
+        if up is not None and up.size:
+            # Streamlit's own id for the uploaded file, which changes when a
+            # different file is chosen and not otherwise — so the parse below
+            # happens once per file.  The bytes are deliberately not read here:
+            # reading them is what the cache is there to skip.
+            source, token = up, f"upload:{up.file_id}"
     else:
-        raw = st.text_area("Paste JSON here", height=180, key="paste",
-                           placeholder=_S2_EXAMPLE, label_visibility="collapsed")
+        pasted = st.text_area("Paste JSON here", height=180, key="paste",
+                              placeholder=_S2_EXAMPLE, label_visibility="collapsed")
+        if pasted and pasted.strip():
+            # No file id to lean on, so the text names itself.  A digest costs a
+            # pass over the string; parsing it costs a pass plus an object per
+            # field, which is the part worth not repeating.
+            source = pasted
+            token = "paste:" + hashlib.sha1(pasted.encode("utf-8")).hexdigest()
 
     # The demo, kept clearly apart from the two real sources above.
     if _EXAMPLE_CORPUS.is_file():
@@ -242,16 +290,19 @@ def get_papers():
                       "verdict except `out_of_scope`, whose expected result is tabulated in "
                       "`examples/README.md`.")
 
-    if not raw or not raw.strip():
-        return None
+    if not token:
+        return None, ""
+    # Both failures are reported here rather than inside the cached function: a
+    # raise is not cached, so a file that cannot be read is re-read on every
+    # rerun — which is right, since the next rerun may be the one that fixed it.
     try:
-        return runners.normalize_upload(json.loads(raw))
+        return _parse_corpus(source, token), token
     except json.JSONDecodeError as e:
         st.error(f"Invalid JSON: {e}")
-        return None
+        return None, ""
     except ValueError as e:
         st.error(str(e))
-        return None
+        return None, ""
 
 
 # ── Step 1: the comparison table ─────────────────────────────────────────────
@@ -500,13 +551,13 @@ def _step_provide_papers():
     # written afterwards: how many papers there are is only known once the widgets
     # below it have run, and the pill would otherwise report the previous rerun.
     head2 = st.container(key="blstep2")
-    items = get_papers()
+    items, token = get_papers()
     step_header(2, "Provide the papers", "Semantic Scholar records, as JSON",
                 f"✅ {len(items)} paper(s)" if items else "waiting for papers",
                 "ok" if items else "wait", into=head2, learn="your own papers")
     if items is not None:
         st.success(f"✅ Loaded {len(items)} paper(s) — ready to run.")
-        results.show_input_quality(items, key="input")
+        results.show_input_quality(items, token, key="input")
     return items
 
 

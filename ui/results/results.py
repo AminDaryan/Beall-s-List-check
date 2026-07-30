@@ -105,12 +105,42 @@ def _status_summary(rows):
                         for s in ordered), unsafe_allow_html=True)
 
 
-def show_input_quality(items, key):
-    """Up-front panel: validate the Semantic Scholar metadata, offer it as Excel."""
+# Both halves of the panel are keyed on *token* — the name Step 2 gives the
+# corpus it loaded (see app._parse_corpus) — because both are a pass over every
+# record and Streamlit reruns this script on every interaction.  Measured on an
+# 18,482-paper export: 7.5s to validate and 3.1s to build the workbook, on every
+# keystroke, while the panel that shows them is collapsed.
+#
+# The workbook is the one that surprises: `st.download_button` takes its bytes
+# as an argument, so the file has to exist before the button can be drawn, and
+# an expander renders its contents whether or not it is open.  Nothing was
+# waiting for that workbook — it was being built in case someone asked.
+#
+# `cache_resource` for the flags, because they hold the paper dicts themselves
+# and cache_data would pickle and copy all of them on every access;
+# `cache_data` for the workbook, which is 1.6 MB of bytes and is copied for the
+# cost of a memcpy.  One entry each: the corpus on screen, and no other.
+@st.cache_resource(show_spinner=False, max_entries=1)
+def _validated(_items, token):
+    """What the offline validator says about the corpus *token* names."""
+    return input_quality.validate_papers(_items)
+
+
+@st.cache_data(show_spinner=False, max_entries=1)
+def _quality_xlsx(_items, _flagged, token):
+    """The quality report for the corpus *token* names, as .xlsx bytes."""
+    return runners.build_input_quality_xlsx(_items, _flagged)
+
+
+def show_input_quality(items, token, key):
+    """Up-front panel: validate the Semantic Scholar metadata, offer it as Excel.
+
+    *token* names the corpus, and is what both halves are cached on; see above.
+    """
     if not _VALIDATORS_OK:
         return
     try:
-        flagged = input_quality.validate_papers(items)   # offline validator
+        flagged = _validated(items, token)               # offline validator
     except Exception as exc:
         st.caption(f"(input validation unavailable: {exc})")
         return
@@ -130,7 +160,7 @@ def show_input_quality(items, key):
                    "A flag means a record is missing something the venue match relies on, so "
                    "its verdict may be weaker — it does not stop the run and is not an error.")
         st.download_button("⬇️ Download report (.xlsx)",
-                           data=runners.build_input_quality_xlsx(items, flagged),
+                           data=_quality_xlsx(items, flagged, token),
                            file_name="input_data_quality.xlsx", key=f"dqdl_{key}",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         if not flagged:

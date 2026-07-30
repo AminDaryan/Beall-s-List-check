@@ -362,6 +362,24 @@ button[data-testid^="stBaseButton"]:active:not(:disabled) {
 @media (prefers-reduced-motion:reduce) {
   button[data-testid^="stBaseButton"]:hover:not(:disabled) {transform:none;}
 }
+
+/* ── The stale fade, moved past a typing burst ─────────────────────────────
+   While a run is in flight Streamlit fades every element it has not redrawn
+   yet to opacity .33 -- a 1s ease-in, half a second after the run starts.  That
+   is the right signal for a check that takes a minute and the wrong one for
+   typing, because Step 3's venue boxes call back into Python on every
+   keystroke: a typed word chains its reruns into one unbroken running state --
+   measured at 2.3s for six letters -- and everything below the box sits at a
+   third of its opacity for the length of the word.  Which reads, correctly but
+   uselessly, as the page going dark while you type.
+
+   So the fade is kept and its threshold is moved: a word never reaches it, a
+   run still does.  Only the delay is touched, because only the delay is wrong
+   -- the fade itself is how Streamlit says "this is last run's answer", and on
+   a real wait that is worth saying.  The rule matches the element container,
+   which is where Streamlit puts the fade, and needs `!important` because
+   emotion's own class lands at the same specificity. */
+[data-testid="stElementContainer"] {transition-delay:4s !important;}
 """
 
 
