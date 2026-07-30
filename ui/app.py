@@ -17,24 +17,21 @@ that is readable on GitHub, so the instructions exist in exactly one place.
 """
 
 import html
-import io
 import json
 import os
 import re
-import sys
-from pathlib import Path
+from typing import NamedTuple
 
-import openpyxl
 import streamlit as st
 from dotenv import load_dotenv
 
-import crossref
-import doaj
 import notices
+import results
 import runners
+import settings_page
 import styles
+import tutorial_page
 import venue_lists
-import venue_lookup
 
 # Step 3's venue boxes search DOAJ while a name is being typed, which Streamlit's
 # own widgets cannot do — they filter options client-side and call back only on
@@ -47,15 +44,6 @@ except Exception:
     st_searchbox = None
 
 load_dotenv(runners.REPO_ROOT / ".env")
-
-# In-process validator for the live "Input data quality" panel.
-sys.path.insert(0, str(runners.RC))           # src/  (for the `common` package)
-sys.path.insert(0, str(runners._BEALLS))      # bealls_list_check/ (the venue checks)
-try:
-    from common import input_quality           # the shared, field-aware validator
-    _VALIDATORS_OK = True
-except Exception:
-    _VALIDATORS_OK = False
 
 st.set_page_config(page_title="Beall's List check", page_icon="🕵️", layout="wide")
 # Best-effort: show Streamlit toasts in the top-right (falls back to default).
@@ -74,9 +62,6 @@ _S2_EXAMPLE = json.dumps(
 # The corpus shipped for verifying an installation (see examples/README.md),
 # offered in Step 2 so the app can be tried without supplying data.
 _EXAMPLE_CORPUS = runners.REPO_ROOT / "examples" / "sample_papers.json"
-
-_UI_DIR = Path(__file__).resolve().parent
-_TUTORIAL_MD = _UI_DIR / "TUTORIAL.md"          # rendered by the Tutorial page
 
 
 # The provider `.env` names. Step 3 starts from it and can be pointed elsewhere
@@ -255,210 +240,6 @@ def get_papers():
         return None
 
 
-@st.cache_resource(show_spinner=False)
-
-
-@st.cache_resource(show_spinner=False)
-
-
-@st.cache_data(show_spinner=False, ttl=3600)
-
-
-def show_input_quality(items, key):
-    """Up-front panel: validate the Semantic Scholar metadata, offer it as Excel."""
-    if not _VALIDATORS_OK:
-        return
-    try:
-        flagged = input_quality.validate_papers(items)   # offline validator
-    except Exception as exc:
-        st.caption(f"(input validation unavailable: {exc})")
-        return
-    # Collapsed, always.  This panel reports on the *metadata that was supplied*,
-    # not on anything the tool has done, and it is normal for a real corpus to
-    # have some — the example corpus is deliberately one of those, because record
-    # 6 carries no venue at all.  Opening itself and leading with a warning made
-    # a green "Loaded 8 paper(s) — ready to run" be immediately contradicted by
-    # what looked like an error.  The count is in the label, which is the part
-    # worth seeing; the detail is one click away for whoever wants it.
-    icon = "⚠️" if flagged else "✅"
-    label = (f"{icon} Input data quality — {len(flagged)} of {len(items)} record(s) flagged"
-             if flagged else
-             f"✅ Input data quality — nothing flagged in {len(items)} record(s)")
-    with st.expander(label, expanded=False):
-        st.caption("An offline look at the Semantic Scholar metadata *before* the check runs. "
-                   "A flag means a record is missing something the venue match relies on, so "
-                   "its verdict may be weaker — it does not stop the run and is not an error.")
-        st.download_button("⬇️ Download report (.xlsx)",
-                           data=runners.build_input_quality_xlsx(items, flagged),
-                           file_name="input_data_quality.xlsx", key=f"dqdl_{key}",
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        if not flagged:
-            st.caption("No issues found by the offline checks. (Not a guarantee of correctness; "
-                       "deeper checks run during the check itself and show in the run log.)")
-        for i, p, flags in flagged[:5]:
-            st.markdown(f"**#{i}** {(p.get('title') or '?')[:90]} — " + "; ".join(flags))
-        if len(flagged) > 5:
-            st.caption(f"…and {len(flagged) - 5} more — download the report above for the full list.")
-
-
-def _preview(xlsx_bytes: bytes, max_rows: int = 40):
-    """Show sheet names + the first sheet's first rows as a table."""
-    try:
-        wb = openpyxl.load_workbook(io.BytesIO(xlsx_bytes), read_only=True, data_only=True)
-    except Exception as e:                      # never let a preview crash the page
-        st.caption(f"(Preview unavailable: {e})")
-        return
-    st.caption("Sheets: " + ", ".join(wb.sheetnames))
-    ws = wb[wb.sheetnames[0]]
-    rows = list(ws.iter_rows(values_only=True))
-    if not rows:
-        return
-    headers = [str(h) if h is not None else f"col{i}" for i, h in enumerate(rows[0])]
-    # Everything as text: a sheet column here mixes numbers, strings and the
-    # blanks left by merged cells, which Arrow cannot type (it logs a traceback
-    # and falls back).  A preview of a formatted workbook is text anyway.
-    data = [dict(zip(headers, [("" if v is None else str(v)) for v in r]))
-            for r in rows[1:max_rows + 1]]
-    st.dataframe(data)
-    if len(rows) > max_rows + 1:
-        st.caption(f"(showing first {max_rows} of {len(rows) - 1} rows — download for the full sheet)")
-
-
-def render_result(res: runners.RunResult, checker: runners.Checker):
-    if res.ok:
-        st.success(f"✅ Done — {checker.title} finished. Your Excel is ready below.")
-        st.download_button(f"⬇️ Download {res.output_path.name}", data=res.output_bytes,
-                           file_name=res.output_path.name, key=f"dl_{checker.id}",
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        _preview(res.output_bytes)
-    else:
-        st.error(f"The checker exited with code {res.returncode} and produced no output file. "
-                 "See the run log below.")
-    with st.expander("Run log (incl. the input data-quality report)", expanded=not res.ok):
-        if res.stdout:
-            st.text(res.stdout[-8000:])
-        if res.stderr:
-            st.caption("stderr")
-            st.text(res.stderr[-4000:])
-
-
-def _chip(text, tone="mute", *, title=None, flow=False):
-    """A small pill in one of the palette's tones.
-
-    *tone* is ``mute``, ``ok`` or ``warn`` — a class rather than a colour, so the
-    pill picks up the light or dark value of that tone from :data:`_TOKENS`
-    instead of carrying a hex that only works against one background.
-
-    *title* becomes the browser's hover text — the sentence of detail that does
-    not fit inside a pill — and marks the pill with the help cursor so there is
-    something to invite the hover.  *flow* adds the trailing margins wanted when
-    several pills wrap across a line; a pill alone in a table cell wants none,
-    because the margin would push it off the cell's vertical centre.
-    """
-    cls = f"bl-chip bl-{tone}" + (" bl-flow" if flow else "")
-    if not title:
-        return f"<span class='{cls}'>{text}</span>"
-    return (f"<span class='{cls} bl-help' "
-            f"title='{html.escape(title, quote=True)}'>{text}</span>")
-
-
-def readable_on(fill: str) -> str:
-    """Slate-900 or white — whichever reads on the ``RRGGBB`` *fill*.
-
-    The status fills are Excel's and are not ours to re-tone, but they are not
-    uniform either: most are pale and want dark text, while ``error`` is a deep
-    red that wants white.  Decided by WCAG relative luminance rather than by a
-    hand-kept list, so a change to ``STATUS_FILL_COLORS`` cannot leave a chip
-    unreadable.  The threshold is where the two contrast ratios meet.
-    """
-    def channel(c):
-        c /= 255
-        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
-
-    r, g, b = (channel(int(fill[i:i + 2], 16)) for i in (0, 2, 4))
-    return "#0f172a" if 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.204 else "#ffffff"
-
-
-def _status_chip(text, status, *, flow=False):
-    """A pill in a *status*'s canonical colour, from ``STATUS_FILL_COLORS``.
-
-    Separate from :func:`_chip` on purpose.  Those colours are the workbook's —
-    the single source of truth is ``config.py`` — so they must not be re-toned
-    for a dark background, or the chips would stop matching the file they
-    describe.  Only the text on them is chosen here.
-    """
-    fill = runners.STATUS_FILL_COLORS.get(status, "FFFFFF")
-    cls = "bl-chip" + (" bl-flow" if flow else "")
-    return (f"<span class='{cls}' style='background:#{fill};"
-            f"color:{readable_on(fill)};'>{text}</span>")
-
-
-_STATUS_ORDER = ("on_list", "review", "clean", "no_venue", "error")
-
-
-def _status_summary(rows):
-    """Coloured count-per-status chips (canonical colours), most-flagged first."""
-    counts = {}
-    for r in rows:
-        counts[r["Status"]] = counts.get(r["Status"], 0) + 1
-    ordered = [s for s in _STATUS_ORDER if s in counts] + \
-              [s for s in counts if s not in _STATUS_ORDER]
-    st.markdown("".join(_status_chip(f"{s}: <b>{counts[s]}</b>", s, flow=True)
-                        for s in ordered), unsafe_allow_html=True)
-
-
-def _csv_status_preview(rows, max_rows=100):
-    """Preview the CSV with each Status cell shaded its canonical colour."""
-    preview = rows[:max_rows]
-    try:
-        import pandas as pd
-        df = pd.DataFrame(preview, columns=["SS-ID", "DOI", "Status"])
-
-        def _bg(val):
-            hexc = runners.STATUS_FILL_COLORS.get(val)
-            # The text colour has to be set alongside the fill.  These are pale
-            # Excel fills, and the dark theme's own table text is near-white on
-            # them; `error` is the mirror case, a deep red under dark text.
-            return (f"background-color: #{hexc}; color: {readable_on(hexc)}"
-                    if hexc else "")
-
-        styler = df.style
-        # pandas >= 2.1 renamed Styler.applymap -> Styler.map.
-        styler = (styler.map(_bg, subset=["Status"]) if hasattr(styler, "map")
-                  else styler.applymap(_bg, subset=["Status"]))
-        st.dataframe(styler)
-    except Exception:
-        st.dataframe(preview)                             # plain fallback
-    if len(rows) > max_rows:
-        st.caption(f"(showing first {max_rows} of {len(rows)} rows — download for the full CSV)")
-
-
-def render_csv_result(res: runners.BatchCsvResult):
-    if res.ok:
-        st.success(f"✅ Done — {len(res.rows)} record(s) classified. "
-                   "Download the CSV (SS-ID, DOI, Status) below.")
-        _status_summary(res.rows)
-        c1, c2 = st.columns(2)
-        with c1:
-            st.download_button("⬇️ Download CSV (SS-ID, DOI, Status)", data=res.csv_bytes,
-                               file_name="bealls_status.csv", key="dl_csv", mime="text/csv")
-        with c2:
-            st.download_button("⬇️ Download colour-coded Excel", key="dl_csv_xlsx",
-                               data=runners.build_status_xlsx(res.rows),
-                               file_name="bealls_status.xlsx",
-                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        _csv_status_preview(res.rows)
-    else:
-        st.error(f"The batch check exited with code {res.returncode} and produced no CSV. "
-                 "See the run log below.")
-    with st.expander("Run log", expanded=not res.ok):
-        if res.stdout:
-            st.text(res.stdout[-8000:])
-        if res.stderr:
-            st.caption("stderr")
-            st.text(res.stderr[-4000:])
-
-
 # ── Step 1: the comparison table ─────────────────────────────────────────────
 # Step 1 is laid out as a comparison table: choose | check | what it does | and
 # then one column per attribute the three checks actually differ on.  The point
@@ -489,73 +270,6 @@ def _row_key(checker_id: str) -> str:
     return "pickrow-" + checker_id.replace(".", "-")
 
 
-# ── Rendering a repository markdown file as a page ───────────────────────────
-# A markdown image on a line of its own.
-_MD_IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$", re.M)
-# A link to a file in the repository. It resolves on GitHub but not in the app,
-# where it is shown as the path it points at.
-_MD_REL_LINK = re.compile(r"\[([^\]]+)\]\((?!https?://|#)([^)]+)\)")
-# A section heading, optionally "N · Title".
-_MD_HEADING = re.compile(r"^(#{2,3})[ \t]+(.+?)[ \t]*$", re.M)
-# What the app leaves out. The block between these markers is written for someone
-# reading TUTORIAL.md on GitHub before they have the app; inside the app it is
-# instructions for something already done.
-_MD_SKIP = re.compile(r"[ \t]*<!--[ \t]*app:skip-start[ \t]*-->.*?"
-                      r"<!--[ \t]*app:skip-end[ \t]*-->[ \t]*\n?", re.S)
-
-
-def _slug(text: str) -> str:
-    """The anchor Streamlit (and GitHub) give a heading of this text.
-
-    Lower-cased, punctuation dropped, runs of anything else collapsed to single
-    hyphens — "1 · First run, with the example papers" becomes
-    "1-first-run-with-the-example-papers".  Reimplemented rather than guessed at:
-    the ids it produces are what both the in-app links and TUTORIAL.md's own
-    cross-references resolve against.
-    """
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
-
-
-@st.cache_data(show_spinner=False)
-def _tutorial_sections():
-    """``[(level, number, title, anchor)]`` for every heading the app renders.
-
-    Read from the file rather than listed here, so renaming or renumbering a
-    section cannot leave the Tutorial's contents, or the ⓘ links that point into
-    it from the flow, aimed at a heading that no longer exists.
-
-    The block the app skips is stripped first, for the same reason: its headings
-    are real on GitHub but are not on the page here, and both callers build links
-    that have to land somewhere.
-    """
-    try:
-        text = _MD_SKIP.sub("", _TUTORIAL_MD.read_text(encoding="utf-8"))
-    except OSError:
-        return []
-    out = []
-    for hashes, title in re.findall(r"^(#{2,3})[ \t]+(.+?)[ \t]*$", text, re.M):
-        num, _, rest = title.partition(" · ")
-        numbered = num.isdigit()
-        out.append((len(hashes), num if numbered else "",
-                    rest if numbered else title, _slug(title)))
-    return out
-
-
-def tutorial_href(phrase: str) -> str:
-    """Link to the Tutorial section whose title contains *phrase*.
-
-    Matched on a phrase rather than on a slug so that the caller does not have to
-    know the section's number — the numbers move when the walkthrough is
-    reordered, and a stale ``#4-...`` would land silently on the wrong section.
-    Falls back to the top of the page when nothing matches.
-    """
-    want = phrase.lower()
-    for _level, _num, title, anchor in _tutorial_sections():
-        if want in title.lower():
-            return f"/tutorial#{anchor}"
-    return "/tutorial"
-
-
 def step_header(num, title, hint="", state="", tone="idle", into=None, learn=""):
     """The header bar for one step of the flow.
 
@@ -578,7 +292,7 @@ def step_header(num, title, hint="", state="", tone="idle", into=None, learn="")
     following it in place would reload the app and lose the loaded papers.
     """
     st_ = into if into is not None else st.container(key=f"blstep{num}")
-    href = tutorial_href(learn) if learn else ""
+    href = tutorial_page.tutorial_href(learn) if learn else ""
     info = (f"<a class='bl-info' href='{href}' target='bl-tutorial' "
             f"title='Read about this step in the Tutorial'>&#9432;</a>") if href else ""
     st_.markdown(
@@ -657,26 +371,39 @@ def _pick_checker(checker_id: str):
 
 
 # ── Pages ────────────────────────────────────────────────────────────────
-def page_check():
-    """The four-step flow: choose a check, provide papers, set options, run."""
-    st.title("🕵️ Beall's List predatory-venue check")
-    st.caption("Is the paper's **journal/publisher on Beall's List** of potentially predatory "
-               "venues? Add your papers as JSON, run, and download the Excel report. "
-               "Step-by-step instructions are on the **Tutorial** page.")
-    st.markdown(styles.PAGE_CSS, unsafe_allow_html=True)
-    # The one pair of colours the stylesheet cannot work out for itself.
-    st.markdown(styles.field_placeholder_css(), unsafe_allow_html=True)
-    # Anything the previous render queued on its way out — see notices.notify_next_run.
-    notices.flush_notices()
+class _Llm(NamedTuple):
+    """What Step 1 worked out about the language model, for Step 4 to restate.
 
-    if st.session_state.get("checker_id") not in runners.CHECKERS_BY_ID:
-        st.session_state["checker_id"] = runners.CHECKERS[0].id
-    checker = runners.CHECKERS_BY_ID[st.session_state["checker_id"]]
-    # Step 3's provider starts at `.env`'s, not at whichever happens to head the
-    # list.  Set here rather than there because Step 1's readiness line, drawn
-    # first, has to be answering about the same one.
-    st.session_state.setdefault("provider", ENV_PROVIDER)
+    A named tuple rather than three loose values, for the reason ``_LOOKUP_IDLE``
+    is a mapping: these travel together between two steps that are hundreds of
+    lines apart, and a positional tuple that grew a field would break the reader
+    silently.
+    """
 
+    ok: object          # True, False, or None when there is nothing to verify
+    message: str
+    models: list
+
+
+class _Options(NamedTuple):
+    """Everything Step 3 decides, as Step 4 needs it."""
+
+    crossref: bool
+    whitelist: object
+    blacklist: object
+    aux_lists: dict
+    extra_args: object
+    provider: str
+    model: str
+
+
+def _step_choose_check(checker):
+    """Step 1 — choose a check, and report whether its LLM is usable.
+
+    Returns the :class:`_Llm` that Step 4's summary restates. That it is returned
+    rather than left in a local is what the old comment beside it already said:
+    "also read by Step 4's summary, below".
+    """
     # Step 1 — choose a check.  A comparison table rather than a dropdown: the
     # three are meant to be weighed against each other, and a dropdown shows only
     # the option already chosen.
@@ -711,9 +438,9 @@ def page_check():
             row[1].markdown(_grid((
                 f"<b>{c.icon} {c.title}</b><br><span class='bl-sub'>{c.tagline}</span>",
                 c.description,
-                _chip(c.cost_label, "warn" if c.needs_llm else "ok", title=c.cost_note),
-                _chip(c.records_label, "mute", title=c.records_note),
-                _chip(c.output_label, "mute", title=c.output_note),
+                results._chip(c.cost_label, "warn" if c.needs_llm else "ok", title=c.cost_note),
+                results._chip(c.records_label, "mute", title=c.records_note),
+                results._chip(c.output_label, "mute", title=c.output_note),
             )), unsafe_allow_html=True)
 
     # The LLM-readiness line.  Its slot is rendered whatever is selected and is
@@ -750,7 +477,11 @@ def page_check():
             llm_html = (f"<span class='bl-llm-bad' title='{html.escape(llm_msg, quote=True)}'>"
                         f"⚠️ {lead} — {html.escape(llm_msg)}</span>")
     llm_slot.markdown(f"<div class='bl-llm'>{llm_html}</div>", unsafe_allow_html=True)
+    return _Llm(llm_ok, llm_msg, llm_models)
 
+
+def _step_provide_papers():
+    """Step 2 — the papers themselves. Returns the records, or None."""
     # Step 2 — provide the papers.  The header's container is reserved first and
     # written afterwards: how many papers there are is only known once the widgets
     # below it have run, and the pill would otherwise report the previous rerun.
@@ -761,8 +492,13 @@ def page_check():
                 "ok" if items else "wait", into=head2, learn="your own papers")
     if items is not None:
         st.success(f"✅ Loaded {len(items)} paper(s) — ready to run.")
-        show_input_quality(items, key="input")
+        results.show_input_quality(items, key="input")
+    return items
 
+
+def _step_options(checker, llm):
+    """Step 3 — everything about *this* run. Returns an :class:`_Options`."""
+    llm_models = llm.models
     # Step 3 — options.  Nothing here has to be touched, so the pill states what
     # is in force rather than whether anything was.
     #
@@ -886,7 +622,17 @@ def page_check():
                 source="crossref")
     aux_lists = {"--whitelist": wl, "--blacklist": bl}
     extra_args = None if crossref else ["--crossref", "off"]
+    return _Options(crossref, wl, bl, aux_lists, extra_args,
+                    provider if checker.needs_llm else "",
+                    model if checker.needs_llm else "")
 
+
+def _step_run(checker, items, llm, options):
+    """Step 4 — restate what is about to happen, run it, show what came back."""
+    crossref, wl, bl = options.crossref, options.whitelist, options.blacklist
+    aux_lists, extra_args = options.aux_lists, options.extra_args
+    provider, model = options.provider, options.model
+    llm_ok, llm_msg = llm.ok, llm.message
     # Step 4 — run.  The summary restates every decision made above, each under
     # the name of the thing it decides, so what is about to run can be checked
     # without scrolling back up — and without having to work out what a bare
@@ -1015,9 +761,9 @@ def page_check():
             st.caption(f"This result came from **{ran.title}**. Run again to get a "
                        f"**{checker.title}** result.")
         if isinstance(res, runners.BatchCsvResult):
-            render_csv_result(res)
+            results.render_csv_result(res)
         else:
-            render_result(res, ran)
+            results.render_result(res, ran)
 
         # The machine-readable CSV, on demand, from a workbook result.  It cannot be
         # derived from the workbook: the batch check keeps every input record while
@@ -1037,306 +783,48 @@ def page_check():
                         items, crossref=crossref)
             addon = st.session_state.get("csv_addon")
             if addon is not None:
-                render_csv_result(addon)
+                results.render_csv_result(addon)
 
 
-def _shot_html(src: str, alt: str, ident: str) -> str:
-    """A screenshot, and the full-size copy a click on it opens.
+def page_check():
+    """The four-step flow, in the order the page renders it.
 
-    Not ``st.image``: that re-encodes a PNG as JPEG — visibly lossy on a picture
-    of text, which every one of these is — and offers no way through to the
-    original.  Served instead from ``ui/static`` (see .streamlit/config.toml) as
-    the PNG it is.
-
-    The overlay is opened by the anchor's fragment and closed by another, so no
-    script is involved: Streamlit strips ``<script>`` out of markdown, and this
-    needs none.  That is also why every way out has to be a link, and why there
-    are three of them — the image, the backdrop around it, and the bar's own
-    button.  Closing was previously that button alone, hunted for on top of a
-    screenshot that had covered the window, and the image beneath the pointer
-    said zoom-out while doing nothing.
-
-    A link to the file itself is offered rather than a second magnification.  At
-    1:1 the browser's image viewer zooms both ways and its tab has a Back
-    button, neither of which a stylesheet can provide.
+    Each step is its own function and hands the next what it needs as a return
+    value. They used to be four stretches of one 381-line function sharing 29
+    locals, which read top-to-bottom well enough but hid which of those locals
+    genuinely crossed a step boundary — three of them, it turns out, and one
+    comment already had to say so in prose.
     """
-    alt_a = html.escape(alt, quote=True)
-    return (
-        f"<a class='bl-shot' href='#{ident}' title='Click to see it full size'>"
-        f"<img src='{src}' alt='{alt_a}'>"
-        f"<span class='bl-shot-zoom'>Click to enlarge</span></a>"
-        + (f"<div class='bl-shot-cap'>{html.escape(alt)}</div>" if alt else "")
-        + f"<div class='bl-lightbox' id='{ident}'>"
-          f"<a class='bl-lightbox-bg' href='#bl-closed' tabindex='-1' aria-hidden='true'></a>"
-          f"<div class='bl-lightbox-bar'>"
-          f"<span class='bl-lightbox-hint'>Click the image — or anywhere around it — "
-          f"to close</span>"
-          f"<a class='bl-lightbox-act' href='{src}' target='_blank' rel='noopener'"
-          f" title='The file itself, at full resolution, in a tab of its own'>"
-          f"Open the original &#8599;</a>"
-          f"<a class='bl-lightbox-act bl-lightbox-close' href='#bl-closed'>&times; Close</a>"
-          f"</div>"
-          f"<a class='bl-lightbox-fig' href='#bl-closed' aria-label='Close'>"
-          f"<img src='{src}' alt='{alt_a}'></a></div>")
-
-
-def _heading_html(hashes: str, title: str) -> str:
-    """One section heading, as its own HTML so it can carry a numbered badge.
-
-    The numbers are the walkthrough's spine, and as plain markdown they were just
-    the first characters of a line of prose.  Rendered here the way the flow's own
-    steps are — a filled circle, then the title — so the two pages read as one
-    piece of software.
-
-    The ``id`` is the slug Streamlit would have generated, so the links into these
-    sections keep working and so ``TUTORIAL.md``'s own cross-references resolve to
-    the same anchors on GitHub.
-    """
-    tag = "h2" if len(hashes) == 2 else "h3"
-    anchor = _slug(title)
-    num, _, rest = title.partition(" · ")
-    if not num.isdigit():
-        return (f"<{tag} id='{anchor}' class='bl-h bl-h-plain'>"
-                f"{html.escape(title)}</{tag}>")
-    return (f"<{tag} id='{anchor}' class='bl-h'>"
-            f"<span class='bl-h-n'>{html.escape(num)}</span>"
-            f"<span>{html.escape(rest)}</span></{tag}>")
-
-
-def _contents_html() -> str:
-    """The page's sections, as a menu at the top.
-
-    A row per section rather than a strip of chips: a contents list is
-    navigation, and navigation is read down a column, not across a wrapped line.
-    The rows also give each entry a full-width target and a stable position — the
-    chips re-wrapped at every window size — and room for the title in full rather
-    than however much of it fits in a pill.
-
-    **Every** level-2 section, numbered or not. "What this tool checks" and
-    "Where to go next" are as jumpable as the seven steps between them, and a
-    contents list that quietly omitted them would be misdescribing the page. They
-    carry a dot in the number's place, so the column still lines up.
-    """
-    items = [(num, title, anchor) for level, num, title, anchor in _tutorial_sections()
-             if level == 2]
-    if not items:
-        return ""
-    rows = "".join(
-        f"<a class='bl-toc-row' href='#{anchor}'>"
-        f"<span class='bl-toc-n{'' if num else ' bl-toc-n-plain'}'>{num or '&bull;'}</span>"
-        f"<span class='bl-toc-t'>{html.escape(title)}</span></a>"
-        for num, title, anchor in items)
-    return f"<div class='bl-toc'><div class='bl-toc-k'>Contents</div>{rows}</div>"
-
-
-def _render_markdown_file(path, *, skip_app_only=False, static_url="", before_sections=""):
-    """Render a repository markdown file as a page, images and headings and all.
-
-    *skip_app_only* drops the block the file fences off as not worth showing in
-    the app.  *static_url* is the prefix under which the file's images are served,
-    which is what lets them be plain ``<img>`` tags.  *before_sections* is HTML to
-    place immediately above the first section heading — after the title and the
-    file's opening note, which is where a table of contents belongs.
-    """
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError as exc:
-        st.error(f"Could not read `{path.name}`: {exc}")
-        return
-    if skip_app_only:
-        text = _MD_SKIP.sub("", text)
-    if before_sections:
-        first = _MD_HEADING.search(text)
-        if first:
-            text = text[:first.start()] + before_sections + "\n\n" + text[first.start():]
-
-    def chunk(md):
-        md = md.strip()
-        if md:
-            md = _MD_HEADING.sub(lambda m: _heading_html(m.group(1), m.group(2)), md)
-            st.markdown(_MD_REL_LINK.sub(r"\1 (`\2`)", md), unsafe_allow_html=True)
-
-    pos = 0
-    for i, m in enumerate(_MD_IMAGE.finditer(text)):
-        chunk(text[pos:m.start()])
-        name = Path(m.group(2)).name
-        if static_url and (path.parent / m.group(2)).is_file():
-            st.markdown(_shot_html(static_url + name, m.group(1), f"bl-shot-{i}"),
-                        unsafe_allow_html=True)
-        pos = m.end()
-    chunk(text[pos:])
-
-
-def page_tutorial():
-    """The walkthrough, rendered from ui/TUTORIAL.md so there is one copy of it.
-
-    Rendered into a keyed container so the stylesheet can hold the text to a
-    readable measure, and with the file's install-and-launch block dropped: the
-    app is demonstrably running by the time anyone reads this page, so telling
-    them how to start it is the one section that cannot apply.  It stays in the
-    file for the GitHub reader, who has not started it yet.
-    """
-    st.markdown(styles.TUTORIAL_CSS, unsafe_allow_html=True)
-    with st.container(key="tutorial"):
-        _render_markdown_file(_TUTORIAL_MD, skip_app_only=True,
-                              static_url="/app/static/",
-                              before_sections=_contents_html())
-
-
-def _bytes_human(n):
-    """A size a person reads, from a number of bytes."""
-    if n >= 1e9:
-        return f"{n / 1e9:.1f} GB"
-    if n >= 1e6:
-        return f"{n / 1e6:.1f} MB"
-    return f"{max(n // 1000, 1)} kB"
-
-
-def _age_human(days):
-    """How long ago, in the largest unit that still says something useful."""
-    if days < 1 / 24:
-        return "just now"
-    if days < 1:
-        return f"{int(days * 24)} hour(s) ago"
-    return f"{int(days)} day(s) ago"
-
-
-def _para(*paragraphs):
-    """Join paragraphs for a tooltip, which renders Markdown and wants blank lines."""
-    return "\n\n".join(paragraphs)
-
-
-def _directory_row(module, *, title, key, offered, coverage, off_state, help_text):
-    """One directory, as a switch and one line of fact.
-
-    A switch rather than a Download button and its retinue, because there are only
-    two states worth having and the switch *is* both of them: on means the list is
-    held here and searched here; off means it is not.  There is no separate Remove
-    and no separate Refresh — off removes it, and a copy older than a fortnight is
-    replaced on its own.
-
-    Everything that used to be said in paragraphs is on the ⓘ beside the switch.
-    A settings page is read when something needs deciding, and the decision is the
-    switch; the reasoning should be there for whoever wants it and out of the way
-    of whoever does not.
-    """
-    state = module.status()
-    held = state["present"]
-    want = st.toggle(f"**{title}** — searched by the {offered}", value=held,
-                     key=f"hold_{key}", help=help_text)
-
-    if want and not held:
-        _fetch_directory(module, title)         # reruns when it lands
-    elif held and not want:
-        module.delete()
-        venue_lists.clear_directory_caches()
-        notices.notify_next_run(f"{title} removed from this machine.", icon="🗑️")
-        st.rerun()
-
-    if held:
-        count = (f"{state['journals']:,} journals" if state["journals"] >= 0
-                 else "unreadable — switch it off and on again")
-        line = (f"{count} &nbsp;·&nbsp; {_bytes_human(state['bytes'])} stored "
-                f"&nbsp;&nbsp;—&nbsp;&nbsp; {coverage}")
-        tone = "bl-dir-present"
-    else:
-        line, tone = off_state, "bl-dir-absent"
-    st.markdown(f"<div class='bl-dir-state {tone}'>{line}</div>", unsafe_allow_html=True)
-
-
-def _fetch_directory(module, title):
-    """Download one directory's list, with a bar, then forget the old index."""
-    bar = st.progress(0.0, text=f"Fetching {title}…")
-    try:
-        def on_progress(fraction):
-            # A server that sends no length gives None; the bar then only says
-            # "running" rather than lying about how far along it is.
-            bar.progress(fraction if fraction is not None else 0.5,
-                         text=f"Fetching {title}…"
-                              + (f" {int(fraction * 100)}%" if fraction else ""))
-
-        journals, error = module.load_journals(refresh=True, progress=on_progress)
-        bar.progress(1.0, text=f"Reducing {len(journals):,} journals…")
-    except Exception as exc:                      # a download must not break the page
-        journals, error = [], f"{type(exc).__name__}: {exc}"
-    finally:
-        bar.empty()
-    venue_lists.clear_directory_caches()
-    if error:
-        st.error(error)
-    else:
-        notices.notify_next_run(f"{title}: {len(journals):,} journals held here.", icon="✅")
-        st.rerun()
-
-
-def page_settings():
-    """Two switches: whether each venue directory is held on this machine.
-
-    The page exists because the default has to stay cheap.  Nothing here is
-    downloaded until it is switched on, which is the whole point — a first run of
-    this app should cost nothing it was not asked for.
-    """
+    """The four-step flow: choose a check, provide papers, set options, run."""
+    st.title("🕵️ Beall's List predatory-venue check")
+    st.caption("Is the paper's **journal/publisher on Beall's List** of potentially predatory "
+               "venues? Add your papers as JSON, run, and download the Excel report. "
+               "Step-by-step instructions are on the **Tutorial** page.")
     st.markdown(styles.PAGE_CSS, unsafe_allow_html=True)
+    # The one pair of colours the stylesheet cannot work out for itself.
     st.markdown(styles.field_placeholder_css(), unsafe_allow_html=True)
+    # Anything the previous render queued on its way out — see notices.notify_next_run.
     notices.flush_notices()
 
-    st.title("⚙️ Settings")
-    st.caption("Hold a venue directory on this machine and Step 3 searches it here — "
-               "instantly, with no internet. Nothing is downloaded until you switch it "
-               "on. Neither directory takes any part in any verdict.")
-
-    _directory_row(
-        doaj, title="DOAJ", key="doaj", offered="**whitelist**",
-        coverage="every one has a name, an ISSN, a publisher and a website",
-        off_state="Not on this machine — the whitelist cannot search until you switch this on",
-        help_text=_para(
-            "The Directory of Open Access Journals: about 23,000 journals that passed "
-            "its editorial screening, each with its name, ISSN, publisher and website. "
-            "That is everything a whitelist entry can match on.",
-
-            "Switching this on downloads about 25 MB once and keeps about 4 MB of it — "
-            "the rest is fields a venue list has no use for. A few seconds.",
-
-            "There is no online alternative for this box: DOAJ's search endpoint "
-            "answers a request per keystroke with a 502, so the whitelist can only "
-            "search a local copy. With this off, type the venue and press Add.",
-
-            "Being listed in DOAJ is not part of any verdict — it only helps name a "
-            "venue."))
-
-    _directory_row(
-        crossref, title="Crossref", key="crossref", offered="**blacklist**",
-        coverage="every one has a name, 82% an ISSN, almost all a publisher — no websites",
-        off_state="Searching Crossref online — about half a second a search, "
-                  "needs a connection, starts from two letters",
-        help_text=_para(
-            "The DOI registry: about 167,000 journals, screened by nobody, which is "
-            "what a blacklist needs. Every one has a name and almost all a publisher; "
-            "82% carry an ISSN. Crossref records no websites at all, so an entry added "
-            "from here matches on name and ISSN, never on a domain.",
-
-            "Switching this on downloads about 51 MB once and keeps about 18 MB. "
-            "Twenty seconds or so.",
-
-            "With it off the blacklist still works — it asks Crossref's live API "
-            "instead, which needs a connection and takes about half a second a search. "
-            "With it on, searches are local and instant, and start from one letter.",
-
-            "Being registered with Crossref is not part of any verdict — it only helps "
-            "name a venue."))
-
-    st.caption(f"Stored in `{venue_lookup.CACHE_DIR}` · ignored by git · safe to delete "
-               "by hand · replaced automatically once older than a fortnight.")
-
-
+    if st.session_state.get("checker_id") not in runners.CHECKERS_BY_ID:
+        st.session_state["checker_id"] = runners.CHECKERS[0].id
+    checker = runners.CHECKERS_BY_ID[st.session_state["checker_id"]]
+    # Step 3's provider starts at `.env`'s, not at whichever happens to head the
+    # list.  Set here rather than there because Step 1's readiness line, drawn
+    # first, has to be answering about the same one.
+    st.session_state.setdefault("provider", ENV_PROVIDER)
+    llm = _step_choose_check(checker)
+    items = _step_provide_papers()
+    options = _step_options(checker, llm)
+    _step_run(checker, items, llm, options)
 # ── Navigation ──────────────────────────────────────────────────────────────
 # Three pages in the sidebar: the flow, the instructions for it, and the one
 # thing there is to configure.
 nav = st.navigation([
     # The default page is served from "/", so it is given no url_path of its own.
     st.Page(page_check, title="Run a check", icon="▶️", default=True),
-    st.Page(page_tutorial, title="Tutorial", icon="📘", url_path="tutorial"),
-    st.Page(page_settings, title="Settings", icon="⚙️", url_path="settings"),
+    st.Page(tutorial_page.page_tutorial, title="Tutorial", icon="📘", url_path="tutorial"),
+    st.Page(settings_page.page_settings, title="Settings", icon="⚙️", url_path="settings"),
 ])
 sidebar()          # below the page links, on every page
 nav.run()

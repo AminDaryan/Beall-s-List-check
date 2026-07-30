@@ -1,13 +1,12 @@
 """Messages that outlive the render that raised them.
 
-Streamlit paints only when a run finishes, and a run that ends in
-``st.rerun`` has its output discarded — so a toast raised just before one
-goes down with it.  Anything that acts and then reruns (choosing a venue,
-switching a directory on) queues its confirmation here instead, and the next
-render flushes it.
+Streamlit paints only when a run finishes, and a run that ends in ``st.rerun``
+has its output discarded — so a toast raised just before one goes down with it.
+Anything that acts and then reruns (choosing a venue, switching a directory on)
+queues its confirmation here instead, and the next render flushes it.
 
-Its own module because three of them need it and it needs nothing back,
-which is what keeps the import graph a graph.
+Its own module because three of them need it and it needs nothing back, which is
+what keeps the import graph a graph.
 """
 
 import streamlit as st

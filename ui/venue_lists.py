@@ -7,10 +7,11 @@ searched in different directories for that reason, but they are the *same
 control*: same skeleton, same bands, same handlers, differing only in which
 directory a keystroke reaches and what an empty list means.
 
-The directory itself is ``doaj.py`` or ``crossref.py``; the shape they hand back
-and the local index they are searched through are ``venue_lookup.py``'s.  What is
-here is everything between those and the screen: when to look something up, what
-to do with a click, and how to say what an entry will be matched on.
+The directories themselves are ``doaj.py`` and ``crossref.py``; the venue shape
+they hand back and the local index they are searched through are
+``venue_lookup.py``'s.  What is here is everything between those and the screen:
+when to look something up, what to do with a click, and how to say what an entry
+will be matched on.
 
 Reads its geometry and its palette from ``styles``, so the dropdown it draws
 inside the component's iframe lands exactly on the bands the page's own CSS sets
@@ -38,6 +39,7 @@ try:
     from streamlit_searchbox import st_searchbox
 except Exception:
     st_searchbox = None
+
 
 # ── Step 3's venue lists ─────────────────────────────────────────────────────
 # A venue list is a *list*, and it is now edited as one: rows with a ✕, built by
@@ -133,6 +135,7 @@ def directory_of(source):
 _LOOKUP_IDLE = {"term": "", "shown": 0, "total": 0, "error": "", "pending": False}
 
 
+@st.cache_resource(show_spinner=False)
 def doaj_index():
     """DOAJ's whole journal list, read from the local copy and kept for the process.
 
@@ -152,6 +155,7 @@ def doaj_index():
     return doaj.build_index(journals), error
 
 
+@st.cache_resource(show_spinner=False)
 def crossref_index():
     """Crossref's whole journal list, when there is a local copy of it.
 
@@ -333,7 +337,7 @@ def searchbox_styles(*, has_matches=True):
                 # Inset, because the wrapper above may be clipping. See the
                 # docstring: an outset ring would be cut off on an empty box.
                 ":focus-within": {"border": f"1px solid {accent}",
-                                  "boxShadow": f"inset 0 0 0 2px rgba(59,130,246,.45)"},
+                                  "boxShadow": "inset 0 0 0 2px rgba(59,130,246,.45)"},
             },
             "singleValue": {"color": text},
             "input": {"color": text},
@@ -346,6 +350,7 @@ def searchbox_styles(*, has_matches=True):
     }
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
 def crossref_search(term: str, limit: int):
     """Memoized :func:`crossref.search` — one request per distinct term per hour.
 

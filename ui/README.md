@@ -1,8 +1,18 @@
 # The web app
 
-> Deep-dive companion to [`app.py`](app.py), [`runners.py`](runners.py) and
-> [`doaj.py`](doaj.py). The
+> Deep-dive companion to the modules in this folder. The
 > main [README](../README.md) gives the short version and links here.
+>
+> | | |
+> |---|---|
+> | [`app.py`](app.py) | the four-step flow, and the navigation |
+> | [`styles.py`](styles.py) | the palette, the stylesheets, the venue column's geometry |
+> | [`venue_lists.py`](venue_lists.py) | Step 3's venue boxes |
+> | [`results.py`](results.py) | what a run returns, on screen |
+> | [`tutorial_page.py`](tutorial_page.py) · [`settings_page.py`](settings_page.py) | the other two pages |
+> | [`notices.py`](notices.py) | messages that outlive the render that raised them |
+> | [`runners.py`](runners.py) | the Streamlit-free adapter that executes a check |
+> | [`doaj.py`](doaj.py) · [`crossref.py`](crossref.py) · [`venue_lookup.py`](venue_lookup.py) | the venue directories |
 > For how a verdict is reached, see [`match/`](../src/bealls_list_check/match/README.md)
 > and [`resolve/`](../src/bealls_list_check/resolve/README.md).
 
