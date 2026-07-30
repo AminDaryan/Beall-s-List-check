@@ -437,10 +437,11 @@ turn a search box off — both answers work, and the app starts on the first one
 
 **Nothing is downloaded until you choose "On this computer"**, and choosing "Over
 the internet" again keeps the file — so choosing the copy a second time is
-instant rather than another download. A copy older than a fortnight is replaced
-on its own, so there is nothing to refresh by hand. The line under each pair of
-options reports what is actually on your computer: how many journals, how big,
-and how long ago it arrived.
+instant rather than another download. A copy older than a fortnight still works;
+choosing "On this computer" again replaces it with a fresh one. The line under
+each pair of options reports what is actually on your computer: how many
+journals, how big, how long ago it arrived, and whether it is old enough to be
+worth replacing.
 
 One difference worth knowing when building a list: DOAJ records a website for
 every journal, and Crossref records none at all. So a venue added from the

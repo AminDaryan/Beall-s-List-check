@@ -65,9 +65,9 @@ for _p in [_UI, *(d for d in _UI.iterdir() if d.is_dir() and any(d.glob("*.py"))
         sys.path.insert(0, str(_p))
 
 from venue_lookup import (CACHE_DIR, ISSN_RE, MAX_CACHE_AGE_SECONDS,  # noqa: F401
-                          SearchResult, Venue, build_index, cache_status,
-                          normalize_issn, read_cache, read_preference,
-                          write_cache, write_preference)
+                          SearchResult, Venue, build_index, cache_present,
+                          cache_status, normalize_issn, read_cache,
+                          read_preference, write_cache, write_preference)
 # Aliased, because this module's own `search` is the live API and both are wanted:
 # the local copy when there is one, the network when there is not.
 from venue_lookup import search as search_local
@@ -283,12 +283,23 @@ def hold(value):
 
 
 def downloaded():
-    """Whether a local copy is actually on disk, whatever the preference says."""
-    return bool(cache_status(CACHE_FILE)["present"])
+    """Whether a local copy is actually on disk, whatever the preference says.
+
+    :func:`cache_present` rather than :func:`status`, because this is asked at
+    keystroke rate — see the note there.  It matters more here than it does for
+    DOAJ: this file is 17.6 MB, and counting its records to decide whether it
+    exists cost 405 ms a call — thirty times what searching every one of them
+    costs.
+    """
+    return cache_present(CACHE_FILE)
 
 
 def have_local():
-    """Whether searches should go to the local copy: asked for, and actually here."""
+    """Whether searches should go to the local copy: asked for, and actually here.
+
+    Two cheap reads and no parse: this is on the path of every keystroke in the
+    blacklist box and every render of Step 3.
+    """
     return held() and downloaded()
 
 

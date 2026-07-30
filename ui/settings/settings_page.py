@@ -13,9 +13,9 @@ options with their costs written beside them, because the question here is
 Each option carries its own trade in its caption, so the choice can be made
 without flipping it to find out what the other one does, and the line underneath
 reports the copy on disk — how many journals, how big, how old.  There is no
-Remove and no Refresh: choosing "over the internet" leaves the file alone (so
-choosing back costs no download), and a copy older than a fortnight is replaced
-on its own.
+Remove and no Refresh: choosing "over the internet" leaves the file alone, so
+choosing the copy again costs no download — unless it has aged past a fortnight
+or cannot be read, in which case that same choice is what replaces it.
 
 Nothing is downloaded until "on this computer" is chosen — which is the point.  A
 first run of this app should cost nothing it was not asked for.
@@ -115,10 +115,15 @@ def _state_line(module, state, title):
         # page will replace, not one it will congratulate itself on already having.
         return (f"The copy of {title} on this computer could not be read — choose "
                 f"“{ONLINE}”, then “{LOCAL}” again to download it afresh"), "bl-dir-broken"
+    # A copy past a fortnight still answers every search, so this stays the quiet
+    # tone and not an amber one — but the two clicks that replace it are worth
+    # naming, because they are the only thing that will.
+    replace = (f" — choose “{ONLINE}”, then “{LOCAL}” again to replace it"
+               if state["stale"] else "")
     return _dot("Searching a copy on this computer",
                 f"{state['journals']:,} journals",
                 _bytes_human(state["bytes"]),
-                f"downloaded {_age_human(state['age_days'])}"), "bl-dir-present"
+                f"downloaded {_age_human(state['age_days'])}{replace}"), "bl-dir-present"
 
 
 def _directory(module, *, title, key, searched_by, about, online, local, help_text):
@@ -143,16 +148,24 @@ def _directory(module, *, title, key, searched_by, about, online, local, help_te
 
     if choice == LOCAL and not on:
         module.hold(True)
-        if _usable(state):
+        if _usable(state) and not state["stale"]:
             # Already here from a previous time it was chosen.  Going back to
             # the internet does not throw the file away, so this costs nothing.
             venue_lists.clear_directory_caches()
             notify_next_run(f"{title}: searching the copy already on this computer.",
                             icon="✅")
             st.rerun()
-        # Only reached when the fetch failed and said so; a fetch that worked
-        # rerenders from the top, so `state` below is still what is on disk.
+        # Missing, damaged, or past a fortnight: all three are fetched here, on the
+        # act of choosing the copy, because this is the only place a download can
+        # be seen and priced.  A stale one used to be replaced by the venue box
+        # instead — `load_journals` treats a stale cache as no cache — which put
+        # 51 MB inside a keystroke and contradicted this page's one promise, that
+        # nothing is downloaded until it is asked for.  Nothing is withheld in the
+        # meantime: an old copy still answers every search, and goes on doing so
+        # until this replaces it.  See venue_lists._local_index.
         _fetch_directory(module, title)
+        # Only reached when that fetch failed and said so; one that worked
+        # rerenders from the top, so `state` below is still what is on disk.
     elif choice == ONLINE and on:
         module.hold(False)
         venue_lists.clear_directory_caches()
@@ -253,5 +266,5 @@ def page_settings():
     st.divider()
 
     st.caption(f"Downloaded copies are kept in `{venue_lookup.CACHE_DIR}` — ignored by "
-               "git, safe to delete by hand, and replaced automatically once older than "
-               "a fortnight.")
+               "git and safe to delete by hand. A copy older than a fortnight still "
+               "works and is replaced the next time you choose it here.")

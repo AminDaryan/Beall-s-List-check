@@ -68,13 +68,25 @@ made the recovery line advise a round trip that did nothing, since going to the
 internet and back would have found the same broken file and congratulated itself
 on it.
 
+This is the one place that distinction is worth its cost. `cache_status` reports
+the journal count, and counting the records means parsing the file — 405 ms over
+Crossref's 17.6 MB. Affordable for a page that renders when somebody opens it;
+the venue boxes ask the cheaper `venue_lookup.cache_present()` instead, and
+[`venues/README.md`](../venues/README.md#what-a-keystroke-actually-costs) records
+what it cost when they did not.
+
 ## What there is no control for
 
 - **No Remove.** Choosing *Over the internet* leaves the file where it is, which
   is what makes choosing the copy again instant (measured: 2.5 s, no network).
   The preference and the presence of the file are two separate facts, kept apart
   in `venue_lookup.PREFS_FILE`.
-- **No Refresh.** A copy older than a fortnight is replaced on its own.
+- **No Refresh.** A copy older than a fortnight still answers every search, so
+  nothing is withheld while it ages; choosing *On this computer* is what replaces
+  it, on the same two clicks that recover a damaged one. It used to be replaced
+  automatically — by a venue box, because `load_journals` treats a stale cache as
+  no cache, which made the fortnight rule a 51 MB download from inside a
+  keystroke and contradicted the promise two lines below.
 - **Nothing is downloaded until it is asked for here.** That is the point of the
   page existing at all: a first run of this app should cost nothing it was not
   asked for.

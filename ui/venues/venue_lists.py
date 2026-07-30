@@ -150,6 +150,45 @@ def directory_of(source):
 _LOOKUP_IDLE = {"term": "", "shown": 0, "total": 0, "error": "", "pending": False}
 
 
+# What a box says when it is set to search a local copy and there is no readable
+# one to search.  Worded as the Settings page words the same situation, because it
+# is the same two clicks and the same reason: a copy that cannot be read is one
+# that page will replace, and this sentence has to send the reader there knowing
+# what to press.  The two option names are repeated rather than imported —
+# `settings_page` imports this module, so the dependency cannot run the other way.
+_NO_LOCAL_COPY = ("The copy of {name} on this computer could not be read — open "
+                  "Settings and choose “Over the internet”, then “On this "
+                  "computer” again to download it afresh.")
+
+
+def _local_index(module, name):
+    """One directory's whole journal list, read from disk and indexed. Never fetches.
+
+    The shared body of the two cached indexes below, and the point of it is what it
+    does **not** import: ``module.load_journals``.  That function reads the same
+    cache file and then, finding nothing usable, *downloads the directory* — 25 MB
+    for DOAJ, 51 MB for Crossref.  Its docstrings promise it never does so here,
+    and that promise rested entirely on the caller having asked ``have_local()``
+    first — which answers True for a file that is present and **damaged**.  So the
+    one arrangement the promise was written to exclude was the one it allowed: a
+    half-written cache turned a keystroke into a 51 MB fetch.  Reading the file
+    here makes the download structurally unreachable rather than merely unlikely.
+
+    ``max_age=None`` because age is not this function's question.  A fortnight-old
+    list still names journals — see ``venue_lookup.MAX_CACHE_AGE_SECONDS`` — and
+    the choice here is not between an old list and a fresh one, it is between an
+    old list and none.  Replacing a stale copy belongs to the Settings page, which
+    is where a download can be seen, priced and cancelled.
+
+    Returns ``(index, error)``; *error* is shown under the box and is empty on
+    success.
+    """
+    journals = venue_lookup.read_cache(module.CACHE_FILE, max_age=None)
+    if journals is None:
+        return [], _NO_LOCAL_COPY.format(name=name)
+    return venue_lookup.build_index(journals), ""
+
+
 @st.cache_resource(show_spinner=False)
 def doaj_index():
     """DOAJ's whole journal list, read from the local copy and kept for the process.
@@ -157,17 +196,13 @@ def doaj_index():
     ``cache_resource`` rather than ``cache_data``: this is one large object that
     every session should share, not a per-call value worth copying.
 
-    It **never downloads**.  ``load_journals`` reads the disk cache and, finding
-    none, would fetch 25 MB from inside a keystroke — which used to be exactly
-    what happened the first time anyone used the whitelist box.  Both directories
-    are now downloaded only where a download is asked for, on the Settings page,
-    so the first run of this app costs nothing it did not ask for.
-
-    Returns ``(index, error)``; *error* is shown under the box and is empty on
-    success.
+    It **never downloads** — see :func:`_local_index` for how that is now
+    guaranteed rather than relied upon.  The whitelist box used to fetch 25 MB the
+    first time anyone typed into it; both directories are now downloaded only
+    where a download is asked for, on the Settings page, so the first run of this
+    app costs nothing it did not ask for.
     """
-    journals, error = doaj.load_journals()
-    return doaj.build_index(journals), error
+    return _local_index(doaj, "DOAJ")
 
 
 @st.cache_resource(show_spinner=False)
@@ -175,15 +210,11 @@ def crossref_index():
     """Crossref's whole journal list, when there is a local copy of it.
 
     The blacklist works without this — ``crossref.search`` asks the live API, which
-    needs no download — so unlike :func:`doaj_index` this is only ever called when
-    the Settings page has already fetched the file.  It never fetches one itself:
-    ``load_journals`` reads the disk cache and, finding none, would start a 51 MB
-    download from inside a keystroke.  That is a thing to offer, not to do.
-
-    Returns ``(index, error)``.
+    needs no download — so unlike :func:`doaj_index` this is only ever reached when
+    the Settings page has already fetched the file.  It cannot fetch one itself:
+    a 51 MB download is a thing to offer, not to do from inside a keystroke.
     """
-    journals, error = crossref.load_journals()
-    return crossref.build_index(journals), error
+    return _local_index(crossref, "Crossref")
 
 
 def clear_directory_caches():

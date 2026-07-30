@@ -193,9 +193,14 @@ def option_label(venue):
 # repository.  The Settings page reports and manages both files.
 CACHE_DIR = Path(__file__).resolve().parent / ".cache"
 
-# How long a cached list is used before it is fetched again.  A journal directory
-# does not turn over quickly, and the cost of being two weeks stale is that a very
-# new journal has to be typed by hand — which the box allows anyway.
+# How old a cached list has to be before it is worth fetching again.  A journal
+# directory does not turn over quickly, and the cost of being two weeks stale is
+# that a very new journal has to be typed by hand — which the box allows anyway.
+#
+# Which is why this is the *Settings page's* threshold and not the venue boxes'.
+# A search reads whatever copy is on disk however old it is (see
+# ``venue_lists.doaj_index``): the alternative there is not a fresher list, it is
+# no list at all, or a 51 MB download from inside a keystroke.
 MAX_CACHE_AGE_SECONDS = 14 * 24 * 3600
 
 
@@ -238,8 +243,9 @@ def read_cache(path, max_age=MAX_CACHE_AGE_SECONDS):
 
     A damaged cache is treated as a missing one: there is a way to rebuild it, and
     guessing at half a file is worse than fetching again.  *max_age* of ``None``
-    reads it however old it is, which is what the Settings page wants when it is
-    reporting on a file rather than deciding whether to trust it.
+    reads it however old it is, which is what a caller wants when age is not its
+    question — the Settings page reporting on a file rather than deciding whether
+    to trust it, and the venue boxes, which have no fresher list to fall back to.
     """
     try:
         path = Path(path)
@@ -274,13 +280,43 @@ def write_cache(path, journals):
         pass
 
 
+def cache_present(path):
+    """Whether there is a local copy at *path*.  A stat, and nothing else.
+
+    The question the venue boxes ask, and the reason it is not :func:`cache_status`
+    with the rest of the answer thrown away.  That function reports the journal
+    count, which costs a parse of the whole file — so a test that only needed
+    ``is_file`` was running ``json.load`` over 17.6 MB of Crossref on every
+    keystroke and on every render of Step 3.  Measured: 405 ms to answer *is the
+    file there*, against 13 ms to actually search the 167,000 journals in it.
+
+    Deliberately **not** an opinion about whether that copy is any good.  A present
+    but damaged file answers True here and is caught where it is read, by
+    :func:`read_cache` returning ``None``.  The Settings page does need the
+    stronger question — it decides whether to download — and asks
+    :func:`cache_status` for it, once per render of a page nobody spends the day
+    on.
+    """
+    try:
+        return Path(path).is_file()
+    except Exception:
+        return False
+
+
 def cache_status(path):
     """What the Settings page needs to say about one local copy.
 
-    Reads only the file's own stat plus the record count, never the whole list, so
-    reporting on a 15MB cache costs nothing.  ``journals`` is ``-1`` when the file
-    is there but its count could not be read, which is the honest answer for a
-    file that exists and is damaged.
+    ``journals`` is ``-1`` when the file is there but its count could not be read,
+    which is the honest answer for a file that exists and is damaged — and is what
+    the Settings page tests, because a truncated copy is one to replace rather
+    than one to congratulate itself on already having.
+
+    **This is not cheap, and the count is why.**  Counting the records means
+    parsing the file: 405 ms over Crossref's 17.6 MB, measured.  It is affordable
+    here because the Settings page renders when someone opens it, and nowhere
+    else.  Anything asked more often than that wants :func:`cache_present`, which
+    is a stat — this docstring used to claim the count came for free, and a
+    keystroke-rate caller believed it.
     """
     path = Path(path)
     if not path.is_file():

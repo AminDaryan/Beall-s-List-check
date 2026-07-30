@@ -76,14 +76,14 @@ makes it stop happening.
 The download is the alternative, not the requirement. DOAJ publishes the entire
 journal list as one CSV, so [`doaj.py`](doaj.py) can fetch it **once**
 (~23,000 journals, ~25 MB), reduce it to the fields a venue entry needs, and
-cache it in `ui/venues/.cache/` (gitignored, refetched after a fortnight).
-Everything after that is local:
+cache it in `ui/venues/.cache/` (gitignored; replaced from the Settings page once
+it is over a fortnight old). Everything after that is local:
 
 | | |
 |---|---|
-| First load | ~25 s, once per machine per fortnight |
-| Cached load | ~0.1 s |
-| One search | 30-90 ms over 23,000 journals |
+| First load | ~25 s, once per machine |
+| Cached load | ~0.1 s — 91 ms to read the file, 22 ms to index it, once per process |
+| One search | 2-9 ms over 23,000 journals |
 
 So the box keeps up with typing, works offline once primed, and puts no load on
 DOAJ at all. The trade is that a journal added to DOAJ since the last fetch has
@@ -99,7 +99,7 @@ then the publisher. Shorter titles win ties, so "nature" offers *Nature* before
 One choice per directory, of two named answers — **Over the internet** or **On
 this computer** — and no other control. There is no Remove and no Refresh: going
 back to the internet leaves the file alone, and a copy older than a fortnight is
-replaced on its own. The page itself is documented in
+replaced the next time the copy is chosen. The page itself is documented in
 [`settings/README.md`](../settings/README.md), including why it is a pair of
 named answers rather than a switch; what it changes is this:
 
@@ -127,8 +127,16 @@ before that it had no online mode at all. Both are gone; see the note in
 | Download | ~25 MB CSV | ~51 MB CSV |
 | Fetch + reduce | a few seconds | **18-21 s** |
 | Kept on disk | 3.6 MB | 17.6 MB |
-| One search | 2-34 ms | **14-23 ms** |
+| Index, once per process | 113 ms | 1.1 s |
+| One search | 2-9 ms | 12-142 ms |
+| One whole keystroke | 2-4 ms | 14 ms |
 | Over the internet | its API: ~0.1 s a search, needs a connection | its API: ~0.55 s a search, needs a connection |
+
+**One search** is `search_local` alone and the spread is the match count, not the
+term's length: `sensors` is 2 ms / 13 ms, while `ie` — which a local copy does
+search, having no two-letter floor — matches enough of Crossref to take 142 ms.
+**One whole keystroke** is what the reader actually waits for, and is the number
+that moved; see [below](#what-a-keystroke-actually-costs).
 
 Two numbers, and both are true: the **download** is the directory's full CSV, the
 **kept** figure is what is left after reducing it to the five fields a venue entry
@@ -185,6 +193,60 @@ where the file is and how to read a row of it.
 > single `in` test on the pre-lowered haystack before it runs any regex. Every
 > rank implies the term is somewhere in that haystack, so it changes no result -
 > and it took a Crossref search from **250 ms to 14 ms**.
+
+##### What a keystroke actually costs
+
+Every per-search figure above is `search_local` alone, and for a long time those
+were the only ones measured — which hid the fact that the expensive part of a
+keystroke was never the search. Streamlit reruns the whole script on every
+letter, so Step 3 redraws **both** venue boxes; each box asks `directory_of()`
+which directory it is searching, twice (once for the control, once for the note
+underneath), and the box being typed into asks once more from `_lookup`. Five
+`have_local()` calls per letter.
+
+`have_local()` is `held() and downloaded()`, and `downloaded()` was
+`bool(cache_status(CACHE_FILE)["present"])`. `cache_status` reports the journal
+count, and counting the records means `json.load` over the whole file. So a
+question `Path.is_file()` answers was parsing 17.6 MB of Crossref five times per
+letter — and its own docstring claimed it "reads only the file's own stat plus
+the record count, never the whole list", which is how a keystroke-rate caller
+came to believe it was free:
+
+| | before | after |
+|---|---|---|
+| `doaj.have_local()` | 26 ms | **0.12 ms** |
+| `crossref.have_local()` | 360-431 ms | **0.13 ms** |
+| one keystroke, whitelist box | 1.0-1.4 s | **2-4 ms** |
+| one keystroke, blacklist box | 1.3-1.8 s | **14 ms** |
+
+`venue_lookup.cache_present()` is the cheap question — a stat, and nothing else.
+It is deliberately **not** an opinion about whether the copy is any good: a
+present-but-damaged file answers True here and is caught where the file is read.
+`cache_status` is unchanged, because the Settings page genuinely wants the count
+and renders when somebody opens it and at no other time.
+
+##### A search box must not be able to start a download
+
+`doaj_index()` and `crossref_index()` called `module.load_journals()`, whose
+docstrings promise it never downloads here. That promise rested entirely on the
+caller having checked `have_local()` first — and `have_local()` is True for a
+file that is present and **damaged**. `read_cache` then returns `None`,
+`load_journals` falls through to the network, and a keystroke fetches 25 MB
+(DOAJ) or 51 MB (Crossref). The one arrangement the promise existed to exclude
+was the one it allowed.
+
+Both now read the cache file themselves, through `venue_lookup.read_cache`, so
+there is no path from a keystroke to the network to be guarded in the first
+place. A copy that cannot be read becomes a sentence under the box naming the two
+clicks that replace it.
+
+They read with `max_age=None`, and that moves one thing. A copy older than a
+fortnight used to be replaced automatically — but it was replaced *by the venue
+box*, because `load_journals` treats a stale cache as no cache. The fortnight
+rule was implemented as a 51 MB download from inside a keystroke, which is the
+one thing the Settings page promises never happens. A fortnight-old list still
+names journals, so the box goes on searching it; replacing it is now the Settings
+page's job, on the act of choosing the copy.
 
 #### Crossref: a live API, so a floor and a longer debounce
 
