@@ -403,15 +403,14 @@ matches whose address looks like a shared platform are marked with a **⚠**;
 Crossref does not record an address at all. If you do want a publisher's whole
 site, type its domain into the box instead.
 
-The first time you use the whitelist's search, the app downloads DOAJ's journal
-list once (about 25 MB, a few seconds) and keeps it, so every search after that
-is instant and works without internet. It refreshes itself every couple of weeks.
-The blacklist asks Crossref as you type, so it needs a connection — unless you
-have downloaded Crossref's list on the **Settings** page, in which case it is
-searched on your own machine and needs nothing. While it is asking, the **Add**
-button turns into a small spinner — the answer takes about
-half a second, and the spinner is how you know the box is still working rather
-than finished with nothing to show.
+Out of the box both boxes ask their directory over the internet as you type, so
+both need a connection — unless you have downloaded that directory on the
+**Settings** page, in which case the box searches the copy on your own computer
+and needs nothing. Nothing is downloaded unless you ask for it there. While a box
+is asking over the internet, the **Add** button turns into a small spinner — the
+answer takes about a tenth of a second from DOAJ and about half a second from
+Crossref, and the spinner is how you know the box is still working rather than
+finished with nothing to show.
 
 > These searches only help you *name* a venue. Whether a journal is in DOAJ or
 > Crossref has no effect on any verdict — the check asks whether the venue is on
@@ -419,19 +418,29 @@ than finished with nothing to show.
 
 ### Working without internet — the Settings page
 
-The **Settings** page has one switch per directory. On means its journal list is
-held on your machine and searched there: instant, and working with no internet.
+The **Settings** page decides **where** each directory is searched. It cannot
+turn a search box off — both answers work, and the app starts on the first one:
+
+- **Over the internet.** The box asks the directory's own search service. Nothing
+  to download and nothing stored on your computer; it needs a connection, and
+  DOAJ occasionally refuses a search when it is busy.
+- **On this computer.** The whole journal list is downloaded once and searched
+  where it sits. Instant, and it works with no connection at all.
 
 | | DOAJ (whitelist) | Crossref (blacklist) |
 |---|---|---|
+| Over the internet | about a tenth of a second a search | about half a second a search, and it waits for a second letter before asking |
 | Download, once | about 25 MB | about 51 MB |
-| Kept on disk | about 4 MB | about 18 MB |
 | Takes | a few seconds | about 20 seconds |
-| Switched off | the whitelist asks DOAJ over the internet, about a tenth of a second a search | the blacklist asks Crossref over the internet, about half a second a search |
+| Kept on disk | about 4 MB | about 18 MB |
+| On this computer | instant | instant, and from the first letter |
 
-**Nothing is downloaded until you switch it on**, and switching off keeps the
-file, so switching back on is instant. Hover the ⓘ beside a switch for what that
-directory contains and what it costs.
+**Nothing is downloaded until you choose "On this computer"**, and choosing "Over
+the internet" again keeps the file — so choosing the copy a second time is
+instant rather than another download. A copy older than a fortnight is replaced
+on its own, so there is nothing to refresh by hand. The line under each pair of
+options reports what is actually on your computer: how many journals, how big,
+and how long ago it arrived.
 
 One difference worth knowing when building a list: DOAJ records a website for
 every journal, and Crossref records none at all. So a venue added from the

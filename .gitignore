@@ -21,5 +21,10 @@ src/bealls_list_check/results/
 # Input corpus: Semantic Scholar dump JSON files (large; not committed)
 docs/
 
-# DOAJ journal list cached by the web app (ui/doaj.py) - refetched when stale.
+# Journal lists downloaded by the web app's Settings page (ui/venues/doaj.py and
+# crossref.py) plus the preference recording which of them to search locally -
+# generated per machine, refetched when stale, and never part of the repository.
+# Both paths: the cache moved into ui/venues/ with the folder-per-feature split,
+# and this rule did not follow it, which put a 3.6 MB DOAJ list into a commit.
 ui/.cache/
+ui/venues/.cache/

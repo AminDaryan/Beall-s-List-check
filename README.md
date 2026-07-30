@@ -195,7 +195,11 @@ searches the [DOAJ](https://doaj.org), the blacklist the
 blacklisting is not in a directory of vetted journals. Both can be held offline —
 see **Settings** below. If
 nothing matches, Add takes the text as typed. Every row reads **matches on · ISSN 1234-5678 · venue name** — naming each identifier it carries and its value,
-because that is what decides the run's scope; the same list is editable as JSON,
+because that is what decides the run's scope. A journal's ISSNs share **one**
+pill (**ISSN 1980-4164 · 1413-2311**): nearly every journal registers two, one
+for the print edition and one for the online one, and two pills each reading
+*ISSN* read as two journals rather than one journal's two numbers. Either of them
+matches. The same list is editable as JSON,
 in the format the CLI flags read from a file, under **{ } Edit as JSON**.
 The Thorough check
 additionally gets an **LLM provider** picker and a **Model / deployment** picker,
@@ -204,13 +208,17 @@ backends, and the model list is the names `.env` gives for whichever is selected
 plus *Other* for a name typed in. Neither switching provider nor switching model
 means editing `.env` and restarting.
 
-**Settings.** Two switches, one per venue directory: on means its journal list is
-held on this machine and Step 3 searches it there — instantly, with no internet.
-**Nothing is downloaded until it is switched on**, so a first run costs nothing it
-was not asked for (DOAJ is ~25 MB and keeps 3.6 MB; Crossref is ~51 MB and keeps
-17.6 MB). Off, a box searches that directory's own API instead; on, it searches the
-downloaded copy. Switching off keeps the file, so switching back on is instant. Neither directory takes any part in any
-verdict.
+**Settings.** Where each venue directory is searched, put as two named answers
+rather than an on/off switch — because both work, and nothing here can turn a
+search box off. *Over the internet* asks that directory's own API and stores
+nothing; *On this computer* downloads the whole journal list once and searches it
+where it sits, instantly and with no connection. Each answer carries its price
+beside it, so the choice can be made without trying it, and the line underneath
+reports the copy on disk: journals, size, and how long ago it arrived. **Nothing
+is downloaded until it is asked for**, so a first run costs nothing it was not
+asked for (DOAJ is ~25 MB and keeps 3.6 MB; Crossref is ~51 MB and keeps
+17.6 MB). Going back to the internet keeps the file, so choosing the copy again
+is instant. Neither directory takes any part in any verdict.
 
 **Step 4 · Run.** A labelled summary restates what is about to run — the check,
 how many papers, Crossref, the two lists, and what comes back — and the button

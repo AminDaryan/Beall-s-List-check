@@ -537,14 +537,30 @@ def _sig_chips(entry, shown=""):
     *shown* is the row's display name.  An entry carrying nothing but an ISSN is
     displayed *as* that ISSN, and repeating the number in the pill beside itself
     read as two identifiers where there is one — so that pill says the word only.
+
+    **All of a venue's ISSNs go in one pill**, not one pill each.  Nearly every
+    journal has two, one registered for the print edition and one for the online
+    one, so a directory hands back both — and two pills each reading *ISSN* look
+    like two journals stuck together rather than one journal's two numbers, which
+    is exactly the question they got asked.  One pill, and the tooltip says why
+    there are two of them.
     """
     chips = []
-    for issn in entry.get("issns") or []:
-        chips.append(
-            f"<span class='bl-sig bl-sig-issn' title='The journal&#39;s ISSN. A paper "
-            f"is matched when its own ISSN is exactly this — the surest of the three, "
-            f"because an ISSN belongs to one journal and nothing else.'>"
-            f"{'ISSN' if issn == shown else f'ISSN {html.escape(issn)}'}</span>")
+    issns = list(entry.get("issns") or [])
+    if issns:
+        why = ("The journal&#39;s ISSN. A paper is matched when its own ISSN is exactly "
+               "this — the surest of the three, because an ISSN belongs to one journal "
+               "and nothing else.")
+        if len(issns) > 1:
+            why += (" Journals usually hold two, one for the print edition and one for "
+                    "the online one; both are kept here, and a paper carrying either is "
+                    "matched.")
+        # The word alone when the row is already headed by the number — but only
+        # when that number is the whole of what this entry holds.  With two, the
+        # pill lists both, because "ISSN" beside one of them would hide the other.
+        label = ("ISSN" if issns == [shown] else
+                 "ISSN " + " · ".join(html.escape(i) for i in issns))
+        chips.append(f"<span class='bl-sig bl-sig-issn' title='{why}'>{label}</span>")
     if entry.get("domain"):
         shared = venue_lookup.site_is_shared(f"https://{entry['domain']}")
         why = ("The venue's website. A paper is matched when its venue sits on this "
@@ -818,7 +834,10 @@ def _venue_note(key, source):
         return last["error"]
     term, shown, total = last["term"], last["shown"], last["total"]
     if not term:
-        where = "on this machine" if directory["local"] else "online"
+        # The same two words the Settings page uses for the same two states, so
+        # the note reads as a report of the choice made there rather than as a
+        # second, unrelated fact about the box.
+        where = "on this computer" if directory["local"] else "over the internet"
         return f"Start typing — {directory['name']} is searched {where} as you go."
     if last.get("pending"):
         floor = doaj.MIN_TERM if source == "doaj" else crossref.MIN_TERM
@@ -907,7 +926,7 @@ def _venue_input(key, source):
                 debounce=directory["debounce"] if directory else 150,
                 submit_function=lambda chosen: _add_pick(key, chosen, source),
                 help=(entry_help + f" Typing searches {directory['name']} as you go, "
-                      + ("from a copy held on this machine — no internet needed; "
+                      + ("from a copy on this computer — no connection needed; "
                          if directory["local"] else "over the internet; ")
                       + "choosing a match adds that venue with its official title and "
                       f"ISSN. Being listed in {directory['name']} is not part of any "

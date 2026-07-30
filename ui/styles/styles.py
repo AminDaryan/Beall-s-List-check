@@ -663,19 +663,44 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
    is the page's existing "look at this before you rely on it" — the same wash
    Step 4 puts behind an unverified model — and not red, which is a verdict. */
 .bl-sig-wide {background:var(--bl-warn-bg); color:var(--bl-fg);}
-/* ── The Settings page's directory panels ──────────────────────────────────
-   One status line per directory, stated as a fact rather than as a warning: a
-   missing local copy is a choice the page is offering, not a fault. So "not
-   downloaded" is the muted tone and a present copy is the affirmative one --
-   neither is amber, because nothing here is wrong either way. */
+/* ── The Settings page's two directories ───────────────────────────────────
+   Each is three bands in the order the question is asked: what the directory is,
+   where it should be searched, and what is on disk right now.  The first two are
+   the same on every render; only the last one moves. */
+.bl-dir-name {font-size:1.05rem; font-weight:700; line-height:1.4;
+              margin:.1rem 0 .1rem;}
+.bl-dir-about {font-size:.84rem; line-height:1.5; color:var(--bl-fg-muted);
+               margin-bottom:.55rem;}
+/* The status line, stated as a fact rather than as a warning: searching over the
+   internet is one of the two answers and the one the app starts with, not a
+   fault and not a thing left undone.  So it is the muted tone and a downloaded
+   copy is the affirmative one -- neither is amber, because nothing is wrong
+   either way.  Amber is kept for the one case that does need a hand: a file that
+   is here and cannot be read. */
 .bl-dir-state {display:inline-block; padding:3px 11px; border-radius:8px;
                font-size:.82rem; font-weight:600; line-height:1.5;
                font-variant-numeric:tabular-nums; margin:.15rem 0 .25rem;}
 .bl-dir-present {background:var(--bl-ok-bg); color:var(--bl-fg);}
 .bl-dir-absent {background:var(--bl-mute-bg); color:var(--bl-fg-muted);}
-/* The switch and its one line of fact read as one thing, so the line is pulled
-   up under the label rather than sitting a full block gap below it. */
-.bl-dir-state {margin-top:-.35rem;}
+.bl-dir-broken {background:var(--bl-warn-bg); color:var(--bl-fg);}
+/* The choice and the line of fact under it read as one thing, so the line is
+   pulled up rather than sitting a full block gap below the options. */
+.bl-dir-state {margin-top:-.45rem;}
+/* Streamlit sets a radio's captions in the body colour at full contrast, which
+   makes two three-clause prices shout louder than the options they price. They
+   are the small print under a choice, so they are set as small print.  The width
+   is the load-bearing part: the two options are a comparison and have to sit
+   side by side to read as one, and 21rem is what leaves both of them room in the
+   page's content column.  Wider and they wrap to separate rows, which turns
+   "this or that" back into a list. */
+div[class*="st-key-where_"] [data-testid="stCaptionContainer"] {
+    font-size:.78rem; line-height:1.45; color:var(--bl-fg-muted);
+    max-width:21rem; padding-right:1.1rem;}
+/* Their captions are not the same number of lines, and a horizontal radio centres
+   its options against each other -- which puts the two option names on different
+   baselines and stops them reading as a pair.  Topped instead, so the choice is
+   one line across and the small print hangs below it. */
+div[class*="st-key-where_"] div[role="radiogroup"] {align-items:flex-start;}
 .bl-vl-empty {font-size:.85rem; color:var(--bl-fg-faint); font-style:italic;
               padding:.15rem 0 .3rem;}
 

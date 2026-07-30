@@ -296,7 +296,8 @@ def search(term, *, limit=DEFAULT_LIMIT, timeout=8.0):
         # message names it rather than only offering the immediate escape.
         return SearchResult(term=term,
                             error=f"DOAJ answered {response.status_code}. Press Add to "
-                                  "use what you typed, or switch DOAJ on in Settings.")
+                                  "use what you typed, or set DOAJ to “On this computer” "
+                                  "in Settings to stop asking it at all.")
     try:
         payload = response.json()
     except ValueError:

@@ -10,7 +10,7 @@
 > | [`styles/`](styles/README.md) | the palette, the stylesheets, the venue column's geometry |
 > | [`tutorial/`](tutorial/README.md) | the Tutorial page and the markdown it renders |
 > | [`results/`](results/README.md) | what a run gives back, on screen |
-> | [`settings/`](settings/README.md) | the two directory switches |
+> | [`settings/`](settings/README.md) | where each venue directory is searched |
 > | [`notices.py`](notices.py) | messages that outlive the render that raised them |
 > | [`runners.py`](runners.py) | the Streamlit-free adapter that executes a check |
 >
@@ -64,7 +64,7 @@ The sidebar states, in one sentence, what the tool answers, and lists the three
 pages — **Run a check**, documented below; **Tutorial**, which renders
 [`TUTORIAL.md`](tutorial/TUTORIAL.md) so the walkthrough has one copy, readable both in
 the app and on GitHub; and **Settings**, which holds
-[the one thing there is to configure](#settings-offline-venue-directories). It is deliberately short: how the three checks differ is
+[the one thing there is to configure](settings/README.md). It is deliberately short: how the three checks differ is
 said by Step 1's comparison table and what shape the input takes by Step 2's
 caption, and neither is worth saying twice.
 

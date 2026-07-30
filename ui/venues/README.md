@@ -64,15 +64,20 @@ whether or not the directory knows it.
 
 #### DOAJ: the whole list, downloaded once
 
-DOAJ's search API cannot be called per keystroke. Measured: typing four letters
-into it earns a Cloudflare **502 with `Retry-After: 60`**, and the box then
-reports a timeout instead of matches. It is also not ours to do — DOAJ is a free
-service run by a non-profit.
+DOAJ's search API **can** be called per keystroke, and out of the box it is. That
+claim used to read the other way here — that four letters earned a Cloudflare
+**502 with `Retry-After: 60`** — and it was too strong. Measured both ways: three
+bursts, thirteen requests with no gap between them, answered 200 in 0.05–0.34 s
+with no 502 anywhere; and then the app, driving it normally an hour later, took a
+502 on an ordinary two-word query. So the API is the default, its failure says so
+plainly instead of looking like "no match", and the message names the choice that
+makes it stop happening.
 
-DOAJ publishes the entire journal list as one CSV for exactly this reason, so
-[`doaj.py`](doaj.py) fetches it **once** (~23,000 journals, ~25 MB), reduces it
-to the fields a venue entry needs, and caches it in `ui/.cache/` (gitignored,
-refetched after a fortnight). Everything after that is local:
+The download is the alternative, not the requirement. DOAJ publishes the entire
+journal list as one CSV, so [`doaj.py`](doaj.py) can fetch it **once**
+(~23,000 journals, ~25 MB), reduce it to the fields a venue entry needs, and
+cache it in `ui/venues/.cache/` (gitignored, refetched after a fortnight).
+Everything after that is local:
 
 | | |
 |---|---|
@@ -91,25 +96,24 @@ then the publisher. Shorter titles win ties, so "nature" offers *Nature* before
 
 ### Settings · offline venue directories
 
-Two switches, one per directory: on means the journal list is held on this
-machine and searched here, off means it is not. There is no separate Remove and
-no separate Refresh - off removes it, and a copy older than a fortnight is
-replaced on its own. Everything else is on the info icon beside each switch,
-because a settings page is read when something needs deciding and the decision is
-the switch.
+One choice per directory, of two named answers — **Over the internet** or **On
+this computer** — and no other control. There is no Remove and no Refresh: going
+back to the internet leaves the file alone, and a copy older than a fortnight is
+replaced on its own. The page itself is documented in
+[`settings/README.md`](../settings/README.md), including why it is a pair of
+named answers rather than a switch; what it changes is this:
 
-Each switch chooses **where that directory is searched**, not whether it can be:
-
-| | off | on |
+| | Over the internet | On this computer |
 |---|---|---|
 | DOAJ | its API, ~0.1 s a search | the local copy, instant |
-| Crossref | its API, ~0.55 s a search | the local copy, instant |
+| Crossref | its API, ~0.55 s a search, from two letters up | the local copy, instant, from the first letter |
 
-**Nothing is downloaded until a switch is turned on**, and **switching off keeps
-the file** — so switching back on is instant rather than another download
-(measured: 2.5 s, no network). The preference and the presence of the file are
-therefore two different facts, kept apart in `venue_lookup.PREFS_FILE`: off means
-"search this online", not "throw away the 18 MB you downloaded".
+**Nothing is downloaded until "On this computer" is chosen**, and **going back to
+the internet keeps the file** — so choosing the copy again is instant rather than
+another download (measured: 2.5 s, no network). The preference and the presence
+of the file are therefore two different facts, kept apart in
+`venue_lookup.PREFS_FILE`: the internet answer means "search this online", not
+"throw away the 18 MB you downloaded".
 
 DOAJ used to be the exception — fetched automatically the first time anyone typed
 into the whitelist box, which made a first run cost 25 MB it never mentioned, and
@@ -124,15 +128,22 @@ before that it had no online mode at all. Both are gone; see the note in
 | Fetch + reduce | a few seconds | **18-21 s** |
 | Kept on disk | 3.6 MB | 17.6 MB |
 | One search | 2-34 ms | **14-23 ms** |
-| Off | its API: ~0.1 s a search, needs a connection | its API: ~0.55 s a search, needs a connection |
+| Over the internet | its API: ~0.1 s a search, needs a connection | its API: ~0.55 s a search, needs a connection |
 
 Two numbers, and both are true: the **download** is the directory's full CSV, the
 **kept** figure is what is left after reducing it to the five fields a venue entry
-uses. Only the kept figure is on the page; the download cost is in the tooltip,
-next to the sentence that explains the difference.
+uses. Both are on the Settings page now — the download beside the option that
+incurs it, so it is known before it is chosen, and the kept figure in the line
+that reports what is actually on disk.
 
 **Is either enough to build a list with?** An entry matches on ISSN, domain or
-name, so what matters is coverage of those. Measured over the whole of both:
+name, so what matters is coverage of those — and every identifier an entry
+carries is named on its row, so the scope of the run is readable off the list.
+All of a venue's ISSNs share **one** pill (**ISSN 1980-4164 · 1413-2311**):
+nearly every journal registers two, one for the print edition and one for the
+online one, and directories hand back both. One pill each made a single journal
+look like two, which is what it got asked; the tooltip on the pill says why there
+are two numbers and that either one matches. Measured over the whole of both:
 
 | | name | ISSN | publisher | website |
 |---|---|---|---|---|
@@ -177,9 +188,10 @@ where the file is and how to read a row of it.
 
 #### Crossref: a live API, so a floor and a longer debounce
 
-Crossref publishes no bulk journal file small enough to be worth downloading
-here, so [`crossref.py`](crossref.py) queries `/journals` live. It meters by
-**rate** rather than by budget, and every response says so:
+Out of the box [`crossref.py`](crossref.py) queries `/journals` live — the
+downloaded copy above is the alternative, not the default, and this is what
+applies until it is chosen. Crossref meters by **rate** rather than by budget,
+and every response says so:
 
 ```
 X-Rate-Limit-Limit: 5   X-Rate-Limit-Interval: 1s   X-Concurrency-Limit: 1
