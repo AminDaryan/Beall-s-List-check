@@ -154,6 +154,26 @@ class Venue:
         return entry
 
 
+@dataclass(frozen=True)
+class SearchResult:
+    """What one *live* search produced — including, on failure, why it produced nothing.
+
+    Both directories can be searched over the network as well as locally, and both
+    have to be able to fail without raising: the result is cached by the caller,
+    and an exception is not cacheable, so a refused query would otherwise be
+    re-sent on every rerun of the page.
+    """
+
+    venues: tuple = ()
+    total: int = 0                 # matches the directory holds, which exceeds len(venues)
+    term: str = ""
+    error: str = ""                # a sentence for the user; "" when the search ran
+
+    @property
+    def ok(self):
+        return not self.error
+
+
 def option_label(venue):
     """One line for the search menu: the venue, and what adding it would key on."""
     bits = [venue.title or ", ".join(venue.issns) or "untitled"]
@@ -177,6 +197,40 @@ CACHE_DIR = Path(__file__).resolve().parent / ".cache"
 # does not turn over quickly, and the cost of being two weeks stale is that a very
 # new journal has to be typed by hand — which the box allows anyway.
 MAX_CACHE_AGE_SECONDS = 14 * 24 * 3600
+
+
+# Which directories the reader has asked to hold locally.  A file rather than
+# session state, because the answer has to survive closing the app; beside the
+# caches it describes, and the same to delete.
+#
+# Kept *separate from whether the file is there*, which is the distinction the
+# switch turns on: off means "search this online", not "throw away the 18 MB you
+# downloaded".  Turning it back on with the copy still present costs nothing.
+PREFS_FILE = CACHE_DIR / "directories.json"
+
+
+def read_preference(name, default=False):
+    """Whether *name* is set to be held locally.  Unreadable prefs read as default."""
+    try:
+        with io.open(PREFS_FILE, encoding="utf-8") as fh:
+            return bool(json.load(fh).get(name, default))
+    except Exception:
+        return default
+
+
+def write_preference(name, value):
+    """Record whether *name* is held locally.  Failure costs the preference, not the app."""
+    try:
+        prefs = {}
+        if PREFS_FILE.is_file():
+            with io.open(PREFS_FILE, encoding="utf-8") as fh:
+                prefs = json.load(fh)
+        prefs[name] = bool(value)
+        PREFS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with io.open(PREFS_FILE, "w", encoding="utf-8") as fh:
+            json.dump(prefs, fh)
+    except Exception:
+        pass
 
 
 def read_cache(path, max_age=MAX_CACHE_AGE_SECONDS):

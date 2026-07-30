@@ -123,7 +123,8 @@ def directory_of(source):
     directory = _DIRECTORIES.get(source)
     if not directory:
         return None
-    local = source == "doaj" or (source == "crossref" and crossref.have_local())
+    local = (doaj.have_local() if source == "doaj" else
+             crossref.have_local() if source == "crossref" else False)
     return {**directory,
             "local": local,
             "debounce": _LOCAL_DEBOUNCE if local else directory["debounce"]}
@@ -351,6 +352,17 @@ def searchbox_styles(*, has_matches=True):
 
 
 @st.cache_data(show_spinner=False, ttl=3600)
+def doaj_search(term: str, limit: int):
+    """Memoized :func:`doaj.search` — one request per distinct term per hour.
+
+    Same reasoning as :func:`crossref_search` below: Streamlit reruns the whole
+    script on every click anywhere on the page, and the prefixes of a word are
+    re-sent as it is extended and backspaced.
+    """
+    return doaj.search(term, limit=limit)
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
 def crossref_search(term: str, limit: int):
     """Memoized :func:`crossref.search` — one request per distinct term per hour.
 
@@ -565,19 +577,16 @@ def _lookup(key, term, source):
         return []
 
     limit = st.session_state.get(f"{key}_limit") or _LOOKUP_LIMIT
-    if source == "doaj":
-        if not doaj.have_local():
-            # Nothing to search, and nothing this box can do about it: say where
-            # the switch is rather than reporting "no match" for a directory that
-            # was never consulted.
-            st.session_state[f"{key}_last"] = {
-                "term": term, "shown": 0, "total": 0, "pending": False,
-                "error": "DOAJ is not on this machine — switch it on in Settings, "
-                         "or type the venue and press Add."}
-            return []
+    if source == "doaj" and doaj.have_local():
         index, error = doaj_index()
-        venues, total = ((), 0) if error else doaj.search(index, term, limit)
+        venues, total = ((), 0) if error else doaj.search_local(index, term, limit)
         pending = False
+    elif source == "doaj":
+        # No local copy: ask DOAJ. Same shape as the Crossref branch below, and
+        # the same floor, because both are a round trip.
+        result = doaj_search(term, limit)
+        error, venues, total = result.error, result.venues, result.total
+        pending = len(term) < doaj.MIN_TERM
     elif crossref.have_local():
         # A file on this machine. Scanned in ~15ms, so there is nothing to hold
         # the first letters back for — the floor below exists to save a request,
@@ -795,10 +804,12 @@ def _venue_note(key, source):
         return last["error"]
     term, shown, total = last["term"], last["shown"], last["total"]
     if not term:
-        return f"Start typing — {directory['name']} is searched as you go."
+        where = "on this machine" if directory["local"] else "online"
+        return f"Start typing — {directory['name']} is searched {where} as you go."
     if last.get("pending"):
+        floor = doaj.MIN_TERM if source == "doaj" else crossref.MIN_TERM
         return (f"Keep typing — {directory['name']} is searched from "
-                f"{crossref.MIN_TERM} letters, or press Add to use “{term}” as typed.")
+                f"{floor} letters, or press Add to use “{term}” as typed.")
     if not shown:
         return f"No {directory['name']} match for “{term}” — press Add to use it as typed."
     counted = f"{shown} of {total}" if total > shown else f"{shown}"

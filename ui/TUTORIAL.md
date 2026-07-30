@@ -427,10 +427,11 @@ held on your machine and searched there: instant, and working with no internet.
 | Download, once | about 25 MB | about 51 MB |
 | Kept on disk | about 4 MB | about 18 MB |
 | Takes | a few seconds | about 20 seconds |
-| Switched off | the whitelist cannot search — type venues and press Add | the blacklist asks Crossref over the internet, about half a second a search |
+| Switched off | the whitelist asks DOAJ over the internet, about a tenth of a second a search | the blacklist asks Crossref over the internet, about half a second a search |
 
-**Nothing is downloaded until you switch it on.** Hover the ⓘ beside a switch for
-what that directory contains and what it costs.
+**Nothing is downloaded until you switch it on**, and switching off keeps the
+file, so switching back on is instant. Hover the ⓘ beside a switch for what that
+directory contains and what it costs.
 
 One difference worth knowing when building a list: DOAJ records a website for
 every journal, and Crossref records none at all. So a venue added from the

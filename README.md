@@ -208,8 +208,8 @@ means editing `.env` and restarting.
 held on this machine and Step 3 searches it there — instantly, with no internet.
 **Nothing is downloaded until it is switched on**, so a first run costs nothing it
 was not asked for (DOAJ is ~25 MB and keeps 3.6 MB; Crossref is ~51 MB and keeps
-17.6 MB). With Crossref off the blacklist asks its live API instead; with DOAJ off
-the whitelist cannot search and says so. Neither directory takes any part in any
+17.6 MB). Off, a box searches that directory's own API instead; on, it searches the
+downloaded copy. Switching off keeps the file, so switching back on is instant. Neither directory takes any part in any
 verdict.
 
 **Step 4 · Run.** A labelled summary restates what is about to run — the check,

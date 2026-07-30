@@ -523,12 +523,23 @@ replaced on its own. Everything else is on the info icon beside each switch,
 because a settings page is read when something needs deciding and the decision is
 the switch.
 
-**Nothing is downloaded until it is switched on**, including DOAJ. That is a
-change: DOAJ used to be fetched the first time anyone typed into the whitelist
-box, which made a first run cost 25 MB it never mentioned. `doaj_index()` and
-`crossref_index()` both read the disk cache and never fetch; with DOAJ off, the
-whitelist box says where the switch is rather than reporting "no match" for a
-directory it never consulted.
+Each switch chooses **where that directory is searched**, not whether it can be:
+
+| | off | on |
+|---|---|---|
+| DOAJ | its API, ~0.1 s a search | the local copy, instant |
+| Crossref | its API, ~0.55 s a search | the local copy, instant |
+
+**Nothing is downloaded until a switch is turned on**, and **switching off keeps
+the file** — so switching back on is instant rather than another download
+(measured: 2.5 s, no network). The preference and the presence of the file are
+therefore two different facts, kept apart in `venue_lookup.PREFS_FILE`: off means
+"search this online", not "throw away the 18 MB you downloaded".
+
+DOAJ used to be the exception — fetched automatically the first time anyone typed
+into the whitelist box, which made a first run cost 25 MB it never mentioned, and
+before that it had no online mode at all. Both are gone; see the note in
+[`doaj.py`](doaj.py) about the 502 claim that justified it.
 
 | | DOAJ | Crossref |
 |---|---|---|
@@ -538,7 +549,7 @@ directory it never consulted.
 | Fetch + reduce | a few seconds | **18-21 s** |
 | Kept on disk | 3.6 MB | 17.6 MB |
 | One search | 2-34 ms | **14-23 ms** |
-| Off | the whitelist cannot search at all | the live API: ~550 ms a search, needs a connection |
+| Off | its API: ~0.1 s a search, needs a connection | its API: ~0.55 s a search, needs a connection |
 
 Two numbers, and both are true: the **download** is the directory's full CSV, the
 **kept** figure is what is left after reducing it to the five fields a venue entry

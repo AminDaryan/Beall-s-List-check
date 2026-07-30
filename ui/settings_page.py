@@ -59,18 +59,26 @@ def _directory_row(module, *, title, key, offered, coverage, off_state, help_tex
     of whoever does not.
     """
     state = module.status()
-    held = state["present"]
-    want = st.toggle(f"**{title}** — searched by the {offered}", value=held,
+    on = module.held()
+    want = st.toggle(f"**{title}** — searched by the {offered}", value=on,
                      key=f"hold_{key}", help=help_text)
 
-    if want and not held:
+    if want and not on:
+        module.hold(True)
+        if module.downloaded():
+            # Already here from a previous time it was switched on. Switching off
+            # does not throw the file away, so this costs nothing.
+            venue_lists.clear_directory_caches()
+            notify_next_run(f"{title}: searching the copy already here.", icon="✅")
+            st.rerun()
         _fetch_directory(module, title)         # reruns when it lands
-    elif held and not want:
-        module.delete()
+    elif on and not want:
+        module.hold(False)
         venue_lists.clear_directory_caches()
-        notify_next_run(f"{title} removed from this machine.", icon="🗑️")
+        notify_next_run(f"{title}: searching online again.", icon="🌐")
         st.rerun()
 
+    held = on and state["present"]
     if held:
         count = (f"{state['journals']:,} journals" if state["journals"] >= 0
                  else "unreadable — switch it off and on again")
@@ -78,7 +86,9 @@ def _directory_row(module, *, title, key, offered, coverage, off_state, help_tex
                 f"&nbsp;&nbsp;—&nbsp;&nbsp; {coverage}")
         tone = "bl-dir-present"
     else:
-        line, tone = off_state, "bl-dir-absent"
+        extra = (" · copy kept, switching back on is instant"
+                 if state["present"] else "")
+        line, tone = off_state + extra, "bl-dir-absent"
     st.markdown(f"<div class='bl-dir-state {tone}'>{line}</div>", unsafe_allow_html=True)
 
 
@@ -126,21 +136,14 @@ def page_settings():
     _directory_row(
         doaj, title="DOAJ", key="doaj", offered="**whitelist**",
         coverage="every one has a name, an ISSN, a publisher and a website",
-        off_state="Not on this machine — the whitelist cannot search until you switch this on",
+        off_state="Searching DOAJ online — about a tenth of a second a search, needs a connection",
         help_text=_para(
-            "The Directory of Open Access Journals: about 23,000 journals that passed "
-            "its editorial screening, each with its name, ISSN, publisher and website. "
-            "That is everything a whitelist entry can match on.",
+            "About 23,000 open-access journals that passed DOAJ's screening, each "
+            "with a name, an ISSN, a publisher and a website.",
 
-            "Switching this on downloads about 25 MB once and keeps about 4 MB of it — "
-            "the rest is fields a venue list has no use for. A few seconds.",
-
-            "There is no online alternative for this box: DOAJ's search endpoint "
-            "answers a request per keystroke with a 502, so the whitelist can only "
-            "search a local copy. With this off, type the venue and press Add.",
-
-            "Being listed in DOAJ is not part of any verdict — it only helps name a "
-            "venue."))
+            "Off, the box asks DOAJ's API. On, it downloads the list once — 25 MB, "
+            "a few seconds — and searches it here instead. Switching off keeps the "
+            "file, so switching back on is instant."))
 
     _directory_row(
         crossref, title="Crossref", key="crossref", offered="**blacklist**",
@@ -148,20 +151,13 @@ def page_settings():
         off_state="Searching Crossref online — about half a second a search, "
                   "needs a connection, starts from two letters",
         help_text=_para(
-            "The DOI registry: about 167,000 journals, screened by nobody, which is "
-            "what a blacklist needs. Every one has a name and almost all a publisher; "
-            "82% carry an ISSN. Crossref records no websites at all, so an entry added "
-            "from here matches on name and ISSN, never on a domain.",
+            "About 167,000 journals from the DOI registry, screened by nobody, which "
+            "is what a blacklist needs. Names and publishers throughout, an ISSN for "
+            "82% — and no websites at all, so entries match on name and ISSN.",
 
-            "Switching this on downloads about 51 MB once and keeps about 18 MB. "
-            "Twenty seconds or so.",
-
-            "With it off the blacklist still works — it asks Crossref's live API "
-            "instead, which needs a connection and takes about half a second a search. "
-            "With it on, searches are local and instant, and start from one letter.",
-
-            "Being registered with Crossref is not part of any verdict — it only helps "
-            "name a venue."))
+            "Off, the box asks Crossref's API. On, it downloads the list once — "
+            "51 MB, about twenty seconds — and searches it here instead. Switching "
+            "off keeps the file, so switching back on is instant."))
 
     st.caption(f"Stored in `{venue_lookup.CACHE_DIR}` · ignored by git · safe to delete "
                "by hand · replaced automatically once older than a fortnight.")

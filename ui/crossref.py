@@ -47,13 +47,13 @@ Import-safe (no Streamlit), so it can be exercised from a shell:
 import csv
 import io
 import os
-from dataclasses import dataclass
 
 import requests
 
 from venue_lookup import (CACHE_DIR, ISSN_RE, MAX_CACHE_AGE_SECONDS,  # noqa: F401
-                          Venue, build_index, cache_status, normalize_issn,
-                          read_cache, write_cache)
+                          SearchResult, Venue, build_index, cache_status,
+                          normalize_issn, read_cache, read_preference,
+                          write_cache, write_preference)
 # Aliased, because this module's own `search` is the live API and both are wanted:
 # the local copy when there is one, the network when there is not.
 from venue_lookup import search as search_local
@@ -104,20 +104,6 @@ DEFAULT_LIMIT = 8
 # per journal because the endpoint has no field selector (``select`` answers 400
 # here, unlike on ``/works``).  Ten Show more presses to reach it.
 _MAX_ROWS = 200
-
-
-@dataclass(frozen=True)
-class SearchResult:
-    """What one search produced — including, on failure, why it produced nothing."""
-
-    venues: tuple = ()
-    total: int = 0                 # matches Crossref holds, which exceeds len(venues)
-    term: str = ""
-    error: str = ""                # a sentence for the user; "" when the search ran
-
-    @property
-    def ok(self):
-        return not self.error
 
 
 def _issns(record):
@@ -272,13 +258,24 @@ def delete():
         return False
 
 
-def have_local():
-    """Whether a local copy exists and is fresh enough to search.
+def held():
+    """Whether the reader has asked for this directory to be held locally."""
+    return read_preference("crossref")
 
-    Read from the file's own timestamp rather than by loading it, so the question
-    is cheap enough to ask on every render.
-    """
+
+def hold(value):
+    """Record the answer. Switching *off* keeps the file — see venue_lookup.PREFS_FILE."""
+    write_preference("crossref", value)
+
+
+def downloaded():
+    """Whether a local copy is actually on disk, whatever the preference says."""
     return bool(cache_status(CACHE_FILE)["present"])
+
+
+def have_local():
+    """Whether searches should go to the local copy: asked for, and actually here."""
+    return held() and downloaded()
 
 
 def load_journals(*, timeout=300.0, refresh=False, progress=None):

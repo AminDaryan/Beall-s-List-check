@@ -7,15 +7,23 @@ means knowing its exact title, its website, or its ISSN.  DOAJ knows all three,
 so this module turns "the journal I mean is called roughly this" into an entry
 the check can match on.
 
-**Why the whole list, and not the search API.**  The box searches as the name is
-typed, and a request per keystroke is both too slow and not ours to make: DOAJ is
-a free service run by a non-profit, and typing four letters into its search
-endpoint earns a Cloudflare 502 with ``Retry-After: 60`` — measured, not
-supposed.  DOAJ publishes the entire journal list as one CSV for exactly this
-reason, so it is fetched **once** (~23,000 journals, ~25 MB, a few seconds),
-reduced to the five fields a venue entry needs, and cached on disk.  Everything
-after that is a scan of a list in memory: instant from the first character,
-correct offline, and no load on DOAJ at all.
+**Two ways to search it, and the Settings page picks.**  :func:`search` asks
+DOAJ's own API, which is what the whitelist box uses out of the box: no download,
+and an answer in about a tenth of a second.  :func:`load_journals` fetches the
+entire journal list instead — one CSV, ~23,000 journals, ~25 MB — and reduces it
+to the five fields a venue entry needs, after which :func:`search_local` is a
+scan of a list in memory: instant from the first character, correct offline, and
+no load on DOAJ at all.
+
+*This file used to say the API could not be used at all — that typing four
+letters into it earned a Cloudflare 502.  That was too strong, and so was the
+first correction to it.  Measured both ways: three bursts, including thirteen
+requests with no gap between them at all, answered 200 in 0.05–0.34 s with no
+502 anywhere — and then the app, driving it normally an hour later, took a 502
+on an ordinary two-word query.  So: the API works, is usually fast, and **does
+still fail under load**.  That is why it is the default rather than the only
+option, why the failure says so plainly instead of looking like "no match", and
+why the message points at the switch that makes it stop happening.*
 
 Nothing in the check engine imports this: DOAJ has no part in any verdict, and
 must not acquire one.  Being indexed in DOAJ says a journal passed DOAJ's
@@ -40,8 +48,12 @@ import io
 import requests
 
 from venue_lookup import (CACHE_DIR, ISSN_RE, MAX_CACHE_AGE_SECONDS,  # noqa: F401
-                          Venue, build_index, cache_status, normalize_issn,
-                          read_cache, search, site_is_shared, write_cache)
+                          SearchResult, Venue, build_index, cache_status,
+                          normalize_issn, read_cache, read_preference,
+                          site_is_shared, write_cache, write_preference)
+# Aliased, because this module's own `search` is the live API and both are wanted:
+# the local copy when there is one, the network when there is not.
+from venue_lookup import search as search_local
 
 # The venue shape and the shared-host test live in venue_lookup, so this module
 # and crossref.py hand back the same thing. Re-exported under the old name
@@ -52,6 +64,16 @@ Journal = Venue
 # DOAJ's own "all journals as CSV" download — one request, refreshed daily at
 # source.  It 307s to a signed S3 URL, which requests follows.
 _CSV_URL = "https://doaj.org/csv"
+
+# DOAJ's own journal search, one request per term.  Free, no key, and
+# comfortably fast enough to sit behind a debounce -- see the module docstring
+# for the measurement that retired the claim that it was not.
+_API = "https://doaj.org/api/search/journals/"
+
+# Below this many characters nothing is sent: one letter is a real query and
+# not a useful answer, and it costs a round trip.  The local copy has no such
+# cost and so no such floor.
+MIN_TERM = 2
 
 CACHE_FILE = CACHE_DIR / "doaj_journals.json"
 
@@ -101,10 +123,24 @@ def status():
     return cache_status(CACHE_FILE)
 
 
-def have_local():
-    """Whether a local copy exists. Read from the file's own stat, so it is cheap
-    enough to ask on every render."""
+def held():
+    """Whether the reader has asked for this directory to be held locally."""
+    return read_preference("doaj")
+
+
+def hold(value):
+    """Record the answer. Switching *off* keeps the file — see venue_lookup.PREFS_FILE."""
+    write_preference("doaj", value)
+
+
+def downloaded():
+    """Whether a local copy is actually on disk, whatever the preference says."""
     return bool(cache_status(CACHE_FILE)["present"])
+
+
+def have_local():
+    """Whether searches should go to the local copy: asked for, and actually here."""
+    return held() and downloaded()
 
 
 def delete():
@@ -178,3 +214,80 @@ def _download(response, progress=None):
         if progress is not None:
             progress(min(seen / total, 1.0) if total else None)
     return b"".join(chunks)
+
+
+def _api_journal(record):
+    """One API result as a :class:`Journal`, or ``None`` if it names nothing.
+
+    The API nests everything under ``bibjson`` and splits the two ISSNs into
+    their own keys, but it carries the same five fields the CSV does — title,
+    both ISSNs, publisher, country and the journal's own URL — so a venue found
+    online and the same venue found in the local copy are indistinguishable.
+    """
+    bibjson = (record or {}).get("bibjson") or {}
+    issns = []
+    for key in ("pissn", "eissn"):
+        issn = normalize_issn(bibjson.get(key))
+        if issn and issn not in issns:
+            issns.append(issn)
+    title = (bibjson.get("title") or "").strip()
+    if not (title or issns):
+        return None
+    publisher = bibjson.get("publisher") or {}
+    return Venue(
+        title=title,
+        issns=tuple(issns),
+        site=((bibjson.get("ref") or {}).get("journal") or "").strip(),
+        publisher=(publisher.get("name") or "").strip(),
+        country=(publisher.get("country") or "").strip(),
+        kind="journal",
+    )
+
+
+def search(term, *, limit=DEFAULT_LIMIT, timeout=8.0):
+    """Search DOAJ's own API for *term*; never raises.
+
+    The counterpart of :func:`search_local`, and the one the whitelist box uses
+    when there is no local copy.  Returns a
+    :class:`~venue_lookup.SearchResult`; a term shorter than :data:`MIN_TERM` is
+    not sent at all and comes back empty with no error.
+
+    An ISSN is asked as an ISSN — ``issn:2666-2485`` — which is the one query
+    that can be exact.
+    """
+    term = (term or "").strip()
+    if len(term) < MIN_TERM:
+        return SearchResult(term=term)
+
+    issn = normalize_issn(term) if ISSN_RE.search(term) else ""
+    query = f"issn:{issn}" if issn else term
+    try:
+        response = requests.get(_API + requests.utils.quote(query, safe=":"),
+                                params={"pageSize": max(1, min(int(limit), 100))},
+                                headers={"User-Agent": _UA}, timeout=timeout)
+    except requests.exceptions.Timeout:
+        return SearchResult(term=term,
+                            error=f"DOAJ did not answer within {timeout:g}s. "
+                                  "Type the venue and press Add instead.")
+    except requests.exceptions.RequestException:
+        return SearchResult(term=term,
+                            error="Could not reach DOAJ (no internet, or the site is "
+                                  "down). Venues can still be added by typing them.")
+    if response.status_code == 429:
+        return SearchResult(term=term,
+                            error="DOAJ is asking for fewer requests just now. Wait a "
+                                  "moment, or press Add to use what you typed.")
+    if response.status_code != 200:
+        # DOAJ does this under load; the local copy is the standing fix, so the
+        # message names it rather than only offering the immediate escape.
+        return SearchResult(term=term,
+                            error=f"DOAJ answered {response.status_code}. Press Add to "
+                                  "use what you typed, or switch DOAJ on in Settings.")
+    try:
+        payload = response.json()
+    except ValueError:
+        return SearchResult(term=term, error="DOAJ's answer was not readable as JSON.")
+
+    venues = tuple(v for v in (_api_journal(r) for r in (payload.get("results") or []))
+                   if v is not None)
+    return SearchResult(venues=venues, total=int(payload.get("total") or 0), term=term)
