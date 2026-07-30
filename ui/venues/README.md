@@ -533,15 +533,16 @@ means **not examined** rather than cleared. DOAJ is the canonical index of
 invites reading the box as *venues I trust, so don't flag them* — which is the
 opposite of what it does.
 
-The two lists are labelled by what they do, with the familiar term kept as a
-secondary identifier. "Whitelist" alone is ambiguous in this domain — it reads
-just as easily as *venues I consider safe*, which is the opposite of what it
-does:
+The two lists are labelled by the familiar term, with what each one does carried
+on the **?** beside it. "Whitelist" alone is ambiguous in this domain — it reads
+just as easily as *venues I consider safe*, which is the opposite of what it does
+— so the sentence is not dropped, only moved to where such a question is answered
+once rather than restated on every look:
 
-| Box | Effect | CLI |
-|---|---|---|
-| **Only check these venues** *(whitelist)* | Restricts the run. A paper from any venue not listed is reported as `out_of_scope` — **not examined**, which is not the same as cleared. | `--whitelist` |
-| **Also treat these venues as predatory** *(blacklist)* | Extends the list, for this run only. | `--blacklist` |
+| Box | On the **?** | Effect | CLI |
+|---|---|---|---|
+| **whitelist** | Only check these venues | Restricts the run. A paper from any venue not listed is reported as `out_of_scope` — **not examined**, which is not the same as cleared. | `--whitelist` |
+| **blacklist** | Also treat these venues as predatory | Extends the list, for this run only. | `--blacklist` |
 
 Both fold open to the same JSON the CLI flags take as a *file*, editable in
 place:

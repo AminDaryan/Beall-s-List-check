@@ -668,17 +668,21 @@ def _step_options(checker, llm):
         st.caption("Both are empty on most runs. Leave them so unless this run needs a "
                    "different scope from Beall's List itself.")
         wl_col, bl_col = st.columns(2)
-        # Named by what they do, with the familiar term kept as a secondary
-        # identifier.  "Whitelist" alone is ambiguous here: it reads just as
-        # easily as "venues I consider safe", which is the opposite of what
-        # it does.
+        # Named by the familiar term, with what it does on the ? beside it.  The
+        # heading used to carry both — "Only check these venues · whitelist" —
+        # which said the same thing twice across the widest line in the column,
+        # and said it again on every look.  "Whitelist" alone is ambiguous
+        # ("venues I consider safe" is the opposite of what it does), so the
+        # sentence is not dropped; it is put where an ambiguity is resolved
+        # once, on the mark that exists to be asked.
         with wl_col:
             wl = venue_lists.venue_list_editor(
-                "Only check these venues &nbsp;·&nbsp; <b>whitelist</b>", "wl",
+                "whitelist", "wl",
                 "Restricts the run. A paper from any venue not listed here is reported as "
                 "<code>out_of_scope</code> — <b>not examined</b>, which is not the same as "
                 "cleared. Leave empty to check every paper.",
                 "Empty — every paper is checked.",
+                what="Only check these venues",
                 # DOAJ indexes journals, not predatory publishers, so it can help
                 # build this list and has no business building the other one:
                 # appearing in DOAJ is evidence a journal was vetted, which is
@@ -686,10 +690,11 @@ def _step_options(checker, llm):
                 source="doaj")
         with bl_col:
             bl = venue_lists.venue_list_editor(
-                "Also treat these venues as predatory &nbsp;·&nbsp; <b>blacklist</b>", "bl",
+                "blacklist", "bl",
                 "Extends the list. These venues count as predatory for this run in "
                 "addition to everything on Beall's List.",
                 "Empty — Beall's List is used as it stands.",
+                what="Also treat these venues as predatory",
                 # Crossref, not DOAJ: a venue worth blacklisting is one no
                 # directory of vetted journals will have, and the DOI registry
                 # screens nobody. See _DIRECTORIES.
@@ -793,8 +798,13 @@ def _step_run(checker, items, llm, options):
                 log_line.caption("⏳ " + line[-140:])
 
         try:
-            with st.spinner(f"{checker.title} running… "
-                            "large corpora and the LLM pass can take a while."):
+            # What actually makes *this* check slow.  Every one of them scales
+            # with the corpus; only the thorough check also waits on an LLM, and
+            # naming a pass that is not going to run reads as a warning about
+            # something that never happens.
+            slow = ("large corpora and the LLM pass can take a while"
+                    if checker.needs_llm else "large corpora can take a while")
+            with st.spinner(f"{checker.title} running… {slow}."):
                 if checker.kind == "csv":
                     res = runners.run_batch_csv(items, crossref=crossref, on_line=on_line)
                 else:

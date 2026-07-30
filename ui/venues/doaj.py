@@ -1,7 +1,7 @@
 """The DOAJ journal list, held locally so a venue can be found while it is typed.
 
 The Directory of Open Access Journals (https://doaj.org) is the reference index
-of vetted open-access journals.  Step 3's **Only check these venues** list is a
+of vetted open-access journals.  Step 3's **whitelist** is a
 *scope filter* — see ``user_lists.py`` — and typing a journal into it by hand
 means knowing its exact title, its website, or its ISSN.  DOAJ knows all three,
 so this module turns "the journal I mean is called roughly this" into an entry

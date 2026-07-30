@@ -958,7 +958,7 @@ def _venue_list_body(key, empty):
 
 
 def venue_list_editor(label: str, key: str, hint: str, empty: str,
-                      *, source: str = ""):
+                      *, what: str = "", source: str = ""):
     """One venue list, edited as a list. Returns the entries, or None if empty.
 
     The return value is the same JSON-shaped list the old text box parsed to, so
@@ -981,6 +981,13 @@ def venue_list_editor(label: str, key: str, hint: str, empty: str,
     say different things: an empty whitelist means every paper is checked, while
     an empty blacklist means Beall's List is used as it stands.  One sentence
     covering both would have to be vague about the only fact worth stating.
+
+    *what* is the sentence naming what the list does — "Only check these venues"
+    — carried on a ``?`` beside the label rather than in it.  Both were in the
+    heading once, and the pairing spent the column's widest line restating the
+    label in longhand every time it was looked at.  It is still the answer to
+    "which way round is this one?", which is a question asked once; a mark that
+    can be pointed at is where an answer like that belongs.
     """
     st.session_state.setdefault(f"{key}_venues", [])
     st.session_state.setdefault(key, "")
@@ -988,7 +995,9 @@ def venue_list_editor(label: str, key: str, hint: str, empty: str,
 
     # Heading and hint as one block, so a two-line hint and a three-line one
     # occupy the same band and the add boxes beneath them share a row.
-    st.markdown(f"<div class='bl-vl-head'><div class='bl-vl-label'>{label}</div>"
+    mark = (f"<span class='bl-vl-q' title='{html.escape(what, quote=True)}'>?</span>"
+            if what else "")
+    st.markdown(f"<div class='bl-vl-head'><div class='bl-vl-label'>{label}{mark}</div>"
                 f"<div class='bl-vl-hint'>{hint}</div></div>", unsafe_allow_html=True)
 
     note = _venue_input(key, source)

@@ -316,11 +316,13 @@ Below it, under **Venue lists**, are two optional boxes, available on the fast
 check and the thorough check. They are empty on almost every run, and being able
 to see that they are empty is the point of their being on the page:
 
-- **Only check these venues** *(whitelist)* — narrows the run. A paper from a
-  venue that is not on the list is reported as `out_of_scope` instead of being
-  checked.
-- **Also treat these venues as predatory** *(blacklist)* — adds venues to the
-  list, for this run only.
+- **whitelist** — narrows the run: only the venues on it are checked. A paper
+  from a venue that is not on the list is reported as `out_of_scope` instead of
+  being checked.
+- **blacklist** — adds venues to the list, treating them as predatory for this
+  run only.
+
+Each box carries a **?** beside its name giving the same sentence in the app.
 
 `out_of_scope` means the paper was **not examined**. It does not mean the paper
 is fine, and putting a venue on the whitelist never hides a finding about it: a

@@ -216,8 +216,8 @@ def page_settings():
 
     _directory(
         doaj, title="DOAJ", key="doaj",
-        searched_by="Searched by Step 3's <b>Only check these venues</b> box "
-                    "(the <b>whitelist</b>).",
+        searched_by="Searched by Step 3's <b>whitelist</b> box "
+                    "(<i>only check these venues</i>).",
         about="The Directory of Open Access Journals: about 23,000 journals that "
               "passed its editorial screening. Each has a name, an ISSN, a publisher "
               "and a website.",
@@ -234,8 +234,8 @@ def page_settings():
 
     _directory(
         crossref, title="Crossref", key="crossref",
-        searched_by="Searched by Step 3's <b>Also treat these venues as predatory</b> "
-                    "box (the <b>blacklist</b>).",
+        searched_by="Searched by Step 3's <b>blacklist</b> box "
+                    "(<i>also treat these venues as predatory</i>).",
         about="The DOI registry: about 167,000 journals, screened by nobody — which is "
               "what a blacklist needs. All have a name, 82% an ISSN, almost all a "
               "publisher, and none a website.",

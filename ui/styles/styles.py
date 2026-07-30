@@ -508,6 +508,17 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
    a two-line hint in the other from offsetting every control beneath them. */
 .bl-vl-head {min-height:5.4rem;}
 .bl-vl-label {font-size:.95rem; font-weight:600; color:var(--bl-fg); margin-bottom:.1rem;}
+/* The ? beside a list's name, holding the sentence the name used to be paired
+   with.  Sized as a target rather than as a glyph, and kept quiet until it is
+   pointed at, for the same reasons .bl-info is: it answers a question asked
+   once, and it must not compete with the label it sits after. */
+.bl-vl-q {display:inline-flex; align-items:center; justify-content:center;
+          width:1.15rem; height:1.15rem; margin-left:.4rem; border-radius:50%;
+          vertical-align:text-bottom; cursor:help;
+          font-size:.72rem; font-weight:700; line-height:1;
+          background:var(--bl-mute-bg); color:var(--bl-fg-faint);
+          transition:background-color var(--bl-hover), color var(--bl-hover);}
+.bl-vl-q:hover {background:var(--bl-accent-soft); color:var(--bl-fg);}
 .bl-vl-hint {font-size:.8rem; line-height:1.45; color:var(--bl-fg-faint);}
 .bl-vl-hint code {font-size:.92em; padding:1px 4px; border-radius:4px;
                   background:color-mix(in srgb, currentColor 13%, transparent);}
