@@ -88,8 +88,8 @@ produce every verdict except `out_of_scope`.
 
 ![The app after startup, with the example papers loaded](static/ui-main.png)
 
-The sidebar holds two things: the links to the two pages (**Run a check** and
-**Tutorial**) and one line on what the app does. Everything about the LLM is in
+The sidebar holds two things: the links to the three pages (**Run a check**,
+**Tutorial** and **Settings**) and one line on what the app does. Everything about the LLM is in
 the flow itself, because only one of the three checks uses one. The app follows
 the light or dark setting of the browser, and the **⚙** button in the top right
 corner overrides it.
@@ -406,14 +406,35 @@ site, type its domain into the box instead.
 The first time you use the whitelist's search, the app downloads DOAJ's journal
 list once (about 25 MB, a few seconds) and keeps it, so every search after that
 is instant and works without internet. It refreshes itself every couple of weeks.
-The blacklist asks Crossref as you type, so it needs a connection. While it is
-asking, the **Add** button turns into a small spinner — the answer takes about
+The blacklist asks Crossref as you type, so it needs a connection — unless you
+have downloaded Crossref's list on the **Settings** page, in which case it is
+searched on your own machine and needs nothing. While it is asking, the **Add**
+button turns into a small spinner — the answer takes about
 half a second, and the spinner is how you know the box is still working rather
 than finished with nothing to show.
 
 > These searches only help you *name* a venue. Whether a journal is in DOAJ or
 > Crossref has no effect on any verdict — the check asks whether the venue is on
 > Beall's List, which is a different question.
+
+### Working without internet — the Settings page
+
+Both directories publish their whole journal list as one file, and the
+**Settings** page can download them so the searches happen on your own machine:
+instant, and working with no internet at all.
+
+| | DOAJ (whitelist) | Crossref (blacklist) |
+|---|---|---|
+| Download | about 25 MB | about 51 MB |
+| Takes | a few seconds | about 20 seconds |
+| Without it | downloaded automatically the first time you use the box — it has no other way to search | the blacklist asks Crossref over the internet instead, about half a second per search |
+
+Crossref is **never** downloaded unless you ask for it on that page. That is
+deliberate: a first run should not cost 51 MB, and the live search works well.
+Download it if you search venues often, or if the machine has no internet.
+
+Nothing on that page changes any verdict. Both directories only help you *name* a
+venue.
 
 ### Editing the list as JSON
 

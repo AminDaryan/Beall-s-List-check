@@ -345,6 +345,29 @@ _DIRECTORIES = {
     "crossref": {"name": "Crossref", "debounce": 300},
 }
 
+# What the same box costs when the directory is a file on this machine instead of
+# a service: no round trip, so no reason to coalesce keystrokes as hard and no
+# reason to hold the first letters back.  DOAJ has always been read this way;
+# Crossref is read this way only once the Settings page has fetched it.
+_LOCAL_DEBOUNCE = 120
+
+
+def directory_of(source):
+    """The directory a list searches, as it is *right now*.
+
+    The name is fixed; how the box behaves is not, because Crossref can be either
+    a live API or a local copy and the two do not deserve the same debounce.  Read
+    per render, so downloading or removing the copy on the Settings page changes
+    the box on the next interaction without anything having to be told.
+    """
+    directory = _DIRECTORIES.get(source)
+    if not directory:
+        return None
+    local = source == "doaj" or (source == "crossref" and crossref.have_local())
+    return {**directory,
+            "local": local,
+            "debounce": _LOCAL_DEBOUNCE if local else directory["debounce"]}
+
 # What the last lookup found, as a mapping rather than a positional tuple: it is
 # written from four places and read in one, and a tuple that grew a field once
 # already broke the reader from a site that had not been updated with it.
@@ -442,6 +465,36 @@ def doaj_index():
     """
     journals, error = doaj.load_journals()
     return doaj.build_index(journals), error
+
+
+@st.cache_resource(show_spinner=False)
+def crossref_index():
+    """Crossref's whole journal list, when there is a local copy of it.
+
+    The blacklist works without this — ``crossref.search`` asks the live API, which
+    needs no download — so unlike :func:`doaj_index` this is only ever called when
+    the Settings page has already fetched the file.  It never fetches one itself:
+    ``load_journals`` reads the disk cache and, finding none, would start a 51 MB
+    download from inside a keystroke.  That is a thing to offer, not to do.
+
+    Returns ``(index, error)``.
+    """
+    journals, error = crossref.load_journals()
+    return crossref.build_index(journals), error
+
+
+def clear_directory_caches():
+    """Forget both in-memory indexes, after either file has changed on disk.
+
+    They are ``cache_resource``, so they outlive the run that built them — which
+    is the point, and also means a download or a delete would otherwise leave the
+    boxes searching the list from before it.
+    """
+    for cached in (doaj_index, crossref_index):
+        try:
+            cached.clear()
+        except Exception:
+            pass
 
 
 # The field's fill and edge, keyed by whether the dark theme is in force.  Named
@@ -864,6 +917,14 @@ def _lookup(key, term, source):
         index, error = doaj_index()
         venues, total = ((), 0) if error else doaj.search(index, term, limit)
         pending = False
+    elif crossref.have_local():
+        # A file on this machine. Scanned in ~15ms, so there is nothing to hold
+        # the first letters back for — the floor below exists to save a request,
+        # and there is no request. Same treatment as DOAJ, which is read this way
+        # too. See the Settings page.
+        index, error = crossref_index()
+        venues, total = ((), 0) if error else crossref.search_local(index, term, limit)
+        pending = False
     else:
         result = crossref_search(term, limit)
         error, venues, total = result.error, result.venues, result.total
@@ -1067,7 +1128,7 @@ def _venue_note(key, source):
     """The one line under the box: what the last keystroke's lookup found."""
     if not source:
         return "Added exactly as typed — a name, a website (ieee.org) or an ISSN."
-    directory = _DIRECTORIES[source]
+    directory = directory_of(source)
     last = st.session_state.get(f"{key}_last") or _LOOKUP_IDLE
     if last["error"]:
         return last["error"]
@@ -1107,7 +1168,7 @@ def _venue_input(key, source):
     always the same height — it is the only feedback the search gives, and a note
     that appeared only when it had something to say would move the list below it.
     """
-    directory = _DIRECTORIES.get(source)
+    directory = directory_of(source)
     entry_help = ("Read as a name, a website (ieee.org) or an ISSN (1234-5678) — which one "
                   "is decided by what you type, and shown on the row it becomes.")
     # Add belongs to the text, so it appears with it and sits *inside* the box at
@@ -1159,10 +1220,12 @@ def _venue_input(key, source):
                 edit_after_submit="current",
                 debounce=directory["debounce"] if directory else 150,
                 submit_function=lambda chosen: _add_pick(key, chosen, source),
-                help=(entry_help + f" Typing searches {directory['name']} as you go; "
-                      "choosing a match adds that venue with its official title and ISSN. "
-                      f"Being listed in {directory['name']} is not part of any verdict — "
-                      "it only helps name a venue." if directory else entry_help))
+                help=(entry_help + f" Typing searches {directory['name']} as you go, "
+                      + ("from a copy held on this machine — no internet needed; "
+                         if directory["local"] else "over the internet; ")
+                      + "choosing a match adds that venue with its official title and "
+                      f"ISSN. Being listed in {directory['name']} is not part of any "
+                      "verdict — it only helps name a venue." if directory else entry_help))
         if typed:
             st.button("Add", key=f"{key}_handadd",
                       on_click=_add_typed_venue, args=(key,),
@@ -1997,6 +2060,19 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
    is the page's existing "look at this before you rely on it" — the same wash
    Step 4 puts behind an unverified model — and not red, which is a verdict. */
 .bl-sig-wide {background:var(--bl-warn-bg); color:var(--bl-fg);}
+/* ── The Settings page's directory panels ──────────────────────────────────
+   One status line per directory, stated as a fact rather than as a warning: a
+   missing local copy is a choice the page is offering, not a fault. So "not
+   downloaded" is the muted tone and a present copy is the affirmative one --
+   neither is amber, because nothing here is wrong either way. */
+.bl-dir-state {display:inline-block; padding:3px 11px; border-radius:8px;
+               font-size:.82rem; font-weight:600; line-height:1.5;
+               font-variant-numeric:tabular-nums; margin:.15rem 0 .25rem;}
+.bl-dir-present {background:var(--bl-ok-bg); color:var(--bl-fg);}
+.bl-dir-absent {background:var(--bl-mute-bg); color:var(--bl-fg-muted);}
+/* The two panels are a pair and are read side by side, so they are given one
+   height rather than each taking the height of its own sentence. */
+div[class*="st-key-dir-"] {min-height:15.5rem;}
 .bl-vl-empty {font-size:.85rem; color:var(--bl-fg-faint); font-style:italic;
               padding:.15rem 0 .3rem;}
 
@@ -2969,12 +3045,163 @@ def page_tutorial():
                               before_sections=_contents_html())
 
 
+def _bytes_human(n):
+    """A size a person reads, from a number of bytes."""
+    if n >= 1e9:
+        return f"{n / 1e9:.1f} GB"
+    if n >= 1e6:
+        return f"{n / 1e6:.1f} MB"
+    return f"{max(n // 1000, 1)} kB"
+
+
+def _age_human(days):
+    """How long ago, in the largest unit that still says something useful."""
+    if days < 1 / 24:
+        return "just now"
+    if days < 1:
+        return f"{int(days * 24)} hour(s) ago"
+    return f"{int(days)} day(s) ago"
+
+
+def _directory_panel(module, *, title, url, used_by, needed, key):
+    """One directory's status and its three buttons, on the Settings page.
+
+    *module* is ``doaj`` or ``crossref`` — both expose the same four functions
+    (``status``, ``load_journals``, ``delete``, ``DOWNLOAD_MB``), which is what
+    lets one panel serve both.  *needed* says what happens with no local copy,
+    and it is the one line that genuinely differs between them: the whitelist has
+    no other way to search, while the blacklist falls back to Crossref's live API.
+    """
+    state = module.status()
+    with st.container(border=True, key=f"dir-{key}"):
+        st.markdown(f"**{title}** &nbsp;·&nbsp; [{url}](https://{url})")
+        st.caption(used_by)
+
+        if not state["present"]:
+            st.markdown(f"<div class='bl-dir-state bl-dir-absent'>Not downloaded</div>",
+                        unsafe_allow_html=True)
+            st.caption(needed)
+        else:
+            count = (f"{state['journals']:,} journals" if state["journals"] >= 0
+                     else "unreadable — download it again")
+            st.markdown(
+                f"<div class='bl-dir-state bl-dir-present'>{count} &nbsp;·&nbsp; "
+                f"{_bytes_human(state['bytes'])} on disk &nbsp;·&nbsp; "
+                f"fetched {_age_human(state['age_days'])}</div>",
+                unsafe_allow_html=True)
+            if state["stale"]:
+                st.caption("More than a fortnight old. It still works; a journal added "
+                           "since then has to be typed by hand.")
+
+        row = st.columns([1, 1, 1.2])
+        label = "⬇️ Download" if not state["present"] else "🔄 Refresh"
+        if row[0].button(label, key=f"dl_{key}", width="stretch",
+                         help=f"About {module.DOWNLOAD_MB} MB over the network, once."):
+            _fetch_directory(module, title)
+        if row[1].button("🗑️ Remove", key=f"rm_{key}", width="stretch",
+                         disabled=not state["present"],
+                         help="Delete the local copy from this machine."):
+            module.delete()
+            clear_directory_caches()
+            notify_next_run(f"Removed the local {title} copy.", icon="🗑️")
+            st.rerun()
+        row[2].caption(f"~{module.DOWNLOAD_MB} MB download")
+
+
+def _fetch_directory(module, title):
+    """Download one directory's list, with a bar, then forget the old index."""
+    bar = st.progress(0.0, text=f"Fetching {title}…")
+    try:
+        def on_progress(fraction):
+            # A server that sends no length gives None; the bar then only says
+            # "running" rather than lying about how far along it is.
+            bar.progress(fraction if fraction is not None else 0.5,
+                         text=f"Fetching {title}…"
+                              + (f" {int(fraction * 100)}%" if fraction else ""))
+
+        bar.progress(0.0, text=f"Fetching {title}…")
+        journals, error = module.load_journals(refresh=True, progress=on_progress)
+        bar.progress(1.0, text=f"Reducing {len(journals):,} journals…")
+    except Exception as exc:                      # a download must not break the page
+        journals, error = [], f"{type(exc).__name__}: {exc}"
+    finally:
+        bar.empty()
+    clear_directory_caches()
+    if error:
+        st.error(error)
+    else:
+        notify_next_run(f"{title}: {len(journals):,} journals held locally.", icon="✅")
+        st.rerun()
+
+
+def page_settings():
+    """Offline copies of the two venue directories — the one thing to configure.
+
+    The page exists because the *default* has to stay cheap.  Step 3's boxes work
+    with no local data at all: the blacklist asks Crossref's live API, half a
+    second a search.  Holding Crossref's whole list instead makes those searches
+    local and instant and works with no internet — but it is a 51 MB download, and
+    nobody should pay that to run a check once.  So it is offered here rather than
+    taken on the first run.
+
+    Nothing on this page can change a verdict, and the page says so: both
+    directories exist only to help *name* a venue when building a list.
+    """
+    st.markdown(_PAGE_CSS, unsafe_allow_html=True)
+    st.markdown(field_placeholder_css(), unsafe_allow_html=True)
+    flush_notices()
+
+    st.title("⚙️ Settings")
+    st.caption("One thing to decide, and only if you want to: whether the venue "
+               "directories Step 3 searches are held on this machine.")
+
+    step_header(1, "Offline venue directories", "download once, search without internet",
+                "optional", "idle")
+    st.markdown(
+        "Step 3's two venue boxes search a directory as you type, so a journal can "
+        "be added with its official title and ISSN instead of being typed by hand. "
+        "Each directory publishes its whole journal list as one file. With that file "
+        "on this machine a search is a scan of a list in memory — **instant, and it "
+        "works with no internet**. Without it, the blacklist asks Crossref over the "
+        "network instead, about half a second a search.")
+    st.info("Neither directory takes any part in any verdict. Being listed in DOAJ "
+            "means a journal passed DOAJ's screening; being in Crossref means someone "
+            "paid to register its DOIs. The check asks whether the venue is on "
+            "Beall's List, which is a different question — these only help you *name* "
+            "a venue.", icon="ℹ️")
+
+    left, right = st.columns(2)
+    with left:
+        _directory_panel(
+            doaj, title="DOAJ", url="doaj.org", key="doaj",
+            used_by="Searched by the **whitelist** — *Only check these venues*. "
+                    "About 23,000 vetted open-access journals, with their websites.",
+            needed="The whitelist has no other way to search, so it is downloaded "
+                   "automatically the first time that box is used. Downloading it "
+                   "here just does it now, on purpose, rather than mid-typing.")
+    with right:
+        _directory_panel(
+            crossref, title="Crossref", url="crossref.org", key="crossref",
+            used_by="Searched by the **blacklist** — *Also treat these venues as "
+                    "predatory*. About 167,000 journals, screened by nobody, which is "
+                    "what a blacklist needs. No websites: Crossref does not record them.",
+            needed="Not required. Without it the blacklist searches Crossref live, "
+                   "which works well and needs no download — but needs a connection, "
+                   "waits about half a second, and starts from two letters.")
+
+    st.caption(f"Both files live in `{venue_lookup.CACHE_DIR}`, are ignored by git, "
+               "and are safe to delete by hand. They are re-fetched automatically "
+               "once they are more than a fortnight old.")
+
+
 # ── Navigation ──────────────────────────────────────────────────────────────
-# Two pages in the sidebar: the flow, and the instructions for it.
+# Three pages in the sidebar: the flow, the instructions for it, and the one
+# thing there is to configure.
 nav = st.navigation([
     # The default page is served from "/", so it is given no url_path of its own.
     st.Page(page_check, title="Run a check", icon="▶️", default=True),
     st.Page(page_tutorial, title="Tutorial", icon="📘", url_path="tutorial"),
+    st.Page(page_settings, title="Settings", icon="⚙️", url_path="settings"),
 ])
 sidebar()          # below the page links, on every page
 nav.run()

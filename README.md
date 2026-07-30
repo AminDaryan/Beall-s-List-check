@@ -192,7 +192,8 @@ ISSN and press Add. Typing also searches a venue directory as you go and offers 
 underneath, so one can be added with its official title and ISSN: the whitelist
 searches the [DOAJ](https://doaj.org), the blacklist the
 [Crossref](https://www.crossref.org) journal registry, because a venue worth
-blacklisting is not in a directory of vetted journals. If
+blacklisting is not in a directory of vetted journals. Both can be held offline —
+see **Settings** below. If
 nothing matches, Add takes the text as typed. Every row reads **matches on · ISSN 1234-5678 · venue name** — naming each identifier it carries and its value,
 because that is what decides the run's scope; the same list is editable as JSON,
 in the format the CLI flags read from a file, under **{ } Edit as JSON**.
@@ -202,6 +203,14 @@ which decide what answers this run: the provider list is the six supported
 backends, and the model list is the names `.env` gives for whichever is selected,
 plus *Other* for a name typed in. Neither switching provider nor switching model
 means editing `.env` and restarting.
+
+**Settings.** One optional page: whether the two venue directories are held on
+this machine. Both publish their whole journal list as one file, so both can be
+downloaded once and searched locally — instant, and working with no internet. It
+is a choice rather than a default because the default has to stay cheap: DOAJ is
+~25 MB and Crossref ~51 MB, and nobody should pay that to run a check once.
+Without a local Crossref copy the blacklist simply asks its live API instead.
+Neither directory takes any part in any verdict.
 
 **Step 4 · Run.** A labelled summary restates what is about to run — the check,
 how many papers, Crossref, the two lists, and what comes back — and the button

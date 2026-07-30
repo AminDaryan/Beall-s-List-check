@@ -14,13 +14,17 @@ endpoint earns a Cloudflare 502 with ``Retry-After: 60`` — measured, not
 supposed.  DOAJ publishes the entire journal list as one CSV for exactly this
 reason, so it is fetched **once** (~23,000 journals, ~25 MB, a few seconds),
 reduced to the five fields a venue entry needs, and cached on disk.  Everything
-after that is a dictionary lookup: instant from the first character, correct
-offline, and no load on DOAJ at all.
+after that is a scan of a list in memory: instant from the first character,
+correct offline, and no load on DOAJ at all.
 
 Nothing in the check engine imports this: DOAJ has no part in any verdict, and
 must not acquire one.  Being indexed in DOAJ says a journal passed DOAJ's
 editorial screening; it is not the question this tool asks, which is whether the
 venue appears on Beall's List.  All this module does is help *name* a venue.
+
+The cache, the index and the ranking are ``venue_lookup``'s, shared with
+``crossref.py`` — what is left here is the one thing that is DOAJ's alone: the
+address of its CSV and what its columns are called.
 
 Like ``runners.py`` this is import-safe — no Streamlit — so it can be exercised
 from a shell:
@@ -32,14 +36,12 @@ from a shell:
 
 import csv
 import io
-import json
-import re
-import time
-from pathlib import Path
 
 import requests
 
-from venue_lookup import ISSN_RE, Venue, normalize_issn, site_is_shared  # noqa: F401
+from venue_lookup import (CACHE_DIR, ISSN_RE, MAX_CACHE_AGE_SECONDS,  # noqa: F401
+                          Venue, build_index, cache_status, normalize_issn,
+                          read_cache, search, site_is_shared, write_cache)
 
 # The venue shape and the shared-host test live in venue_lookup, so this module
 # and crossref.py hand back the same thing. Re-exported under the old name
@@ -51,20 +53,15 @@ Journal = Venue
 # source.  It 307s to a signed S3 URL, which requests follows.
 _CSV_URL = "https://doaj.org/csv"
 
-# Where the reduced list is kept between runs.  Beside the app rather than in a
-# platform cache directory, so it is obvious what it is and deleting it is
-# obviously safe; .gitignore keeps it out of the repository.
-CACHE_DIR = Path(__file__).resolve().parent / ".cache"
 CACHE_FILE = CACHE_DIR / "doaj_journals.json"
 
-# How long a cached list is used before it is fetched again.  A journal
-# directory does not turn over quickly, and the cost of being two weeks stale is
-# that a very new journal has to be typed by hand — which the box allows anyway.
-MAX_CACHE_AGE_SECONDS = 14 * 24 * 3600
+# Roughly what the download costs, for the Settings page to say before anyone
+# starts it. Measured; DOAJ's list grows slowly, so this stays about right.
+DOWNLOAD_MB = 25
 
 DEFAULT_LIMIT = 8
 
-# No key is needed, and DOAJ asks only that clients identify themselves.  Same
+# No key is needed, and DOAJ asks only that clients identify themselves. Same
 # shape as data_quality.py's Crossref agent.
 _UA = "bealls-list-check/1.0 (research tooling; +https://doaj.org/docs/api)"
 
@@ -99,131 +96,79 @@ def _row_to_journal(row):
     )
 
 
-def _read_cache():
-    """The cached list, or ``None`` when it is absent, stale or unreadable."""
+def status():
+    """What the Settings page needs to say about the local copy."""
+    return cache_status(CACHE_FILE)
+
+
+def delete():
+    """Remove the local copy. Returns True if a file was actually removed."""
     try:
-        if not CACHE_FILE.is_file():
-            return None
-        if time.time() - CACHE_FILE.stat().st_mtime > MAX_CACHE_AGE_SECONDS:
-            return None
-        with io.open(CACHE_FILE, encoding="utf-8") as fh:
-            return [Venue(title=t, issns=tuple(i), site=s, publisher=p,
-                          country=c, kind="journal")
-                    for t, i, s, p, c in json.load(fh)["journals"]]
+        CACHE_FILE.unlink()
+        return True
     except Exception:
-        return None                     # a damaged cache is a missing cache
+        return False
 
 
-def _write_cache(journals):
-    """Persist the reduced list. Failure is not an error — it just costs a fetch."""
-    try:
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        payload = {"fetched": time.time(),
-                   "journals": [[j.title, list(j.issns), j.site, j.publisher, j.country]
-                                for j in journals]}
-        with io.open(CACHE_FILE, "w", encoding="utf-8") as fh:
-            json.dump(payload, fh, ensure_ascii=False)
-    except Exception:
-        pass
-
-
-def load_journals(*, timeout=120.0, refresh=False):
+def load_journals(*, timeout=120.0, refresh=False, progress=None):
     """Every journal in DOAJ, from the disk cache or one download.
 
     Returns ``(journals, error)``.  *error* is a sentence for the person at the
     screen and is empty on success; *journals* is empty only when the list could
     not be obtained at all.  Nothing raises — the box this feeds must keep
     working by hand when DOAJ or the network does not.
+
+    *progress* is called with a fraction from 0 to 1 as the download arrives, for
+    the Settings page's bar.  It is optional and never required to be accurate:
+    DOAJ's CSV is served without a length, in which case it is called with
+    ``None`` to mean "running, but the end is not known".
     """
     if not refresh:
-        cached = _read_cache()
+        cached = read_cache(CACHE_FILE)
         if cached:
             return cached, ""
     try:
         response = requests.get(_CSV_URL, headers={"User-Agent": _UA},
                                 timeout=timeout, stream=True)
     except requests.exceptions.RequestException:
-        return (_read_cache() or []), ("Could not reach DOAJ to fetch its journal list. "
-                                       "Venues can still be added by typing them.")
+        return (read_cache(CACHE_FILE, max_age=None) or []), (
+            "Could not reach DOAJ to fetch its journal list. "
+            "Venues can still be added by typing them.")
     if response.status_code != 200:
-        return (_read_cache() or []), (
+        return (read_cache(CACHE_FILE, max_age=None) or []), (
             f"DOAJ answered {response.status_code} for its journal list. "
             "Venues can still be added by typing them.")
     try:
-        text = response.content.decode("utf-8", errors="replace")
+        raw = _download(response, progress)
+        text = raw.decode("utf-8", errors="replace")
         rows = csv.DictReader(io.StringIO(text))
         journals = [j for j in (_row_to_journal(r) for r in rows) if j is not None]
     except Exception as exc:
-        return (_read_cache() or []), f"DOAJ's journal list could not be read ({exc})."
+        return (read_cache(CACHE_FILE, max_age=None) or []), (
+            f"DOAJ's journal list could not be read ({exc}).")
     if not journals:
         return [], "DOAJ's journal list came back empty."
-    _write_cache(journals)
+    write_cache(CACHE_FILE, journals)
     return journals, ""
 
 
-def _haystack(journal):
-    """The lower-cased text one journal is matched against."""
-    return f"{journal.title} {journal.publisher}".lower()
+def _download(response, progress=None):
+    """Read a streamed response to bytes, reporting progress if asked.
 
-
-def build_index(journals):
-    """Pre-lower every journal's searchable text, once, for :func:`search`.
-
-    Returns a list of ``(haystack, lowered_title, journal)``.  Doing this per
-    keystroke over 23,000 journals is the difference between a box that keeps up
-    with typing and one that does not.
+    Shared shape with ``crossref._download``; kept per-module rather than in
+    ``venue_lookup`` because that module is deliberately network-free.
     """
-    return [(_haystack(j), j.title.lower(), j) for j in journals]
-
-
-def search(index, term, limit=DEFAULT_LIMIT):
-    """The best *limit* matches for *term*, and how many there were in all.
-
-    Returns ``(hits, total)``.  *total* is every journal that matched, not just
-    the ones returned, so a caller can offer the rest rather than silently
-    truncating — "8 of 214" is a different statement from "8".
-
-    *index* is what :func:`build_index` returned (a bare journal list is also
-    accepted, and indexed on the spot).  Ranking is by how early and how cleanly
-    the term appears, which is what makes a half-typed name useful:
-
-      1. the title starts with it — "power sou" -> *Power Sources…*
-      2. a word of the title starts with it — "sources" -> *Journal of Power Sources*
-      3. it appears anywhere in the title
-      4. it appears in the publisher's name
-
-    An ISSN is matched exactly instead, against either of a journal's two.
-
-    Every match is scanned and ranked, with no cap: a one-letter term does match
-    thousands, and stopping early would make *total* a number that depends on
-    where the scan happened to stop rather than on how many journals there are.
-    Measured at ~40 ms over the whole directory, which a keystroke can afford.
-    """
-    term = (term or "").strip().lower()
-    if not term or not index:
-        return [], 0
-    if isinstance(index[0], Venue):
-        index = build_index(index)
-
-    issn = normalize_issn(term) if ISSN_RE.search(term) else ""
-    if issn:
-        exact = [j for _h, _t, j in index if issn in j.issns]
-        return exact[:limit], len(exact)
-
-    hits = []
-    for haystack, title, journal in index:
-        if title.startswith(term):
-            rank = 0
-        elif re.search(r"\b" + re.escape(term), title):
-            rank = 1
-        elif term in title:
-            rank = 2
-        elif term in haystack:
-            rank = 3
-        else:
+    total = 0
+    try:
+        total = int(response.headers.get("Content-Length") or 0)
+    except (TypeError, ValueError):
+        total = 0
+    chunks, seen = [], 0
+    for chunk in response.iter_content(262144):
+        if not chunk:
             continue
-        # Shorter titles first within a rank: a search for "nature" should offer
-        # *Nature* before *Nature Reviews Methods Primers*.
-        hits.append((rank, len(title), journal))
-    hits.sort(key=lambda h: (h[0], h[1]))
-    return [j for _r, _l, j in hits[:limit]], len(hits)
+        chunks.append(chunk)
+        seen += len(chunk)
+        if progress is not None:
+            progress(min(seen / total, 1.0) if total else None)
+    return b"".join(chunks)
