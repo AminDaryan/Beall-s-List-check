@@ -444,6 +444,42 @@ def doaj_index():
     return doaj.build_index(journals), error
 
 
+# The field's fill and edge, keyed by whether the dark theme is in force.  Named
+# once because two places need the same two values and they must not drift: the
+# component paints the real field with them, and the stylesheet paints the shape
+# that stands in for it while the component is remounting (see the
+# `st-key-venuebox-::before` rule).
+_FIELD_BG = {True: "#1e293b", False: "#f1f5f9"}      # slate-800 / slate-100
+_FIELD_EDGE = {True: "#475569", False: "#cbd5e1"}    # slate-600 / slate-300
+
+
+def theme_is_dark():
+    """Whether the dark theme is the one on screen.
+
+    Asked in Python because CSS cannot: Streamlit's ⚙ switcher repaints the app
+    without touching ``prefers-color-scheme`` and leaves no attribute naming the
+    active theme — see the note above ``_TOKENS``.  ``st.context.theme`` does
+    report the theme *in force*, override included.  Guarded, falling back to the
+    app's own default base on a Streamlit that lacks it.
+    """
+    try:
+        return st.context.theme.type == "dark"
+    except Exception:
+        return True
+
+
+def field_placeholder_css():
+    """The two field colours, as CSS variables for the stylesheet to use.
+
+    The shape that holds the field's place while the component remounts has to be
+    the field's own colour, and that colour is only knowable in Python.  Emitted
+    per render, so it follows the ⚙ switcher like everything else.
+    """
+    dark = theme_is_dark()
+    return (f"<style>:root{{--bl-field-bg:{_FIELD_BG[dark]};"
+            f"--bl-field-edge:{_FIELD_EDGE[dark]};}}</style>")
+
+
 def searchbox_styles(*, has_matches=True):
     """Colours for the search menu, in the theme that is actually on screen.
 
@@ -528,17 +564,14 @@ def searchbox_styles(*, has_matches=True):
     Guarded: on a Streamlit without ``st.context.theme`` the menu is styled for
     the app's own default base rather than losing its elevation again.
     """
-    try:
-        dark = st.context.theme.type == "dark"
-    except Exception:
-        dark = True                      # the app's own default base
+    dark = theme_is_dark()
     # Named by the job each colour does, not by where it happens to be used: the
     # point of the fix is that `page` and `raised` are *different*.
     raised = "#1e293b" if dark else "#ffffff"       # the open menu — one plane up
-    field = "#1e293b" if dark else "#f1f5f9"        # the box, as Streamlit fills its own
+    field = _FIELD_BG[dark]                         # the box, as Streamlit fills its own
     rowhover = "#334155" if dark else "#f1f5f9"     # slate-700 / slate-100
     text = "#f1f5f9" if dark else "#1e293b"         # slate-100 / slate-800
-    edge = "#475569" if dark else "#cbd5e1"         # slate-600 / slate-300
+    edge = _FIELD_EDGE[dark]                        # slate-600 / slate-300
     page = "#0f172a" if dark else "#ffffff"         # what the overlay is lying on
     accent = "#3b82f6"                              # blue-500, as everywhere else
     # What the typed letters are marked with inside a match. The app's blue at low
@@ -1868,26 +1901,51 @@ div[class*="st-key-venuebox-"] button {
    the input inside it holds the caret. The scope that is left is tighter than it
    looks, because Add is only rendered at all while a box holds a term nobody has
    committed yet, which is the same situation as "I am searching". A rerun with
-   both boxes empty has no button to spin. */
+   both boxes empty has no button to spin.
+
+   While it is out, the button is not a button dressed as one: its fill goes with
+   its label, so what is left in the field is a spinner and nothing else. Only the
+   *box* it occupies stays, at 47x28, so the field's contents do not shuffle when
+   it comes back. The ring is drawn in the page's own border and accent rather
+   than in the accent's foreground, because it is now sitting on the field
+   instead of on a blue fill. */
 [data-test-script-state="running"] div[class*="st-key-venuebox-"] button {
-    pointer-events:none;}
-/* Hidden rather than removed, so the button keeps its width and nothing moves. */
+    pointer-events:none;
+    background:transparent !important; box-shadow:none !important;
+    filter:none !important;}
 [data-test-script-state="running"] div[class*="st-key-venuebox-"] button > div {
     visibility:hidden;}
 [data-test-script-state="running"] div[class*="st-key-venuebox-"] button::after {
     content:""; position:absolute; inset:0; margin:auto;
-    width:13px; height:13px; border-radius:50%;
-    border:2px solid color-mix(in srgb, var(--bl-on-accent) 30%, transparent);
-    border-top-color:var(--bl-on-accent);
+    width:15px; height:15px; border-radius:50%; box-sizing:border-box;
+    border:2px solid var(--bl-border); border-top-color:var(--bl-accent);
     animation:bl-spin .6s linear infinite;}
 @keyframes bl-spin {to {transform:rotate(360deg);}}
 /* The spin is decoration; the "not now" is carried by the button losing its
-   label and its pointer, which anyone who has asked for less motion still gets. */
+   label, its fill and its pointer, which anyone who has asked for less motion
+   still gets. */
 @media (prefers-reduced-motion: reduce) {
   [data-test-script-state="running"] div[class*="st-key-venuebox-"] button::after {
-      animation:none;
-      border-color:color-mix(in srgb, var(--bl-on-accent) 30%, transparent);}
+      animation:none; border-color:var(--bl-border);}
 }
+
+/* ── The field's own outline, so it cannot blink out ───────────────────────
+   Choosing a match remounts the component, and for the ~280ms the new iframe
+   takes to boot there is no field on screen at all: the iframe exists but stands
+   0px tall (measured), so the box simply vanished and came back. Hiding
+   Streamlit's loading skeleton stopped that gap from *moving* anything, and by
+   removing the grey placeholder it made the gap plainer to see.
+
+   So the band paints the field's own shape itself. It sits under the iframe --
+   which is positioned, and so above it -- and is invisible for as long as there
+   is an iframe to cover it; while there is not, it is what stays on screen. The
+   two colours come from Python, because the component's field is coloured from
+   `st.context.theme` and CSS cannot ask which theme is in force (see _TOKENS);
+   emitted per render by `field_placeholder_css`, they match it exactly. */
+div[class*="st-key-venuebox-"]::before {
+    content:""; position:absolute; top:0; left:0; right:0;
+    height:var(--bl-venuefield); box-sizing:border-box; border-radius:4px;
+    background:var(--bl-field-bg); border:1px solid var(--bl-field-edge);}
 /* Out of flow, the button's container has no width to give its contents, and
    Streamlit's label is a flex child that will happily shrink to one character
    per line -- measured at 8px wide and 67px tall inside a 28px button. Every
@@ -2392,6 +2450,8 @@ def page_check():
                "venues? Add your papers as JSON, run, and download the Excel report. "
                "Step-by-step instructions are on the **Tutorial** page.")
     st.markdown(_PAGE_CSS, unsafe_allow_html=True)
+    # The one pair of colours the stylesheet cannot work out for itself.
+    st.markdown(field_placeholder_css(), unsafe_allow_html=True)
     # Anything the previous render queued on its way out — see notify_next_run.
     flush_notices()
 

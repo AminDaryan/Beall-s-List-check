@@ -720,10 +720,36 @@ tighter than it sounds, because **Add only exists while a box holds a term nobod
 has committed yet** — the same situation as "I am searching". A rerun with both
 boxes empty has no button to spin.
 
-The label is hidden rather than removed so the button keeps its 47 × 28 px box and
-nothing moves; `pointer-events: none` matches the fact that it cannot be pressed
-mid-run. Under `prefers-reduced-motion` the ring stops turning and the "not now"
-is carried by the missing label alone.
+While the search is out the button is not a button dressed as one: its **fill
+goes with its label**, so what is left in the field is a spinner and nothing else.
+Only the 47 × 28 px box it occupies stays, so the field's contents do not shuffle
+when it comes back, and `pointer-events: none` matches the fact that it cannot be
+pressed mid-run. The ring is drawn in the page's own border and accent rather than
+in the accent's foreground, because it now sits on the field instead of on a blue
+fill. Under `prefers-reduced-motion` it stops turning and the "not now" rests on
+the missing label and fill.
+
+##### The field paints its own outline, so it cannot blink out
+
+Choosing a match remounts the component, and for the ~280 ms the new iframe takes
+to boot there is **no field on screen at all** — the iframe exists but stands 0 px
+tall (measured). Hiding Streamlit's loading skeleton stopped that gap from moving
+anything, and by removing the grey placeholder it made the gap plainer to see: the
+box vanished and came back.
+
+So the band paints the field's own shape itself, as a `::before`. It sits under the
+iframe — which is positioned, and so above it — and is invisible for as long as
+there is an iframe to cover it; while there is not, it is what stays on screen.
+Verified by catching the remount frame: with `ifrH: 0`, a 38 px field in
+`rgb(30,41,59)` bordered `rgb(71,85,105)` is still there on dark, and
+`rgb(241,245,249)` on `rgb(203,213,225)` on light — the same values the component
+paints.
+
+Those two colours come from Python (`field_placeholder_css`), because the
+component's field is coloured from `st.context.theme` and CSS cannot ask which
+theme is in force (see [above](#why-nothing-in-_tokens-branches-on-light-versus-dark)).
+They are named once in `_FIELD_BG` / `_FIELD_EDGE` so the real field and the shape
+standing in for it cannot drift apart.
 
 #### Show more, rather than a silent top-eight
 
