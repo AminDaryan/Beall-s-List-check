@@ -736,12 +736,36 @@ separate complaints:
 |---|---|
 | "it doesn't add, then next time it does" | `_reset_box` writes no `options_py`, and the component falls back to handing on the **raw option index** when that key is missing. An integer has no `to_entry`, so the click after an add was dropped. |
 | "randomly empties the input" | `_reset_box` changes the key that remounts the React side, which is the only thing that empties the box. With no rerun the box kept the term and emptied later, in the middle of whatever was typed next. |
-| "the input shifts down and up" | that late remount, arriving during the next interaction rather than at the click. |
+| "the input shifts down and up" | a **loading skeleton**, see below. |
 
 So the handler reruns as soon as it has acted. The component does exactly this
 for its own `clear_on_submit`, from the same place. Confirmations are queued with
 `notify_next_run` and emitted by `flush_notices` at the top of the next render,
 because a toast raised in the run being abandoned goes with it.
+
+#### Why the band is pinned, and the skeleton hidden
+
+Choosing a match remounts the component — that is how the box clears — and while
+the new iframe boots, Streamlit shows a **loading skeleton** in its element
+container. The iframe is absolutely positioned and contributes no height, but the
+skeleton is in flow. Sampled every frame across a pick: the band went 48 px →
+92 px for ~280 ms → 48 px, carrying the note, the list box and the JSON fold 44 px
+down the page and back. That is the input "going down and up".
+
+Two rules fix it, and the first failed on its own in a way worth recording:
+
+- **`min-height: 0`, not just `height`.** The container is a flex item, so its
+  `min-height: auto` resolves to the automatic *minimum content size*, which
+  outranks any height given to it. Measured: `height: 48px !important` computed to
+  48 px while the box still stood 92 px tall. Zeroing the minimum is what lets the
+  pin hold; the skeleton then overflows the band silently.
+- **The skeleton is hidden inside this box.** Contained, it moves nothing — but it
+  would still flash a 44 px grey placeholder across the note, and it tells nobody
+  anything: the space is already reserved and the thing loading was on screen a
+  moment ago.
+
+A container whose whole job is to reserve a fixed band must not be sized by what
+happens to be inside it (`_VENUE_BAND`).
 
 The rerun exposed one more thing, latent until then. Streamlit **replays a
 component's last value on every render**, so after a page turn the component

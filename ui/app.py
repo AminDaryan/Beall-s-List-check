@@ -364,6 +364,23 @@ _MENU_GAP = 20
 # and the 8px margin it puts between the control and the menu.
 _MENU_OFFSET = 46
 
+# The height of the band the search box sits in, pinned rather than measured from
+# what is inside it — and it has to be pinned, because what is inside it moves.
+#
+# The box is an absolutely positioned iframe, so it contributes no height at all;
+# the band exists only because `style_absolute` leaves two empty blocks behind to
+# reserve it.  But when the component is remounted — which is what clears the box
+# after a venue is added — Streamlit shows a **loading skeleton** in the element
+# container while the new iframe boots, and that skeleton *is* in flow.  Measured
+# frame by frame: 48px band -> 92px for ~280ms -> 48px again, taking the note, the
+# list and the JSON fold 44px down the page and back.  That is the input "going
+# down and up" after a match is chosen.
+#
+# A container whose whole job is to reserve a fixed band must not be sized by its
+# contents.  Pinned here, the skeleton overflows it silently and nothing below it
+# moves.
+_VENUE_BAND = 48
+
 # The height of the open menu — **fixed**, rather than following the number of
 # matches, and that is the whole point of it.
 #
@@ -404,7 +421,7 @@ _MENU_OFFSET = 46
 # row underneath; at the default, which is what almost every reader has, it lands
 # exactly.  Fixing it properly means owning those two bands, which is a larger
 # change to how the column is laid out than this note is worth.
-_OVERLAY_REACH = 3 * 16 + 16 + 40 + _VENUE_BOX_HEIGHT   # container, gap, note, list
+_OVERLAY_REACH = _VENUE_BAND + 16 + 40 + _VENUE_BOX_HEIGHT   # band, gap, note, list
 _MENU_HEIGHT = f"{_OVERLAY_REACH - _MENU_OFFSET - _MENU_GAP}px"
 
 
@@ -1963,6 +1980,36 @@ div[class*="st-key-venuelist-"] button[data-testid^="stBaseButton"]:hover:not(:d
    the two have to line up. */
 div[class*="st-key-pickrow-"] [data-testid="stMarkdownContainer"],
 .st-key-pickhead [data-testid="stMarkdownContainer"] {margin-bottom:0;}
+""" + f"""
+/* ── The search box's band, pinned ─────────────────────────────────────────
+   See _VENUE_BAND. The box itself is an absolutely positioned iframe and adds
+   no height; this container only reserves the row. When the component is
+   remounted -- which is how the box clears after a venue is added -- Streamlit
+   puts a **loading skeleton** in its element container while the new iframe
+   boots, and that skeleton is in flow. Measured frame by frame: the band goes
+   48px -> 92px for ~280ms -> 48px, carrying the note, the list and the JSON fold
+   44px down the page and back. That is the input "going down and up" after a
+   match is chosen.
+
+   Two rules, because there were two faults:
+
+   `min-height` first. Pinning the height alone did nothing, and the reason is
+   worth writing down: this container is a flex item, so its `min-height: auto`
+   resolves to the automatic *minimum content size* -- which outranks any height
+   you give it. Measured: `height:48px !important` computed to 48px while the box
+   still stood 92px tall. Zeroing the minimum is what lets the pin hold, and the
+   skeleton then overflows the band silently instead of pushing it open.
+   (`!important` on both because Streamlit's own `height:auto` for a vertical
+   block is a class selector emitted after this stylesheet, and ties go to the
+   later rule.)
+
+   Then the skeleton itself. Contained, it no longer moves anything -- but it
+   would still flash a 44px grey placeholder across the note. It is not telling
+   anyone anything: the space is already reserved, and what is loading is a box
+   that was on screen a moment ago. */
+div[class*="st-key-venuebox-"] {{
+    height:{_VENUE_BAND}px !important; min-height:0 !important;}}
+div[class*="st-key-venuebox-"] [data-testid="stSkeleton"] {{display:none !important;}}
 </style>
 """
 
