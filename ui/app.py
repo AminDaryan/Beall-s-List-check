@@ -546,7 +546,13 @@ def _step_choose_check(checker):
 
 
 def _step_provide_papers():
-    """Step 2 — the papers themselves. Returns the records, or None."""
+    """Step 2 — the papers themselves.
+
+    Returns ``(records, token, quality_slot)``: the papers or None, the name the
+    caches key on (see :func:`_parse_corpus`), and an empty container reserved
+    where the data-quality panel goes — filled by the caller, after Steps 3 and
+    4, for the reason given there.
+    """
     # Step 2 — provide the papers.  The header's container is reserved first and
     # written afterwards: how many papers there are is only known once the widgets
     # below it have run, and the pill would otherwise report the previous rerun.
@@ -555,10 +561,13 @@ def _step_provide_papers():
     step_header(2, "Provide the papers", "Semantic Scholar records, as JSON",
                 f"✅ {len(items)} paper(s)" if items else "waiting for papers",
                 "ok" if items else "wait", into=head2, learn="your own papers")
+    quality_slot = None
     if items is not None:
         st.success(f"✅ Loaded {len(items)} paper(s) — ready to run.")
-        results.show_input_quality(items, token, key="input")
-    return items
+        # Reserved here, written last: the panel is the slowest thing on the page
+        # and everything below it was waiting for it.  See page_check.
+        quality_slot = st.container()
+    return items, token, quality_slot
 
 
 def _step_options(checker, llm):
@@ -879,9 +888,22 @@ def page_check():
     # first, has to be answering about the same one.
     st.session_state.setdefault("provider", ENV_PROVIDER)
     llm = _step_choose_check(checker)
-    items = _step_provide_papers()
+    items, token, quality_slot = _step_provide_papers()
     options = _step_options(checker, llm)
     _step_run(checker, items, llm, options)
+    # The data-quality panel goes into the place Step 2 kept for it, and it is
+    # written *here*, after the steps below it, because it is the one thing on
+    # this page that takes real time: a corpus it has not seen before costs ~7.5s
+    # to validate and ~3.1s to build the report for, per 18,000 records.
+    #
+    # Streamlit paints elements in the order the script produces them, so doing
+    # that work in Step 2's own place meant Steps 3 and 4 were not sent until it
+    # finished — and the first render after an upload is the one where they have
+    # no previous version to stand in, so the page simply had no third step for
+    # ten seconds.  Nothing in Steps 3 or 4 reads this panel, so nothing has to
+    # wait for it: the page arrives whole, and the panel fills in behind it.
+    if quality_slot is not None:
+        results.show_input_quality(items, token, key="input", into=quality_slot)
 # ── Navigation ──────────────────────────────────────────────────────────────
 # Three pages in the sidebar: the flow, the instructions for it, and the one
 # thing there is to configure.

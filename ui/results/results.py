@@ -132,15 +132,29 @@ def _quality_xlsx(_items, _flagged, token):
     return runners.build_input_quality_xlsx(_items, _flagged)
 
 
-def show_input_quality(items, token, key):
+def show_input_quality(items, token, key, into=None):
     """Up-front panel: validate the Semantic Scholar metadata, offer it as Excel.
 
     *token* names the corpus, and is what both halves are cached on; see above.
+
+    *into* is the container Step 2 reserved for this panel.  It exists because
+    the panel is written after the steps that appear below it — the validation is
+    the slowest thing on the page, and it used to hold their delivery up — so the
+    place it occupies and the moment it is filled are two different things.
     """
     if not _VALIDATORS_OK:
         return
+    with (into if into is not None else st.container()):
+        _input_quality_body(items, token, key)
+
+
+def _input_quality_body(items, token, key):
+    """The panel itself, in whatever container the caller has opened."""
     try:
-        flagged = _validated(items, token)               # offline validator
+        # Named, because on a corpus this has not seen the wait is real and the
+        # panel is the only thing that can account for it.
+        with st.spinner(f"Checking the metadata of {len(items)} record(s)…"):
+            flagged = _validated(items, token)           # offline validator
     except Exception as exc:
         st.caption(f"(input validation unavailable: {exc})")
         return
