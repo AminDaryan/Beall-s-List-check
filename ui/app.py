@@ -1844,9 +1844,50 @@ div[class*="st-key-venuebox-"] [data-testid="stElementContainer"]:has(button) {
 div[class*="st-key-venuebox-"] [data-testid="stButton"] {
     position:static; width:max-content;}
 div[class*="st-key-venuebox-"] button {
+    position:relative;                      /* for the spinner below */
     min-height:28px; height:28px; padding:0 12px; width:max-content;
     font-size:.76rem; font-weight:600; border-radius:6px;
     background:var(--bl-accent); color:var(--bl-on-accent); border:0;}
+
+/* ── Add turns into a spinner while a search is out ────────────────────────
+   Typing into the blacklist costs a round trip to Crossref -- ~0.55s, behind a
+   300ms debounce -- and for every bit of it the page still shows the frame from
+   before the keystroke, with Add looking as ready as ever. Nothing had said that
+   the box was busy.
+
+   This is done in CSS off Streamlit's own script-state marker because that is the
+   only signal there is. The wait happens *inside one blocking call*: the
+   component hands the term to Python, Python queries, sets the options and
+   reruns, and Streamlit paints only when a run finishes -- so there is no frame
+   in between for Python to draw a spinner into, and a run that ends in a rerun
+   has its output discarded anyway (which is why the "Added X" toast has to be
+   queued; see notify_next_run).
+
+   It cannot be scoped to *which* box is busy: neither `:focus-within` nor
+   `iframe:focus` crosses into the component's frame -- measured, both false while
+   the input inside it holds the caret. The scope that is left is tighter than it
+   looks, because Add is only rendered at all while a box holds a term nobody has
+   committed yet, which is the same situation as "I am searching". A rerun with
+   both boxes empty has no button to spin. */
+[data-test-script-state="running"] div[class*="st-key-venuebox-"] button {
+    pointer-events:none;}
+/* Hidden rather than removed, so the button keeps its width and nothing moves. */
+[data-test-script-state="running"] div[class*="st-key-venuebox-"] button > div {
+    visibility:hidden;}
+[data-test-script-state="running"] div[class*="st-key-venuebox-"] button::after {
+    content:""; position:absolute; inset:0; margin:auto;
+    width:13px; height:13px; border-radius:50%;
+    border:2px solid color-mix(in srgb, var(--bl-on-accent) 30%, transparent);
+    border-top-color:var(--bl-on-accent);
+    animation:bl-spin .6s linear infinite;}
+@keyframes bl-spin {to {transform:rotate(360deg);}}
+/* The spin is decoration; the "not now" is carried by the button losing its
+   label and its pointer, which anyone who has asked for less motion still gets. */
+@media (prefers-reduced-motion: reduce) {
+  [data-test-script-state="running"] div[class*="st-key-venuebox-"] button::after {
+      animation:none;
+      border-color:color-mix(in srgb, var(--bl-on-accent) 30%, transparent);}
+}
 /* Out of flow, the button's container has no width to give its contents, and
    Streamlit's label is a flex child that will happily shrink to one character
    per line -- measured at 8px wide and 67px tall inside a 28px button. Every

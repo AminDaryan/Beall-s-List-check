@@ -406,7 +406,10 @@ site, type its domain into the box instead.
 The first time you use the whitelist's search, the app downloads DOAJ's journal
 list once (about 25 MB, a few seconds) and keeps it, so every search after that
 is instant and works without internet. It refreshes itself every couple of weeks.
-The blacklist asks Crossref as you type, so it needs a connection.
+The blacklist asks Crossref as you type, so it needs a connection. While it is
+asking, the **Add** button turns into a small spinner — the answer takes about
+half a second, and the spinner is how you know the box is still working rather
+than finished with nothing to show.
 
 > These searches only help you *name* a venue. Whether a journal is in DOAJ or
 > Crossref has no effect on any verdict — the check asks whether the venue is on

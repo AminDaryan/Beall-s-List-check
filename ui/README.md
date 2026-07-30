@@ -554,6 +554,7 @@ Eight things about it are deliberate, and each was wrong before it was fixed:
 | No "No options" message (`optionEmpty: "hidden"`) | It was being drawn under an untouched box, announcing the absence of results for a search nobody had run. |
 | **Add** inside the box, at the right-hand end | It acts on the text in the box and nothing else, so it is the box's own button rather than a second control taking a quarter of the width from the thing being typed into. It has to be *overlaid* — the input is inside the component's iframe and no Streamlit widget can be rendered in there — so the container is the positioning context and the button is lifted out of flow onto the right edge, clearing the iframe's `z-index`. Out of flow it has no width to inherit, and Streamlit's label will shrink to one character per line (measured: 8 px wide, 67 px tall, inside a 28 px button), so every level from the button down is pinned to `nowrap` and `max-content`. |
 | Add only once something is typed | On an empty box it offers to do something that cannot work. |
+| Add becomes a **spinner** while a search is out | Typing into the blacklist costs a round trip to Crossref (~0.55 s, behind a 300 ms debounce), and for all of it the page still showed the frame from before the keystroke with Add looking as ready as ever. See below. |
 | `style_absolute=True` | The menu lives *inside* the iframe, so the frame grows to ~350 px to show it. In normal flow that pushed the list and the JSON fold a third of a screen down on every keystroke and left the two columns at different heights; positioned absolutely it overlays instead. |
 | A **box that looks like a box** (`searchbox_styles`) | The component leaves an unfocused control with `1px transparent`, which on this page is a field with no edge at all — placeholder text floating where a control should be. It is given the fill and border Streamlit gives its own inputs. Its `&:hover` has to be replaced too, or hovering puts the transparent border back. |
 | The open menu is a **raised plane**, not a bordered region (`searchbox_styles`) | See below — this is the one that took three attempts. |
@@ -702,6 +703,27 @@ goes visibly off-centre the moment a font size, a zoom level or a Streamlit
 version changes either. And exactly **one** box in the chain is positioned —
 absolutely positioning both the element container and `stButton` stacked their
 offsets, putting the button 5 px below centre.
+
+##### The spinner is CSS, and it has to be
+
+The wait happens **inside one blocking call**: the component hands the term to
+Python, Python queries, sets the options and reruns — and Streamlit paints only
+when a run *finishes*, so there is no frame in between for Python to draw a
+spinner into. A run that ends in a rerun has its output discarded anyway, which
+is the same reason the "Added X" toast has to be queued (`notify_next_run`).
+
+So it keys off Streamlit's own `data-test-script-state="running"` on `stApp` —
+the only signal available. It cannot be narrowed to *which* box is busy: neither
+`:focus-within` nor `iframe:focus` crosses into the component's frame (measured,
+both false while the input inside it holds the caret). The scope that remains is
+tighter than it sounds, because **Add only exists while a box holds a term nobody
+has committed yet** — the same situation as "I am searching". A rerun with both
+boxes empty has no button to spin.
+
+The label is hidden rather than removed so the button keeps its 47 × 28 px box and
+nothing moves; `pointer-events: none` matches the fact that it cannot be pressed
+mid-run. Under `prefers-reduced-motion` the ring stops turning and the "not now"
+is carried by the missing label alone.
 
 #### Show more, rather than a silent top-eight
 
