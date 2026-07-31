@@ -379,6 +379,23 @@ def _user_blacklist_hit(user_index, canonical_domain, all_domains, norm_names, i
     the user saying *this publisher*, and a record whose canonical URL is
     elsewhere but whose alternate points at the named site is exactly the case
     they mean to catch.
+
+    **A name matches as a whole phrase inside the venue's name**, not only as
+    the whole of it — the rule the whitelist has always used, and the one the
+    row's own label promises ("papers whose venue name contains this name as a
+    whole word").  Exact equality was the rule here and it is not one a real
+    catalogue survives: Semantic Scholar records that journal as *ACM
+    Transactions on Multimedia Computing, Communications, and Applications
+    (TOMCCAP)*, so a blacklist entry typed without the trailing abbreviation
+    missed it — and matched only when the record happened to carry an alternate
+    name without the suffix.  Strip that alternate and the same entry, the same
+    papers and the same run stopped flagging them.
+
+    Padded with spaces on both sides so the phrase matches on word boundaries:
+    blacklisting "Sensors" catches a venue named "Sensors" and one named "IEEE
+    Sensors Journal", but never "Biosensors".  That it can be wide is the point
+    of the label saying which identifier it matched on, and of the ⚠ the venue
+    box puts on the identifiers that reach furthest.
     """
     for issn in issns:
         if issn in user_index.by_issn:
@@ -390,6 +407,12 @@ def _user_blacklist_hit(user_index, canonical_domain, all_domains, norm_names, i
     for nm in norm_names:
         if nm in user_index.by_name:
             return _best(user_index.by_name[nm]), "name_exact"
+    for nm in norm_names:
+        padded = f" {nm} "
+        for entry in user_index.entries:
+            listed = entry.get("normalized_name")
+            if listed and f" {listed} " in padded:
+                return entry, "name_phrase"
     return None
 
 

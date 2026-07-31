@@ -58,6 +58,17 @@ SIGNAL_INFO = {
         "website is the listed site too; if the name matches but the website is "
         "different (many journals share a name), it is downgraded to review.",
     ),
+    "name_phrase": (
+        "your blacklisted name appears in the venue's name",
+        "on_list",
+        "Only from a blacklist supplied for the run: the name you listed appears "
+        "as a whole phrase inside the venue's own name. Example: blacklisting "
+        "'ACM Transactions on Multimedia Computing, Communications, and "
+        "Applications' matches a venue Semantic Scholar records under that name "
+        "followed by its abbreviation, '(TOMCCAP)'. Word boundaries are "
+        "respected, so 'Sensors' matches 'IEEE Sensors Journal' but never "
+        "'Biosensors' — a short name can therefore reach further than intended.",
+    ),
     "name_fuzzy": (
         "the journal name is very similar to a listed name",
         "review",
@@ -175,6 +186,8 @@ def _on_list_why(r):
                                  "the site you listed"),
             "issn": f"its ISSN ({r.get('issn') or '—'}) is the one you listed",
             "name_exact": f"its name matches '{listed}', which you listed",
+            "name_phrase": (f"'{listed}' — which you listed — appears as a whole phrase "
+                            f"inside its name, '{r.get('venue') or '—'}'"),
         }.get(mo, f"it matches '{listed}', which you listed")
         return (f"you put this venue on the blacklist for this run, and {how}. "
                 "This is your own entry, not a Beall's List finding — the run "

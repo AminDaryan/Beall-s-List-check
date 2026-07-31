@@ -400,7 +400,7 @@ differ in how much they cover:
 |---|---|---|
 | `ISSN 1234-5678` | papers with exactly that ISSN | one journal, and nothing else |
 | `site example.com` | papers whose venue is on that host, or any host under it | every journal on that site |
-| `venue name` | papers whose venue name contains this name as a whole word | depends on the name — a short or common one catches journals you did not mean |
+| `venue name` | papers whose venue name contains this name as a whole word — so a blacklisted *ACM Transactions on Multimedia Computing, Communications, and Applications* also catches the record Semantic Scholar files under that name followed by `(TOMCCAP)` | depends on the name — a short or common one catches journals you did not mean |
 
 A **⚠** on a site label means the address looks like a shared publisher platform,
 so it covers every journal hosted there rather than just this one.

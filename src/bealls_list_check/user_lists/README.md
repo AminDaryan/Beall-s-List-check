@@ -101,9 +101,17 @@ nothing said the entry had been ignored. A blacklist entry is an instruction fro
 the person running the check, and an instruction the tool's own judgement can
 overrule is not an instruction.
 
-That early pass uses **exact signals only** — the listed host or a host under it,
-an exact ISSN, an exact name — and, unlike the Beall path, does **not** apply the
-name-corroboration downgrade. That rule exists because a third-party list's name
+That early pass matches on the listed host or a host under it, an exact ISSN, or
+the listed **name as a whole phrase inside the venue's name** — the same rule the
+whitelist uses, and the one each row's label promises. Exact equality was the
+rule at first and no real catalogue survives it: Semantic Scholar records one
+journal as *ACM Transactions on Multimedia Computing, Communications, and
+Applications (TOMCCAP)*, so an entry typed without the trailing abbreviation
+matched only by the accident of that record carrying an alternate name without
+it. Phrases are padded, so word boundaries hold: `Sensors` catches *IEEE Sensors
+Journal*, never *Biosensors*.
+
+Unlike the Beall path it does **not** apply the name-corroboration downgrade. That rule exists because a third-party list's name
 may coincide with a different journal; it has no business overruling a name this
 user chose deliberately. A blacklist hit is therefore `on_list`, and the row says
 in words that it came from the reader's own list and on which signal.
