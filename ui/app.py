@@ -1003,20 +1003,30 @@ def page_check():
     llm = _step_choose_check(checker)
     items, token, quality_slot = _step_provide_papers()
     options = _step_options(checker, llm)
-    _step_run(checker, items, llm, options)
     # The data-quality panel goes into the place Step 2 kept for it, and it is
-    # written *here*, after the steps below it, because it is the one thing on
-    # this page that takes real time: a corpus it has not seen before costs ~7.5s
-    # to validate and ~3.1s to build the report for, per 18,000 records.
+    # written here — after Step 3, before Step 4 — for two reasons that used to
+    # pull in opposite directions.
     #
-    # Streamlit paints elements in the order the script produces them, so doing
-    # that work in Step 2's own place meant Steps 3 and 4 were not sent until it
-    # finished — and the first render after an upload is the one where they have
-    # no previous version to stand in, so the page simply had no third step for
-    # ten seconds.  Nothing in Steps 3 or 4 reads this panel, so nothing has to
-    # wait for it: the page arrives whole, and the panel fills in behind it.
+    # Not in Step 2's own place, because Streamlit paints elements in the order
+    # the script produces them: the work this panel does once per corpus held up
+    # everything below it, and the first render after an upload is the one where
+    # Steps 3 and 4 have no previous version to stand in, so the page simply had
+    # no third step until the panel finished.
+    #
+    # But not after Step 4 either, which is where it went next.  A *run* happens
+    # inside Step 4, and anything the script has not reached yet is marked stale
+    # and faded to a third of its brightness — so through a run of several
+    # minutes this panel, the last thing on the page, sat visibly dimmed the
+    # whole time with nothing wrong with it.
+    #
+    # Between them costs what the panel costs, on the first sight of a corpus
+    # only: 0.2-0.3s to validate 18,000 records and ~1.5s to build the report
+    # for them, once the per-record filesystem call was taken out of the
+    # validator.  That is Step 4's summary and its button arriving a moment
+    # later — not a missing step, and not a dimmed panel.
     if quality_slot is not None:
         results.show_input_quality(items, token, key="input", into=quality_slot)
+    _step_run(checker, items, llm, options)
 # ── Navigation ──────────────────────────────────────────────────────────────
 # Three pages in the sidebar: the flow, the instructions for it, and the one
 # thing there is to configure.
