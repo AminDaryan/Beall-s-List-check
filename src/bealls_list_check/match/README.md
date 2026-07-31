@@ -107,7 +107,6 @@ Every paper gets exactly one **status** (the Excel rows are colour-coded by it):
 | `review` | 🟠 orange | **Weak / uncertain match** a human should double-check (similar name, alternate URL, free-PDF host, hijacked-by-name, or a weak list). |
 | `clean` | 🟢 green | The venue was identified and is **not** on the list. |
 | `no_venue` | ⚪ grey | A preprint or a record with no venue — nothing to check. |
-| `out_of_scope` | 🔵 blue | *Only with a whitelist:* the paper's venue wasn't in it, so it was skipped. |
 | `error` | ⚫ dark | The record couldn't be processed (the reason is shown in the row). |
 
 ## Three deliberate downgrades from `on_list` to `review`

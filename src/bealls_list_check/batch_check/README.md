@@ -71,7 +71,7 @@ SS-ID,DOI,Status
 | `DOI` | The record's `externalIds.DOI`, echoed verbatim (empty if none). |
 | `Status` | The verdict, one of the values below. |
 
-`Status` takes one of five values (the main pipeline's `out_of_scope` cannot
+`Status` takes one of five values (the main pipeline's whitelist cannot
 occur here, as the batch command has no whitelist):
 
 | Status | Colour | Meaning |

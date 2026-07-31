@@ -59,5 +59,7 @@ Three rules from the main README are visible in that table:
   nothing corroborated the name match; see
   [`match/`](../src/bealls_list_check/match/README.md).
 
-`out_of_scope` is the one verdict this corpus cannot produce, as it only occurs
-when a [whitelist](../src/bealls_list_check/user_lists/README.md) is supplied.
+Supplying a [whitelist](../src/bealls_list_check/user_lists/README.md) does not
+add a verdict to this table; it removes rows from it. Whitelisting records 1 and
+2's venues, for instance, yields a three-row report — record 8's venue shares
+SCIRP's domain with record 1's — and the other five papers appear nowhere in it.

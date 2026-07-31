@@ -354,13 +354,6 @@ def _review_reason(r: dict) -> str:
     return "This is a soft, lower-confidence match — verify it by hand before acting."
 
 
-def out_of_scope_result(paper, source_file):
-    """Result for a paper skipped because it isn't in the user's whitelist."""
-    r = _blank_result(paper, source_file)
-    r["status"] = "out_of_scope"
-    return r
-
-
 def match_paper(index: BeallIndex, paper: dict, source_file: str) -> dict:
     """Classify one paper. Never raises: a bad record yields an 'error' result.
 

@@ -46,7 +46,7 @@ for _p in [_HERE, *(d for d in _HERE.iterdir() if d.is_dir() and (d / f"{d.name}
         sys.path.insert(0, str(_p))
 sys.path.insert(0, str(_HERE.parent))          # src/ -> common
 from config import CORPUS_DIR, CORPUS_GLOB, SNAPSHOT_PATH, STATUS_FILL_COLORS
-from match import BeallIndex, match_paper, out_of_scope_result
+from match import BeallIndex, match_paper
 from user_lists import load_user_entries, WhitelistMatcher
 import data_quality                        # shared Crossref client (for the reachability probe)
 from common import input_quality          # the one shared input data-quality validator
@@ -91,11 +91,26 @@ def build_index(blacklist_path=None):
 def classify_corpus(index, whitelist=None, crossref="off"):
     """Classify every corpus paper, applying the optional whitelist scope filter.
 
-    When a *whitelist* is active, papers whose venue is not in it are marked
-    ``out_of_scope`` and not matched.  Each result also gets a ``data_quality``
-    list (see data_quality.py): offline structural/consistency checks always,
-    plus a Crossref cross-check when *crossref* is ``"all"`` (every DOI) or
-    ``"flagged"`` (only on_list/review rows — far cheaper on a big corpus).
+    When a *whitelist* is active it **selects the corpus**: a paper whose venue
+    is not in it is dropped before anything else happens, so it is not matched,
+    not validated, not counted and not written to any sheet.  The report is then
+    a report about the whitelisted venues alone — 500 papers in and 50 of them
+    whitelisted means 50 rows, and every count on the Summary sheet is out of 50.
+
+    Papers carrying no venue at all are dropped too: an empty whitelist means
+    "check everything", but a non-empty one is a positive list, and a record with
+    nothing to match cannot be on it.
+
+    That the rest were excluded is not silently lost — the count comes back from
+    here, is printed by the caller and has its own row on the Summary sheet.  It
+    is a number, though, not a set of rows: a paper outside the whitelist was
+    never examined, and a report is a poor place to keep something it has nothing
+    to say about.
+
+    Each result also gets a ``data_quality`` list (see data_quality.py): offline
+    structural/consistency checks always, plus a Crossref cross-check when
+    *crossref* is ``"all"`` (every DOI) or ``"flagged"`` (only on_list/review
+    rows — far cheaper on a big corpus).
 
     The DOI-based review resolvers (hijacked clearance, alternate-URL,
     open-access-PDF and name_exact confirm/clear — see resolve.py) all use
@@ -105,17 +120,16 @@ def classify_corpus(index, whitelist=None, crossref="off"):
     unreachable — see :func:`resolve_crossref_mode`; this parameter itself defaults
     to ``"off"`` so a direct caller opts in explicitly.)
 
-    Returns ``(results, sorted_corpus_files, n_out_of_scope)``.
+    Returns ``(results, sorted_corpus_files, n_excluded)``.
     """
-    results, corpus_files, n_scope = [], set(), 0
+    results, corpus_files, n_excluded = [], set(), 0
     for source_file, paper in load_corpus():
         corpus_files.add(source_file)
         if whitelist is not None and whitelist.active and not whitelist.in_scope(paper):
-            r = out_of_scope_result(paper, source_file)
-            n_scope += 1
-        else:
-            # match_paper never raises — a bad record returns an 'error' result.
-            r = match_paper(index, paper, source_file)
+            n_excluded += 1
+            continue                     # outside the whitelist: not in this run at all
+        # match_paper never raises — a bad record returns an 'error' result.
+        r = match_paper(index, paper, source_file)
         use_cr = crossref == "all" or (crossref == "flagged"
                                        and r["status"] in ("on_list", "review"))
         r["data_quality"] = input_quality.validate_input(paper, use_crossref=use_cr)
@@ -126,7 +140,7 @@ def classify_corpus(index, whitelist=None, crossref="off"):
         if use_cr:
             resolve_review(r, paper, index)
         results.append(r)
-    return results, sorted(corpus_files), n_scope
+    return results, sorted(corpus_files), n_excluded
 
 
 def load_corpus():
@@ -180,8 +194,9 @@ def resolve_crossref_mode(requested):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Beall's List predatory-venue check.")
-    parser.add_argument("--whitelist", help="JSON list of venues; only papers whose "
-                                            "venue is in it are checked (others -> out_of_scope)")
+    parser.add_argument("--whitelist", help="JSON list of venues; the report covers only "
+                                            "papers whose venue is in it — the rest are left "
+                                            "out of the run entirely")
     parser.add_argument("--blacklist", help="JSON list of venues to add to Beall's List "
                                             "as predatory before matching")
     parser.add_argument("--crossref", choices=["off", "flagged", "all"], default="all",
@@ -206,23 +221,33 @@ def main(argv=None):
         whitelist = WhitelistMatcher(load_user_entries(args.whitelist, "whitelist"))
         print(f"Whitelist active ({len(whitelist.issns)} ISSN(s) + "
               f"{len(whitelist.domains)} domain(s) + "
-              f"{len(whitelist.name_phrases)} name(s)) — papers outside it are skipped.")
+              f"{len(whitelist.name_phrases)} name(s)) — the report will cover "
+              "these venues only; every other paper is left out of it.")
 
     crossref_mode = resolve_crossref_mode(args.crossref)
 
     print(f"Loading corpus from {CORPUS_DIR} ...")
     started = time.time()
-    results, corpus_files, n_scope = classify_corpus(index, whitelist, crossref=crossref_mode)
+    results, corpus_files, n_excluded = classify_corpus(index, whitelist, crossref=crossref_mode)
 
     elapsed = time.time() - started
-    out_path, n_flagged = save_workbook(results, snapshot["meta"], corpus_files)
+    out_path, n_flagged = save_workbook(results, snapshot["meta"], corpus_files,
+                                        n_excluded=n_excluded)
 
     counts = {s: 0 for s in STATUS_FILL_COLORS}
     for r in results:
         counts[r["status"]] = counts.get(r["status"], 0) + 1
     print("-" * 70)
     print(f"Checked {len(results)} papers in {elapsed:.1f}s")
-    for status in ("on_list", "review", "clean", "no_venue", "out_of_scope", "error"):
+    if n_excluded:
+        # Said here as well as on the Summary sheet: a run that reports on 50 of
+        # the 500 papers handed to it must say so where the 50 is printed, or the
+        # number reads as the size of the corpus.
+        print(f"  ({n_excluded} more were outside the whitelist and are not in the report)")
+    if whitelist is not None and whitelist.active and not results:
+        print("  Nothing matched the whitelist — the report is empty. Check the names, "
+              "websites and ISSNs in it against the papers' venues.")
+    for status in ("on_list", "review", "clean", "no_venue", "error"):
         print(f"  {status:13}: {counts.get(status, 0)}")
     print(f"Flagged (on_list + review): {n_flagged}")
     print(f"Saved -> {out_path}")

@@ -397,12 +397,17 @@ def _write_results_sheet(ws, results, extra_columns=None, status_key="status"):
 
 
 def _write_summary_sheet(ws, results, snapshot_meta, corpus_files,
-                         token_usage=None, llm_stats=None):
+                         token_usage=None, llm_stats=None, n_excluded=0):
     """Write counts + run metadata so results are interpretable.
 
     token_usage / llm_stats are populated only when the optional LLM second
     pass (bealls_llm_check.py) produced the workbook; they add an 'LLM second
     pass' section with the token counter and what the LLM changed.
+
+    *n_excluded* is how many papers the whitelist kept out of the run.  They are
+    in no sheet — that is what a whitelist now does — so this is the one place
+    the workbook can account for the difference between the corpus handed in and
+    the papers reported on, and it is written even when it is zero.
     """
     border = _border()
     ws.column_dimensions["A"].width = 40
@@ -440,8 +445,11 @@ def _write_summary_sheet(ws, results, snapshot_meta, corpus_files,
     kv(row, "Needs review (soft match)", status_counts.get("review", 0)); row += 1
     kv(row, "Clean (venue identified, not listed)", status_counts.get("clean", 0)); row += 1
     kv(row, "No venue (preprint / no info)", status_counts.get("no_venue", 0)); row += 1
-    kv(row, "Out of scope (not in whitelist)", status_counts.get("out_of_scope", 0)); row += 1
     kv(row, "Errors", status_counts.get("error", 0)); row += 1
+    # Below the verdicts, and worded as a count of papers rather than a verdict,
+    # because it is not one: these papers were never examined.  Every figure
+    # above is out of "Total papers checked"; this one is outside it.
+    kv(row, "Excluded by the whitelist (not examined, in no sheet)", n_excluded); row += 1
     kv(row, "Records with data-quality warnings",
        sum(1 for r in results if r.get("data_quality"))); row += 2
 
@@ -561,7 +569,7 @@ def _write_legend_sheet(ws):
 
 def save_workbook(results, snapshot_meta, corpus_files, *,
                   flagged_extra_columns=None, token_usage=None, llm_stats=None,
-                  results_filename=None):
+                  results_filename=None, n_excluded=0):
     """Build and save the combined workbook; return ``(path, n_flagged)``.
 
     The keyword-only args let the optional LLM pass (bealls_llm_check.py) reuse
@@ -589,7 +597,8 @@ def save_workbook(results, snapshot_meta, corpus_files, *,
 
     ws_summary = wb.create_sheet("Summary")
     _write_summary_sheet(ws_summary, results, snapshot_meta, corpus_files,
-                         token_usage=token_usage, llm_stats=llm_stats)
+                         token_usage=token_usage, llm_stats=llm_stats,
+                         n_excluded=n_excluded)
 
     ws_legend = wb.create_sheet("Legend")
     _write_legend_sheet(ws_legend)

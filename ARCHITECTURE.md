@@ -15,8 +15,8 @@ For an end-user description of *what the tool does and how to run it*, see the
 The tool reads a corpus of **Semantic Scholar paper records** (JSON) and, for each
 paper, classifies its **publication venue** against a vendored snapshot of
 **Beall's List** of allegedly predatory venues. The output is a single **Excel
-workbook** in which every paper receives one of six verdicts — `on_list`,
-`review`, `clean`, `no_venue`, `out_of_scope`, or `error` — accompanied by the
+workbook** in which every paper receives one of five verdicts — `on_list`,
+`review`, `clean`, `no_venue`, or `error` — accompanied by the
 evidence behind that verdict so it can be audited manually.
 
 The base check is fully deterministic and performs no language-model inference;
@@ -111,7 +111,7 @@ stages read and update it. The principal fields are:
   "mentions",            # [(display_text, url)] — the linked venues ("Mentioned in")
 
   # Verdict (set by match.py, possibly revised by resolve.py)
-  "status",              # on_list | review | clean | no_venue | out_of_scope | error
+  "status",              # on_list | review | clean | no_venue | error
   "list_source",         # which Beall list matched (publishers / hijacked / ...)
   "matched_name",        # the listed entry that matched
   "matched_url",         # that entry's own website (the listed/predatory site)

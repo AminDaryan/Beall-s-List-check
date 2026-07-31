@@ -12,9 +12,12 @@ neither — it classifies every record).
 python src/bealls_list_check/bealls_list_check.py --whitelist whitelist.json --blacklist blacklist.json
 ```
 
-- **`--whitelist` narrows the scope.** Only papers whose venue matches a
-  whitelisted entry are checked; every other paper is marked `out_of_scope` and
-  skipped. An empty or absent whitelist means "check everything" (the default).
+- **`--whitelist` selects the corpus.** Only papers whose venue matches a
+  whitelisted entry are checked, and only they are in the workbook — every other
+  paper is dropped before the run and appears in no sheet, so every count in the
+  report is out of the papers that were kept. How many were excluded is on the
+  Summary sheet. An empty or absent whitelist means "check everything" (the
+  default).
 - **`--blacklist` extends the list.** Its entries are added to Beall's List for
   this run (tagged `list_source="blacklist"`) and matched exactly like real Beall
   entries, so a paper in one comes back `on_list`.
@@ -74,11 +77,11 @@ against reaching for one when a single journal was meant.
 
 ## Note on the word "whitelist"
 
-It does **not** mean "venues I trust, so don't flag them". It is a *scope
-filter*: it decides which papers are examined at all. A paper outside it comes
-back `out_of_scope`, which means **not examined** — not `clean`, and not
-cleared. Whitelisting a venue never suppresses a finding about it; a whitelisted
-venue that is on Beall's List still comes back `on_list`.
+It does **not** mean "venues I trust, so don't flag them". It *selects the
+corpus*: it decides which papers are examined at all. A paper outside it is not
+examined and is not in the report, and its absence is not a verdict — it is not
+`clean`, and it is not cleared. Whitelisting a venue never suppresses a finding
+about it; a whitelisted venue that is on Beall's List still comes back `on_list`.
 
 ## Blacklist semantics (extra predatory entries)
 

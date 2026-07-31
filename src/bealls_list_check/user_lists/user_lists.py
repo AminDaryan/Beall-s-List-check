@@ -7,10 +7,11 @@ plain string is treated as a name; ``url`` is accepted in place of ``domain``):
     snapshot entries (``list_source="blacklist"``) and added to the BeallIndex,
     so a paper in one of them is flagged exactly like a real Beall entry.
 
-  * **whitelist** — a *scope filter*.  When non-empty, only papers whose venue
-    matches a whitelist entry are evaluated; every other paper is marked
-    ``out_of_scope`` and skipped.  An empty/absent whitelist means "check
-    everything" (the default behaviour).
+  * **whitelist** — a *corpus selector*.  When non-empty, only papers whose
+    venue matches a whitelist entry are evaluated; every other paper is dropped
+    before the run and appears nowhere in the report, so all of it — the rows,
+    the counts, the flagged sheet — is about the whitelisted venues alone.  An
+    empty/absent whitelist means "check everything" (the default behaviour).
 
 A paper is *in scope* if any one of three signals matches, tried most precise
 first:

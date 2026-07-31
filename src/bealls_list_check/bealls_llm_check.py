@@ -304,11 +304,13 @@ def main(argv=None):
     whitelist = (WhitelistMatcher(load_user_entries(args.whitelist, "whitelist"))
                  if args.whitelist else None)
     if whitelist is not None:
-        print(f"Whitelist active — papers outside it are skipped (out_of_scope).")
+        print("Whitelist active — the report will cover those venues only; every "
+              "other paper is left out of it, and the LLM is never asked about one.")
 
     crossref_mode = det.resolve_crossref_mode(args.crossref)
     print("Running the deterministic pass first ...")
-    results, corpus_files, _n_scope = det.classify_corpus(index, whitelist, crossref=crossref_mode)
+    results, corpus_files, n_excluded = det.classify_corpus(index, whitelist,
+                                                            crossref=crossref_mode)
 
     token_usage = TokenUsageTracker()
     started = time.time()
@@ -323,6 +325,7 @@ def main(argv=None):
         token_usage=token_usage,
         llm_stats=llm_stats,
         results_filename="bealls_llm_results.xlsx",
+        n_excluded=n_excluded,
     )
     rv = llm_stats["review_venues_checked"]
     print(f"\nDone in {time.time() - started:.1f}s. "

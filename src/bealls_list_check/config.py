@@ -164,13 +164,16 @@ PREPRINT_NAMES = {
 #   clean    green  — venue identified and not on the list
 #   no_venue grey   — preprint or no venue info; not classifiable
 #   error    dark   — record could not be processed
-# out_of_scope blue — paper's venue isn't in the user's whitelist, so it was
-#                      skipped (only ever used when a whitelist is supplied).
+#
+# There was a sixth, out_of_scope blue, for a paper whose venue was not in the
+# user's whitelist.  A whitelist now selects the corpus instead of labelling it:
+# papers outside it are not in the workbook at all, so no row can carry that
+# status and a colour for it would be a colour for nothing.  The count of what
+# was excluded is on the Summary sheet, where a number belongs.
 STATUS_FILL_COLORS = {
     "on_list":      "FFC7CE",
     "review":       "FFD79A",
     "clean":        "C6EFCE",
     "no_venue":     "D9D9D9",
-    "out_of_scope": "BDD7EE",
     "error":        "C00000",
 }

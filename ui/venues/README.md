@@ -527,8 +527,8 @@ journal passed its screening; being in Crossref means only that someone paid to
 register its DOIs. The question this tool asks is whether the venue is on Beall's
 List, which neither answers. The search only helps *name* a venue.
 
-That distinction is why the whitelist's caption spells out that `out_of_scope`
-means **not examined** rather than cleared. DOAJ is the canonical index of
+That distinction is why the whitelist's caption spells out that the papers it
+leaves out are **not examined** rather than cleared. DOAJ is the canonical index of
 *legitimate* journals, so putting a DOAJ search next to a box called "whitelist"
 invites reading the box as *venues I trust, so don't flag them* — which is the
 opposite of what it does.
@@ -541,7 +541,7 @@ once rather than restated on every look:
 
 | Box | On the **?** | Effect | CLI |
 |---|---|---|---|
-| **whitelist** | Only check these venues | Restricts the run. A paper from any venue not listed is reported as `out_of_scope` — **not examined**, which is not the same as cleared. | `--whitelist` |
+| **whitelist** | Only check these venues | Selects the papers. Only these venues are checked and only they are in the report; papers from any other venue are left out of it entirely — **not examined**, which is not the same as cleared. The Summary sheet counts them. | `--whitelist` |
 | **blacklist** | Also treat these venues as predatory | Extends the list, for this run only. | `--blacklist` |
 
 Both fold open to the same JSON the CLI flags take as a *file*, editable in

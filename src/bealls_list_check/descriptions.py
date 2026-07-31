@@ -142,7 +142,6 @@ _NONMATCH_NOTES = {
     "clean":        "The venue was identified and is not on Beall's List.",
     "no_venue":     "No journal venue to classify — this is a preprint, or the "
                     "record has no venue information.",
-    "out_of_scope": "Skipped — the venue is not in the whitelist you supplied.",
 }
 
 
@@ -253,9 +252,6 @@ _LEGEND_SECTIONS = [
              "Beall entry."),
             ("no_venue", "—", "Preprint server (e.g. arXiv) or no venue "
              "metadata — there is no journal/publisher to classify."),
-            ("out_of_scope", "—", "Only when a whitelist was supplied: the "
-             "paper's venue is not in it, so the paper was skipped (not "
-             "matched against the list at all)."),
             ("error", "—", "The record could not be processed; the Python "
              "error is shown in the first row of the 'Match' column."),
         ],

@@ -287,8 +287,7 @@ def get_papers():
                     on_click=_load_example_corpus)
         right.caption(f"No data to hand? Fills the paste box with `examples/"
                       f"{_EXAMPLE_CORPUS.name}` — eight synthetic records exercising every "
-                      "verdict except `out_of_scope`, whose expected result is tabulated in "
-                      "`examples/README.md`.")
+                      "verdict, whose expected result is tabulated in `examples/README.md`.")
 
     if not token:
         return None, ""
@@ -678,9 +677,9 @@ def _step_options(checker, llm):
         with wl_col:
             wl = venue_lists.venue_list_editor(
                 "whitelist", "wl",
-                "Restricts the run. A paper from any venue not listed here is reported as "
-                "<code>out_of_scope</code> — <b>not examined</b>, which is not the same as "
-                "cleared. Leave empty to check every paper.",
+                "Selects the papers. Only papers from these venues are checked, and only "
+                "they appear in the report — the rest are left out of it entirely, not "
+                "listed as skipped. Leave empty to check every paper.",
                 "Empty — every paper is checked.",
                 what="Only check these venues",
                 # DOAJ indexes journals, not predatory publishers, so it can help

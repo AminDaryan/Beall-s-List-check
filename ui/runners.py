@@ -42,7 +42,7 @@ try:
 except Exception:
     STATUS_FILL_COLORS = {
         "on_list": "FFC7CE", "review": "FFD79A", "clean": "C6EFCE",
-        "no_venue": "D9D9D9", "out_of_scope": "BDD7EE", "error": "C00000",
+        "no_venue": "D9D9D9", "error": "C00000",
     }
 
 

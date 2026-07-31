@@ -261,8 +261,8 @@ DOI, which turns a few hundred papers into minutes. Setting `CROSSREF_MAILTO` in
 large runs.
 
 > `batch_check.py` takes `--crossref on|off` only — `flagged` is not accepted
-> there. It also has no whitelist/blacklist, so its output has five statuses, not
-> six (`out_of_scope` cannot occur).
+> there. It also has no whitelist/blacklist, so it reports on every record it is
+> given.
 
 ### The thorough check — LLM setup
 
@@ -316,7 +316,6 @@ Every paper gets exactly one **status**, colour-coded in the report:
 | `review` | 🟠 orange | **Weak / uncertain match** a human should double-check. Not a confident accusation. |
 | `clean` | 🟢 green | The venue was identified and is **not** on the list. |
 | `no_venue` | ⚪ grey | A preprint or a record with no venue — nothing to check. |
-| `out_of_scope` | 🔵 blue | *Only with a whitelist:* the venue wasn't in it, so it was skipped. |
 | `error` | ⚫ dark | The record couldn't be processed (the reason is shown in the row). |
 
 The ***core* lists** are predatory *publishers*, standalone *journals*, and
