@@ -11,8 +11,11 @@ newly selected one. Nothing is silently relabelled.
 
 ### Fast and thorough checks
 
-A success banner, a **download button** for the workbook, and a preview of its
-**first sheet, first 40 rows**, with the sheet names listed above it. Below that,
+A success banner, a preview of the workbook's **first sheet, first 40 rows** with
+the sheet names listed above it, and then **one download button** for the whole
+file. One, and after the preview: the preview is what makes anyone want the file,
+and a button above it is read before there is a reason to press it and off the
+screen by the time there is. Below that,
 a **Run log** expander holds the check's console output — including the
 data-quality report — truncated to the last 8,000 characters, and it opens
 automatically when a run fails.
@@ -39,8 +42,9 @@ so a CSV is never shown next to a workbook it did not come from.
 
 ### Batch CSV
 
-Per-status **count chips** in the canonical status colours, then two downloads and
-a 100-row preview whose Status cells are shaded to match.
+Per-status **count chips** in the canonical status colours, a 100-row preview
+whose Status cells are shaded to match, and then the two files it offers — one
+button each, in the same place for the same reason as above.
 
 - **`bealls_status.csv`** — the machine-readable `SS-ID, DOI, Status` file, one
   row per input record in input order.

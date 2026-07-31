@@ -144,10 +144,8 @@ back and forth instead of filling up. Eight papers finish in a few seconds.
 
 ### What you should see
 
-A green success message appears, together with a **download button** for
-`bealls_list_results.xlsx` and a preview of the workbook's first sheet. The same
-button appears again below the preview, so the file can be taken from either end
-of it. The eight
+A green success message appears, then a preview of the workbook's first sheet,
+and under it one **download button** for `bealls_list_results.xlsx`. The eight
 papers come out as follows. These results were checked against the list copy made
 on 2026-06-10; a newer copy may give a different answer for some venues.
 
@@ -172,8 +170,8 @@ in [examples/README.md](../../examples/README.md).
 ![A finished run, with the workbook preview](../static/ui-report.png)
 
 The preview on screen shows the **first 40 rows of the first sheet**. The workbook
-itself has five sheets, and a **download button above and below the preview**
-gives you the whole file.
+itself has five sheets, and the **download button under the preview** gives you
+the whole file.
 
 | Sheet | What is in it |
 |---|---|

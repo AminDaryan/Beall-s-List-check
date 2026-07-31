@@ -214,21 +214,22 @@ _XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 def render_result(res: runners.RunResult, checker: runners.Checker):
     if res.ok:
-        st.success(f"✅ Done — {checker.title} finished. Your Excel is ready below.")
-        st.download_button(f"⬇️ Download {res.output_path.name}", data=res.output_bytes,
-                           file_name=res.output_path.name, key=f"dl_{checker.id}",
-                           mime=_XLSX_MIME)
+        st.success(f"✅ Done — {checker.title} finished. Here is the first sheet; "
+                   "the whole workbook is below it.")
+        # **One button per file**, and it comes after the preview.
+        #
+        # It was above as well for a while, which read as two ways to get one
+        # thing and was three buttons deep once the CSV add-on had been produced
+        # too — six on screen for three files.  Of the two positions this is the
+        # one that earns its place: the preview is what makes anyone want the
+        # file, it shows 40 rows of the first of five sheets, and its own caption
+        # ends by saying to download for the rest.  A button above it is read
+        # before there is a reason to press it, and gone from the screen by the
+        # time there is.
         _preview(res.output_bytes)
-        # The same button again, under the preview.  The preview is the thing
-        # that makes anyone want the file — it shows 40 rows of the first of five
-        # sheets, and its own caption ends by saying to download for the rest —
-        # and by the time it has been read the button above it is off the top of
-        # the screen.  Two buttons for one file is a cost worth paying when the
-        # alternative is scrolling back up to a control you have already passed.
-        st.download_button(f"⬇️ Download the full {res.output_path.name}",
+        st.download_button(f"⬇️ Download {res.output_path.name}",
                            data=res.output_bytes, file_name=res.output_path.name,
-                           key=f"dl_{checker.id}_after_preview", type="primary",
-                           mime=_XLSX_MIME)
+                           key=f"dl_{checker.id}", type="primary", mime=_XLSX_MIME)
     else:
         st.error(f"The checker exited with code {res.returncode} and produced no output file. "
                  "See the run log below.")
@@ -269,34 +270,25 @@ def _csv_status_preview(rows, max_rows=100):
 def render_csv_result(res: runners.BatchCsvResult):
     if res.ok:
         st.success(f"✅ Done — {len(res.rows)} record(s) classified. "
-                   "Download the CSV (SS-ID, DOI, Status) below.")
+                   "The table is below, and both files under it.")
         _status_summary(res.rows)
         # Built once and handed to both pairs of buttons.  `st.download_button`
         # takes its bytes as an argument, so a second button naming the same file
         # would otherwise build the workbook a second time on every rerun — the
         # same trap the input-quality report was in.
-        status_xlsx = runners.build_status_xlsx(res.rows)
-        c1, c2 = st.columns(2)
-        with c1:
-            st.download_button("⬇️ Download CSV (SS-ID, DOI, Status)", data=res.csv_bytes,
-                               file_name="bealls_status.csv", key="dl_csv", mime="text/csv")
-        with c2:
-            st.download_button("⬇️ Download colour-coded Excel", key="dl_csv_xlsx",
-                               data=status_xlsx,
-                               file_name="bealls_status.xlsx", mime=_XLSX_MIME)
+        # One button per file, after the preview — see render_result.  Two files
+        # here rather than one, because they are two files: a CSV a script reads
+        # and the same three columns as Excel, coloured, which a CSV cannot be.
         _csv_status_preview(res.rows)
-        # Under the preview as well, for the reason given in render_result: this
-        # preview stops at 100 rows and says so, and the pair of buttons that
-        # answer that is above everything it just showed.
         b1, b2 = st.columns(2)
         with b1:
-            st.download_button("⬇️ Download the full CSV", data=res.csv_bytes,
-                               file_name="bealls_status.csv", key="dl_csv_after_preview",
-                               mime="text/csv")
+            st.download_button("⬇️ Download bealls_status.csv", data=res.csv_bytes,
+                               file_name="bealls_status.csv", key="dl_csv",
+                               type="primary", mime="text/csv")
         with b2:
-            st.download_button("⬇️ Download the full Excel", key="dl_csv_xlsx_after_preview",
-                               data=status_xlsx, file_name="bealls_status.xlsx",
-                               type="primary", mime=_XLSX_MIME)
+            st.download_button("⬇️ Download the colour-coded Excel", key="dl_csv_xlsx",
+                               data=runners.build_status_xlsx(res.rows),
+                               file_name="bealls_status.xlsx", mime=_XLSX_MIME)
     else:
         st.error(f"The batch check exited with code {res.returncode} and produced no CSV. "
                  "See the run log below.")
