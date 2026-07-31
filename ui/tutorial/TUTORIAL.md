@@ -199,8 +199,13 @@ exported from a literature-search tool. In Step 2, choose **Upload a file** and 
 file onto the box (or use its Browse button), or choose **Paste JSON** and paste
 the text directly. Two shapes are accepted:
 
-- a **JSON list** of paper objects, or
-- a **single** paper object, which the app puts into a list by itself.
+- a **JSON list** of paper objects,
+- a **single** paper object, which the app puts into a list by itself, or
+- the **response Semantic Scholar's API returns**, which wraps the papers in a
+  `data` field — the app takes the papers out of it.
+
+A JSON object that is none of these is refused with a message naming the fields
+it was looking for, rather than being read as one paper with nothing in it.
 
 `.jsonl` files are **not** accepted in the app. Convert such a file into a JSON
 list first, or use `batch_check.py` on the command line, which reads `.jsonl`,

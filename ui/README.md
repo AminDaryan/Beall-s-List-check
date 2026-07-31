@@ -168,8 +168,13 @@ options survive a change of check.
 Semantic Scholar **paper records**, from one of two sources — a `.json` upload or
 a paste box. Accepted input:
 
-- a **JSON list** of paper objects, or
-- a **single** paper object (it is wrapped into a list automatically).
+- a **JSON list** of paper objects,
+- a **single** paper object (it is wrapped into a list automatically), or
+- **Semantic Scholar's own API response**, `{"total": .., "data": [ .. ]}`, whose
+  `data` is used. Saving that response to a file is the obvious way to get papers
+  out of the API, and it used to be read as one paper with no venue — the app
+  said `Loaded 1 paper(s)` and the run returned a single `no_venue` row with
+  nothing to say the file had been misread.
 
 Anything else is rejected with a message rather than a traceback. **`.jsonl` is
 not accepted** — convert it to an array first, or use `batch_check.py` on the

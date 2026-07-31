@@ -347,14 +347,40 @@ def build_status_xlsx(rows: list) -> bytes:
     return buf.getvalue()
 
 
+# What makes a JSON object a paper record rather than something else shaped like
+# one.  Any single field is enough — a record with only a DOI is thin but real,
+# and this is a sanity check on the *file*, not a second data-quality pass.
+_PAPER_FIELDS = ("paperId", "title", "publicationVenue", "venue", "externalIds", "repo")
+
+
 def normalize_upload(parsed) -> list:
     """Coerce uploaded/pasted JSON into a list of paper objects.
 
-    Accepts a list of objects or a single object (wrapped). Raises ValueError
-    with a friendly message otherwise.
+    Accepts a list of objects, a single object, or the envelope Semantic
+    Scholar's own API answers with.  Raises ValueError with a friendly message
+    otherwise.
     """
     if isinstance(parsed, dict):
-        return [parsed]
+        # Semantic Scholar answers a search or a batch request with the records
+        # wrapped: ``{"total": .., "offset": .., "data": [ ... ]}``.  Saving that
+        # response to a file is the obvious way to get papers out of the API, and
+        # it used to be read as *one* paper — an object with no title and no
+        # venue — so the app said "Loaded 1 paper(s) — ready to run" and the
+        # check came back with a single `no_venue` row.  Nothing anywhere said
+        # the file had been misread, which is the worst way for this to fail.
+        data = parsed.get("data")
+        if isinstance(data, list):
+            parsed = data
+        elif any(k in parsed for k in _PAPER_FIELDS):
+            return [parsed]                 # a single record, as before
+        else:
+            keys = ", ".join(f"`{k}`" for k in list(parsed)[:4]) or "nothing"
+            raise ValueError(
+                f"This is a JSON object, but not a paper record: it carries {keys} and "
+                "none of the fields a Semantic Scholar record has (`title`, `paperId`, "
+                "`publicationVenue`, `venue`, `externalIds`). If it came from the "
+                "Semantic Scholar API, the papers are under its `data` key — upload that "
+                "part, or the whole response, which is read the same way.")
     if isinstance(parsed, list):
         if not all(isinstance(x, dict) for x in parsed):
             raise ValueError("JSON list must contain paper objects (dicts).")
