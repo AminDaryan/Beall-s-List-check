@@ -83,10 +83,13 @@ _EXAMPLE_CORPUS = runners.REPO_ROOT / "examples" / "sample_papers.json"
 # for a single run, so it is a default rather than the answer.
 ENV_PROVIDER = os.getenv("LLM_PROVIDER", "azure").lower()
 
-# The last entry of Step 3's model list, and its escape hatch. A model this
-# machine's .env has not been told about cannot be offered in a list, but that is
-# no reason to refuse to run it: choosing this reveals a text box instead.
-_OTHER_MODEL = "Other — type a name…"
+# A model this machine's .env has not been told about cannot be offered in a
+# list, but that is no reason to refuse to run it.  There used to be an "Other —
+# type a name…" entry that revealed a second control below the first, which meant
+# every provider with no configured names showed a dropdown of one useless option
+# and a text box under it: two controls, one question.  The picker now takes
+# typed names directly (`accept_new_options`), so there is one control whether
+# the name is chosen or typed.
 
 
 @st.cache_data(show_spinner=False)
@@ -155,14 +158,14 @@ def selected_provider():
 def selected_model():
     """The model Step 3 has selected — a configured name, or one typed in.
 
+    One value either way: the picker accepts a typed name as an option, so a name
+    that is not in ``.env`` arrives here the same way a configured one does.
+
     Empty when nothing is chosen, which is a state the flow reports rather than
     hides: the run is started with whatever this returns, and with nothing it
     falls back to what the environment already names.
     """
-    name = st.session_state.get("model") or ""
-    if name == _OTHER_MODEL:
-        name = st.session_state.get("model_custom") or ""
-    return name.strip()
+    return (st.session_state.get("model") or "").strip()
 
 
 def sidebar():
@@ -421,9 +424,8 @@ def _provider_changed():
     Callbacks run before the rerun that redraws the widgets, so what is written
     here is what they come back holding.
     """
-    st.session_state.pop("model_custom", None)
     _ok, _msg, models = llm_status(selected_provider())
-    st.session_state["model"] = models[0] if models else _OTHER_MODEL
+    st.session_state["model"] = models[0] if models else None
 
 
 def _pick_checker(checker_id: str):
@@ -569,103 +571,49 @@ def _step_provide_papers():
     return items, token, quality_slot
 
 
-def _step_options(checker, llm):
-    """Step 3 — everything about *this* run. Returns an :class:`_Options`."""
-    llm_models = llm.models
-    # Step 3 — options.  Nothing here has to be touched, so the pill states what
-    # is in force rather than whether anything was.
-    #
-    # The hint used to read "all optional", which was true and unhelpful in the
-    # same breath.  Every other step's hint says what the step is *about*; this
-    # one described its obligation level instead, and did it in a word that reads
-    # as "ignorable" — which one of these settings, the one that decides what the
-    # run spends money on, is not.  It now says what the others say: these have
-    # values already, and you change the ones this run needs.
-    #
-    # Nothing in this step is folded away any more.  Every control here changes
-    # what the run does — Crossref moves two of the example corpus's eight
-    # records between verdicts on its own — and a step whose header claims to
-    # summarise the settings in force cannot do that while some of them are
-    # behind a click.
-    step_header(3, "Options", "already set — change what this run needs",
-                _options_state(checker), learn="venue lists")
+def _options_section(icon, title, hint):
+    """One bordered block of Step 3, opened as a context manager.
 
-    # Which LLM answers is a run setting, so it is decided here rather than only
-    # reported in the sidebar.  Editing .env and restarting the app was the
-    # previous way to change either half of it, which is a lot of ceremony for a
-    # decision taken per run — and it made trying a second provider a
-    # configuration exercise rather than a choice.
-    #
-    # Both halves are offered, because either alone is only half an answer: a
-    # model name means nothing without the backend that serves it, and picking a
-    # provider without saying which of its models to use just moves the question.
-    model = provider = ""
-    if checker.needs_llm:
-        provider_col, model_col = st.columns(2)
-        provider = provider_col.selectbox(
-            "LLM provider", llm_providers(), key="provider", on_change=_provider_changed,
-            help="Which backend answers. Defaults to `.env`'s `LLM_PROVIDER`; choosing "
-                 "another here changes this run only, and leaves `.env` alone. Each "
-                 "provider needs its own credentials — the line under Step 1 says whether "
-                 "the one selected has them.")
-        # The configured names, and a way past them.  A list alone was a dead end
-        # on any machine whose .env happened not to name the wanted model: the
-        # advice was to edit .env and restart, which is exactly the ceremony this
-        # control exists to remove.  A typed name cannot be checked before the
-        # run — see the caption — but "cannot be verified" is not "must not be
-        # offered", and an unverified name that runs beats a verified one that
-        # is not the model the user meant.
-        model = model_col.selectbox(
-            "Model / deployment", llm_models + [_OTHER_MODEL], key="model",
-            help="Which model of that provider this run uses. The listed names come from "
-                 "`.env` — `AZURE_OPENAI_DEPLOYMENT` for the provider `.env` itself "
-                 "selects, `LLM_MODELS_<PROVIDER>` for any other — each of which takes a "
-                 "bare name, a comma-separated list or a JSON array. Not listed is not "
-                 "unavailable: choose *Other* and type any name the provider serves.")
-        if model == _OTHER_MODEL:
-            model = st.text_input(
-                "Model name", key="model_custom", placeholder="e.g. gpt-4o-mini",
-                help="Passed to the provider exactly as typed. For Azure this is the "
-                     "**deployment** name, which need not match the underlying model's.").strip()
-            st.caption("Typed names are not checked before the run: whether the provider "
-                       "serves this one is answered by the provider, on the first request. "
-                       "To have it offered in the list from now on, add it to `.env` and "
-                       "restart the app — `.env` is read once, at startup.")
+    Step 3 holds two or three unrelated decisions — which LLM answers, whether
+    Crossref is consulted, which venues are in scope — and used to run them
+    together down one column, separated by nothing but a bold line and a caption.
+    Read quickly, that is one long form; the only way to tell where the LLM
+    stopped and Crossref started was to read the labels.
 
-    crossref = st.checkbox(
-        "Cross-check every venue against Crossref",
-        value=True,
-        key="cr",
-        help="Crossref is the official registry of published articles (looked up by each "
-             "paper's DOI). When on (the default), the journal name and ISSN that Semantic "
-             "Scholar reports are compared against Crossref's official record, and DOIs are "
-             "used to resolve uncertain matches — catching papers where Semantic Scholar has "
-             "the wrong venue. It contacts Crossref once per paper (a little slower) and is "
-             "skipped automatically when there's no internet. Uncheck to force a fully offline run.")
-    st.caption("Recommended. Confirms each venue against the official registry using the paper's "
-               "DOI, which resolves matches the metadata alone leaves uncertain. Adds one lookup "
-               "per paper, and is skipped automatically when there is no internet.")
-    # Not shown at all for Batch CSV, which takes neither list — batch_check.py
-    # has no --whitelist or --blacklist to give them to.  It used to be shown
-    # anyway, holding a note that said so, which made the section a control that
-    # promised two things and then apologised for having neither.  Step 4's
-    # summary already reports the same fact as a property of the run rather than
-    # as a dead end, which is where it belongs.
-    # In the open, not behind a fold.  They were folded away for being rare, but
-    # rare is not the same as advanced, and a fold answers the wrong question: it
-    # hides *what the run is doing* behind a click, so the only way to confirm no
-    # venue list is in force is to open a panel and read two empty boxes.  Shown,
-    # they answer that by being visibly empty.
-    #
-    # Side by side rather than stacked, which is what the fold was really buying:
-    # two 90px boxes in a column pushed the Run button off the screen, and these
-    # two are a pair — one narrows the run, the other widens it — so a row reads
-    # them as the opposites they are.
-    wl = bl = None
-    if checker.kind != "csv":
-        st.markdown("**🎯 Venue lists — narrow the run, or add venues of your own**")
-        st.caption("Both are empty on most runs. Leave them so unless this run needs a "
-                   "different scope from Beall's List itself.")
+    Each is now its own bordered block with its own heading, so the step is read
+    as the three questions it is.  The heading carries the *subject* and a phrase
+    on what the block decides — the detail stays on each control's own ⓘ, which
+    is what stops a section heading growing into a paragraph.
+    """
+    box = st.container(border=True)
+    box.markdown(f"<div class='bl-opt-h'><span class='bl-opt-i'>{icon}</span>"
+                 f"<span class='bl-opt-t'>{title}</span>"
+                 f"<span class='bl-opt-s'>{hint}</span></div>", unsafe_allow_html=True)
+    return box
+
+
+def _venue_list_section():
+    """Step 3's two venue lists, side by side. Returns ``(whitelist, blacklist)``.
+
+    Not shown at all for Batch CSV, which takes neither — batch_check.py has no
+    --whitelist or --blacklist to give them to.  It used to be shown anyway,
+    holding a note that said so, which made the section a control that promised
+    two things and then apologised for having neither.  Step 4's summary already
+    reports that as a property of the run rather than as a dead end.
+
+    In the open, not behind a fold.  They were folded away for being rare, but
+    rare is not the same as advanced, and a fold answers the wrong question: it
+    hides *what the run is doing* behind a click, so the only way to confirm no
+    venue list is in force is to open a panel and read two empty boxes.  Shown,
+    they answer that by being visibly empty.
+
+    Side by side rather than stacked, which is what the fold was really buying:
+    two boxes in a column pushed the Run button off the screen, and these two are
+    a pair — one narrows the run, the other widens it — so a row reads them as
+    the opposites they are.
+    """
+    with _options_section("🎯", "Venue lists",
+                          "empty on most runs — one narrows the run, the other widens it"):
         wl_col, bl_col = st.columns(2)
         # Named by the familiar term, with what it does on the ? beside it.  The
         # heading used to carry both — "Only check these venues · whitelist" —
@@ -698,6 +646,89 @@ def _step_options(checker, llm):
                 # directory of vetted journals will have, and the DOI registry
                 # screens nobody. See _DIRECTORIES.
                 source="crossref")
+    return wl, bl
+
+
+def _step_options(checker, llm):
+    """Step 3 — everything about *this* run. Returns an :class:`_Options`."""
+    llm_models = llm.models
+    # Step 3 — options.  Nothing here has to be touched, so the pill states what
+    # is in force rather than whether anything was.
+    #
+    # The hint used to read "all optional", which was true and unhelpful in the
+    # same breath.  Every other step's hint says what the step is *about*; this
+    # one described its obligation level instead, and did it in a word that reads
+    # as "ignorable" — which one of these settings, the one that decides what the
+    # run spends money on, is not.  It now says what the others say: these have
+    # values already, and you change the ones this run needs.
+    #
+    # Nothing in this step is folded away any more.  Every control here changes
+    # what the run does — Crossref moves two of the example corpus's eight
+    # records between verdicts on its own — and a step whose header claims to
+    # summarise the settings in force cannot do that while some of them are
+    # behind a click.
+    step_header(3, "Options", "already set — change what this run needs",
+                _options_state(checker), learn="venue lists")
+
+    # Which LLM answers is a run setting, so it is decided here rather than only
+    # reported in the sidebar.  Editing .env and restarting the app was the
+    # previous way to change either half of it, which is a lot of ceremony for a
+    # decision taken per run — and it made trying a second provider a
+    # configuration exercise rather than a choice.
+    #
+    # Both halves are offered, because either alone is only half an answer: a
+    # model name means nothing without the backend that serves it, and picking a
+    # provider without saying which of its models to use just moves the question.
+    model = provider = ""
+    if checker.needs_llm:
+        with _options_section("🧠", "LLM", "which backend answers, and as which model"):
+            provider_col, model_col = st.columns(2)
+            provider = provider_col.selectbox(
+                "LLM provider", llm_providers(), key="provider", on_change=_provider_changed,
+                help="Which backend answers. Defaults to `.env`'s `LLM_PROVIDER`; choosing "
+                     "another here changes this run only, and leaves `.env` alone. Each "
+                     "provider needs its own credentials — the line under Step 1 says whether "
+                     "the one selected has them.")
+            # The configured names, and a way past them, in one control: the list
+            # is what `.env` knows about, and anything else can be typed straight
+            # into it.  A list alone was a dead end on a machine whose .env
+            # happened not to name the wanted model, and a list plus a separate
+            # "Model name" box asked one question twice — visibly so for every
+            # provider with no configured names, where the list held nothing to
+            # pick.  A typed name cannot be checked before the run, but "cannot
+            # be verified" is not "must not be offered": an unverified name that
+            # runs beats a verified one that is not the model that was meant.
+            model = model_col.selectbox(
+                "Model / deployment", llm_models, key="model",
+                index=0 if llm_models else None,
+                accept_new_options=True, placeholder="Choose or type a model name",
+                help="Which model of that provider this run uses — **pick one, or type any "
+                     "name the provider serves**. The listed names come from `.env`: "
+                     "`AZURE_OPENAI_DEPLOYMENT` for the provider `.env` itself selects, "
+                     "`LLM_MODELS_<PROVIDER>` for any other. A typed name is passed on "
+                     "exactly as written (for Azure, that is the **deployment** name) and is "
+                     "not checked until the first request. To have it offered here from now "
+                     "on, add it to `.env` and restart — `.env` is read once, at startup.")
+            model = (model or "").strip()
+
+    with _options_section("🔗", "Crossref", "the official registry, cross-checked by DOI"):
+        # One explanation, on the control.  It used to be said twice — a tooltip
+        # and a caption below saying the same thing in the same words — which is
+        # the most text this step could spend on its least contested setting.
+        crossref = st.checkbox(
+            "Cross-check every venue against Crossref",
+            value=True,
+            key="cr",
+            help="**Recommended.** Crossref is the official registry of published articles, "
+                 "looked up by each paper's DOI. When on (the default), the journal name and "
+                 "ISSN that Semantic Scholar reports are confirmed against Crossref's own "
+                 "record, and DOIs resolve matches the metadata alone leaves uncertain — "
+                 "catching papers where Semantic Scholar has the wrong venue. It costs one "
+                 "lookup per paper, and is skipped automatically when there is no internet. "
+                 "Uncheck to force a fully offline run.")
+    wl = bl = None
+    if checker.kind != "csv":
+        wl, bl = _venue_list_section()
     aux_lists = {"--whitelist": wl, "--blacklist": bl}
     extra_args = None if crossref else ["--crossref", "off"]
     return _Options(crossref, wl, bl, aux_lists, extra_args,

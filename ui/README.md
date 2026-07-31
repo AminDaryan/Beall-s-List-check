@@ -228,18 +228,24 @@ decides what the run spends money on.
   The model list is whatever `openai_client.provider_models()` reports for the
   selected provider: `AZURE_OPENAI_DEPLOYMENT` for the provider `.env` itself
   selects, `LLM_MODELS_<PROVIDER>` for any other, each accepting a bare name, a
-  comma-separated list or a JSON array. It ends with **Other**, which reveals a
-  text box. A typed name cannot be checked before the run and the caption says
-  so, but "cannot be verified" is not "must not be offered": a list alone was a
-  dead end on any machine whose `.env` happened not to name the wanted model, and
-  the advice it could give — edit `.env`, restart — is exactly the ceremony this
-  control exists to remove.
+  comma-separated list or a JSON array. The box also **takes a typed name**
+  (`accept_new_options`), so a model in neither variable is still usable. A typed
+  name cannot be checked before the run, but "cannot be verified" is not "must
+  not be offered": a list alone was a dead end on any machine whose `.env`
+  happened not to name the wanted model, and the advice it could give — edit
+  `.env`, restart — is exactly the ceremony this control exists to remove.
+
+  It is **one** control either way. There used to be an *Other — type a name…*
+  entry that revealed a second text box below the picker, which meant every
+  provider with no configured names showed a dropdown holding one useless option
+  and a box under it: one question, asked twice, most visibly for the providers
+  the escape hatch existed for.
 
   Changing the provider reassigns the model to the new provider's first name (or
-  to *Other*) rather than clearing it. Clearing left the picker offering the new
-  list while still displaying the old provider's name: Streamlit rebuilds the
-  options, but a widget whose stored value has vanished is not redrawn with its
-  new default.
+  clears it, when that provider has none) rather than leaving the old one there.
+  Leaving it left the picker offering the new provider's list while still
+  displaying the old provider's name: Streamlit rebuilds the options, but a
+  widget whose stored value is stale is not redrawn with its new default.
 
   Both selections reach the check the way the check already looks for them:
   `runners.run_checker` is given `env_overrides={"LLM_PROVIDER": …,
@@ -251,7 +257,10 @@ decides what the run spends money on.
 - **Crossref** — a single checkbox, in the open, on by default. Clearing it is
   exactly `--crossref off`. It is skipped automatically when there is no
   internet. It changes verdicts: two of the example corpus's eight records fall
-  back from `on_list` to `review` without it.
+  back from `on_list` to `review` without it. Its explanation is on the
+  checkbox's own ⓘ and nowhere else — it used to be there *and* in a caption
+  under it, in the same words, which was the most text this step spent on its
+  least contested setting.
 - **Venue lists** — the whitelist and the blacklist, side by side, in the open.
   They were folded away for being rare, but rare is not the same as advanced, and
   a fold answers the wrong question: it hides *what the run is doing* behind a
@@ -261,6 +270,13 @@ decides what the run spends money on.
   boxes in a column pushed the Run button off the screen — and the two are a
   pair, one narrowing the run and the other widening it, so a row reads them as
   the opposites they are.
+
+Each of those is a **bordered block with its own heading** — an icon, the
+subject, and a phrase on what the block decides. They ran together down one
+column before, separated by a bold line and a caption, which read as one long
+form in which the only way to tell where the LLM stopped and Crossref started was
+to read the labels. The detail stays on each control's own ⓘ; that is what keeps
+a section heading from growing into a paragraph.
 
 No *setting* in Step 3 is folded away. A step whose header claims to summarise
 the settings in force cannot do that while some of them are behind a click. The

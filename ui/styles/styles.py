@@ -507,6 +507,18 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
    `min-height` on the heading is what stops a three-line hint in one column and
    a two-line hint in the other from offsetting every control beneath them. */
 .bl-vl-head {min-height:5.4rem;}
+/* ── Step 3's sections ────────────────────────────────────────────────────
+   One bordered block per decision, each opening with this line: an icon, the
+   subject, and a phrase on what the block settles.  The subject is sized and
+   weighted to be found while scrolling; the phrase after it is not, because it
+   is read once and the controls below say the rest.  Everything else that used
+   to be here in prose is on the controls' own ⓘ. */
+.bl-opt-h {display:flex; align-items:baseline; gap:.5rem; flex-wrap:wrap;
+           margin:-.15rem 0 .55rem;}
+.bl-opt-i {font-size:.95rem; line-height:1;}
+.bl-opt-t {font-size:.95rem; font-weight:700; letter-spacing:.01em; color:var(--bl-fg);}
+.bl-opt-s {font-size:.79rem; color:var(--bl-fg-faint);}
+
 .bl-vl-label {font-size:.95rem; font-weight:600; color:var(--bl-fg); margin-bottom:.1rem;}
 /* The ? beside a list's name, holding the sentence the name used to be paired
    with.  Sized as a target rather than as a glyph, and kept quiet until it is

@@ -200,7 +200,7 @@ pill (**ISSN 1980-4164 · 1413-2311**): nearly every journal registers two, one
 for the print edition and one for the online one, and two pills each reading
 *ISSN* read as two journals rather than one journal's two numbers. Either of them
 matches. The same list is editable as JSON,
-in the format the CLI flags read from a file, under **{ } Edit as JSON**.
+in the format the CLI flags read from a file, on the box's **{ } As JSON** tab.
 The Thorough check
 additionally gets an **LLM provider** picker and a **Model / deployment** picker,
 which decide what answers this run: the provider list is the six supported

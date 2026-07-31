@@ -263,8 +263,9 @@ from the command line is unaffected.
 a JSON list, and every name in it appears in the model list. For a provider other
 than the one `.env` selects, the names come from `LLM_MODELS_` followed by the
 provider's name in capitals — `LLM_MODELS_ANTHROPIC`, for example — in the same
-three shapes. A model that is in neither is still usable: choose **Other** at the
-end of the list and type its name.
+three shapes. A model that is in neither is still usable: type its name straight
+into the same box. It is passed to the provider exactly as written, and is not
+checked until the first request.
 
 Step 4's summary and the line under Step 1 both name the provider and the model
 that will actually be used, and the finished workbook records both on its
@@ -457,9 +458,9 @@ venue.
 
 ### Editing the list as JSON
 
-**{ } Edit as JSON** shows the same list in the format the command line reads
-from a file. Paste one in and it appears as rows; edit the rows and the JSON
-follows.
+Each box has two tabs. **{ } As JSON** shows the same list in the format the
+command line reads from a file. Paste one in and it appears as rows on the
+**List** tab; edit the rows and the JSON follows.
 
 ```json
 [{ "name": "IEEE", "domain": "ieee.org" }, { "issns": ["2666-2485"] }, "Nature"]

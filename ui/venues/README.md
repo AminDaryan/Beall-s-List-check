@@ -6,10 +6,12 @@
 ### The venue lists are edited as lists
 
 Each list is a column of rows with a ✕ on each, built by typing or by searching
-DOAJ, with the JSON it serialises to kept underneath in an **Edit as JSON** fold.
-The controls come first and the rows follow: the list is the only part that
-grows, so entries appear inside a box whose position is fixed rather than pushing
-the controls that created them down the page.
+DOAJ. The JSON it serialises to is the **{ } As JSON** tab of the same box, not a
+fold beneath it: same list, two ways of looking at it, one at a time. Both panes
+render on every run, so the JSON stays in sync without being opened and switching
+tabs costs no rerun. The controls come first and the rows follow: the list is the
+only part that grows, so entries appear inside a box whose position is fixed
+rather than pushing the controls that created them down the page.
 
 #### One control, and a layout that does not move
 
@@ -26,10 +28,10 @@ not — every band keeps the same offset and the same height, in both columns:
 | Band | height | offset below the heading |
 |---|---|---|
 | heading (`.bl-vl-head`) | 86px (`min-height:5.4rem`) | 0 |
-| search box + Add | 38px | 86px |
-| note (`.bl-vl-note`) | 40px (fixed, clipped) | 142px |
-| list box (`st-key-venuelist-*`) | 190px (`st.container(height=…)`) | 182px |
-| JSON fold | 40px | 388px |
+| search box + Add | 48px | 86px |
+| note (`.bl-vl-note`) | 40px (fixed, clipped) | 150px |
+| tab bar (**List** / **{ } As JSON**) | 42px | 190px |
+| list box (`st-key-venuelist-*`) | 190px (`st.container(height=…)`) | 248px |
 
 Four things buy that:
 
@@ -41,10 +43,12 @@ Four things buy that:
   feedback, and it is clipped at two lines so the longest thing DOAJ can return —
   a network error — occupies exactly what the shortest does. The full text is on
   the control's tooltip.
-- **Nothing is conditionally rendered.** Both comboboxes, both notes and both
-  **Clear the list** buttons are always present, Clear merely disabled when there
-  is nothing to clear, because a control that comes and goes takes its band's
-  height with it.
+- **Nothing is conditionally rendered.** Both comboboxes, both notes, both tab
+  bars and both **Clear the list** buttons are always present, Clear merely
+  disabled when there is nothing to clear, because a control that comes and goes
+  takes its band's height with it. The tabs are the same bargain: both panes are
+  built every run and the inactive one is hidden client-side, so the band below
+  cannot move when the tab changes.
 
 ### Two directories, one for each list
 

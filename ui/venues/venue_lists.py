@@ -834,11 +834,15 @@ def _venue_note(key, source):
         return last["error"]
     term, shown, total = last["term"], last["shown"], last["total"]
     if not term:
-        # The same two words the Settings page uses for the same two states, so
-        # the note reads as a report of the choice made there rather than as a
-        # second, unrelated fact about the box.
-        where = "on this computer" if directory["local"] else "over the internet"
-        return f"Start typing — {directory['name']} is searched {where} as you go."
+        # What to do, not where the lookup happens.  This line used to read
+        # "Start typing — DOAJ is searched on this computer as you go", which
+        # answered a question nobody standing at an empty box is asking: whether
+        # the directory is the downloaded copy or the API is a Settings matter,
+        # and naming it here made the box's one line of guidance about the
+        # plumbing.  The three things that can be typed are the useful part, and
+        # they are the part that is not obvious.
+        return (f"Type a journal name, website or ISSN — {directory['name']} matches "
+                "appear as you type, or press Add to use exactly what you typed.")
     if last.get("pending"):
         floor = doaj.MIN_TERM if source == "doaj" else crossref.MIN_TERM
         return (f"Keep typing — {directory['name']} is searched from "
@@ -953,8 +957,8 @@ def _venue_list_body(key, empty):
                       help=f"Remove {_venue_name(entry)}")
     if len(venues) > _MAX_SHOWN_VENUES:
         st.caption(f"…and {len(venues) - _MAX_SHOWN_VENUES} more not listed here. "
-                   f"All {len(venues)} are in force; the full list is under "
-                   "**Edit as JSON**.")
+                   f"All {len(venues)} are in force; the full list is on the "
+                   "**As JSON** tab.")
 
 
 def venue_list_editor(label: str, key: str, hint: str, empty: str,
@@ -966,8 +970,9 @@ def venue_list_editor(label: str, key: str, hint: str, empty: str,
     unchanged.
 
     Both lists render the **same skeleton in the same order** — heading, one
-    combobox with its Add button, a one-line note, list, JSON fold — and every
-    band in it has a height that does not depend on its contents.  That is what
+    combobox with its Add button, a one-line note, then the list and its JSON as
+    two tabs of one box — and every band in it has a height that does not depend
+    on its contents.  That is what
     makes the two columns line up and stay lined up: the whitelist and the
     blacklist put their controls on the same rows because they are literally the
     same rows.  The only difference between them is what the combobox offers,
@@ -1007,26 +1012,39 @@ def venue_list_editor(label: str, key: str, hint: str, empty: str,
     st.markdown(f"<div class='bl-vl-note'>{html.escape(note)}</div>",
                 unsafe_allow_html=True)
 
-    # A fixed height with its own scrollbar: the one part of this column whose
-    # contents grow, given a size that does not.  Streamlit's `height=` is used
-    # rather than a stylesheet rule so the scroll behaviour is the container's
-    # own and survives a change to its internals.
-    with st.container(height=styles.VENUE_BOX_HEIGHT, border=True, key=f"venuelist-{key}"):
-        _venue_list_body(key, empty)
-
-    with st.expander("{ } Edit as JSON", expanded=False):
+    # The list and its JSON are two views of one thing, so they are two tabs of
+    # one box rather than a box and a fold beneath it.  As a fold they read as
+    # separate controls stacked in a column — the list, and then an unrelated
+    # editor under it that happens to hold the same entries — and the column paid
+    # for the fold's header whether or not anyone opened it.  Tabs say what is
+    # true: same list, two ways of looking at it, one at a time.
+    #
+    # Both panes are rendered on every run (Streamlit hides the inactive one
+    # client-side), so switching tabs costs no rerun and the JSON stays in sync
+    # without being looked at.  They are given the same height for the same
+    # reason every other band here has a fixed one: the column below must not
+    # move when the tab changes.
+    rows_tab, json_tab = st.tabs(["List", "{ } As JSON"])
+    with rows_tab:
+        # A fixed height with its own scrollbar: the one part of this column
+        # whose contents grow, given a size that does not.  Streamlit's `height=`
+        # is used rather than a stylesheet rule so the scroll behaviour is the
+        # container's own and survives a change to its internals.
+        with st.container(height=styles.VENUE_BOX_HEIGHT, border=True, key=f"venuelist-{key}"):
+            _venue_list_body(key, empty)
+    with json_tab:
         st.text_area(
-            "Venue list as JSON", key=key, height=150, label_visibility="collapsed",
-            on_change=_venue_json_edited, args=(key,),
+            "Venue list as JSON", key=key, height=styles.VENUE_BOX_HEIGHT,
+            label_visibility="collapsed", on_change=_venue_json_edited, args=(key,),
             placeholder='[{"name": "IEEE", "domain": "ieee.org"}, "Nature"]',
-            help="The same list, in the format the check reads. Edits here update the list "
-                 "above when the box loses focus (or on Ctrl+Enter).")
+            help='The same list, in the format the check reads: a JSON list of '
+                 '`{"name", "domain", "issns"}` objects, or bare strings like `"Nature"` to '
+                 'match by name alone. Paste one from a colleague or a previous run and it '
+                 'appears as rows on the **List** tab. Edits land when the box loses focus '
+                 '(or on Ctrl+Enter).')
         error = st.session_state.get(f"{key}_jsonerr")
         if error:
             st.error(error)
-        st.caption('A JSON list of `{"name", "domain", "issns"}` objects, or bare strings '
-                   'like `"Nature"` to match by name alone. Paste one from a colleague or a '
-                   'previous run; it appears as rows above.')
         # Always rendered, disabled when there is nothing to clear: a button that
         # comes and goes with the list would move the fold's own contents.
         st.button("Clear the list", key=f"{key}_clear", on_click=_clear_venues,

@@ -112,8 +112,8 @@ journal's website, since a domain is matched by host and many journals share a
 publisher platform. (Crossref's journal records carry no website in any case.) A
 publisher domain is added deliberately, by typing it into the same box.
 
-The JSON is still there, in an **Edit as JSON** fold, in this same format and
-synced both ways, so a list can still be pasted in or copied out. The app writes
+The JSON is still there, on the box's **{ } As JSON** tab, in this same format
+and synced both ways, so a list can still be pasted in or copied out. The app writes
 your uploaded papers to a temporary folder and passes the lists through as the
 same CLI flags, so behaviour is identical to the command line. See
 [`ui/README.md`](../../../ui/README.md).
