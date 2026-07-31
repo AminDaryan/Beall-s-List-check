@@ -9,7 +9,8 @@ layout code.  Nothing in this module does I/O; the functions take a result dict
                     verdict it leads to, and a thorough plain-language
                     explanation.  The single source of truth, reused by both the
                     Match column and the Legend so the two never drift.
-  * LIST_INFO     — plain name + weight for each of Beall's five lists.
+  * LIST_INFO     — plain name + weight for each list a match can come from:
+                    Beall's five, and the blacklist supplied for the run.
   * _on_list_why  — the one-line "Why flagged" sentence for an on_list match.
   * _LEGEND_SECTIONS — the entire Legend sheet's content, as data.
 
@@ -113,13 +114,20 @@ SIGNAL_INFO = {
     ),
 }
 
-# Plain-language name + weight for each Beall list.
+# Plain-language name + weight for each list a match can come from.
+#
+# The last one is not Beall's.  It is the blacklist supplied for this run, and it
+# used to be missing here — so a row matched from it reported its source as the
+# bare word "blacklist", which reads like a category of Beall's List rather than
+# like something the reader typed in themselves half an hour earlier.
 LIST_INFO = {
     "publishers":         ("predatory publisher", "core list"),
     "standalone_journal": ("standalone predatory journal", "core list"),
     "hijacked":           ("hijacked / cloned journal", "core list"),
     "vanity_press":       ("vanity press (book publisher)", "weak — review only"),
     "misleading_metric":  ("fake-metrics company", "weak — review only"),
+    "blacklist":          ("your own blacklist (not Beall's List)",
+                           "supplied for this run"),
 }
 
 
@@ -155,6 +163,22 @@ def _on_list_why(r):
     """
     mo = r.get("matched_on")
     listed = r.get("matched_name") or "a listed entry"
+    # Said before anything else, and said as the reader's own doing: this row is
+    # not a finding about Beall's List, it is the blacklist supplied for this run
+    # being applied.  Naming the signal as well, because "you asked for this" is
+    # only half an answer — which of the entry's identifiers matched decides how
+    # widely it will have caught, and a name is the wide one.
+    if (r.get("list_source") or "") == "blacklist":
+        how = {
+            "domain": f"its website ({r.get('venue_domain') or '—'}) is the site you listed",
+            "domain_subdomain": (f"its website ({r.get('venue_domain') or '—'}) sits under "
+                                 "the site you listed"),
+            "issn": f"its ISSN ({r.get('issn') or '—'}) is the one you listed",
+            "name_exact": f"its name matches '{listed}', which you listed",
+        }.get(mo, f"it matches '{listed}', which you listed")
+        return (f"you put this venue on the blacklist for this run, and {how}. "
+                "This is your own entry, not a Beall's List finding — the run "
+                "treats it as predatory because you said to.")
     if mo == "domain":
         return (f"the venue's own website ({r.get('venue_domain') or '—'}) is on "
                 f"Beall's List as '{listed}' — the most reliable signal.")
@@ -272,7 +296,7 @@ _LEGEND_SECTIONS = [
         ],
     },
     {
-        "title": "'Beall list' — which Beall list the entry came from",
+        "title": "'Beall list' — which list the matched entry came from",
         "headers": ("Beall list (shown in the 'Match' column)", "Weight", "Meaning"),
         "rows": [
             ("predatory publisher", "core list",
@@ -294,6 +318,14 @@ _LEGEND_SECTIONS = [
             ("fake-metrics company", "weak — review only",
              "A company selling fake impact-factor metrics — not a venue at all, "
              "so a match is downgraded to review."),
+            ("your own blacklist (not Beall's List)", "supplied for this run",
+             "Not one of Beall's lists: a venue named in the blacklist given to "
+             "this run, which the check treats as predatory because it was told "
+             "to. Matched on the site, the ISSN or the exact name — whichever the "
+             "entry carried — and asked before anything else, so it applies even "
+             "to a venue the check would otherwise not classify at all, such as a "
+             "preprint server. Nothing here reflects Beall's List; remove the "
+             "entry and the row goes with it."),
         ],
     },
     {

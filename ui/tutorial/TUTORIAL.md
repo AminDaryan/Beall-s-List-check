@@ -346,7 +346,9 @@ to see that they are empty is the point of their being on the page:
   checked, and only those appear in the report. A paper from any other venue is
   left out of the workbook entirely.
 - **blacklist** — adds venues to the list, treating them as predatory for this
-  run only.
+  run only. This applies even to a venue the check would otherwise not classify
+  at all: blacklist a preprint server, and papers from it are flagged. The row
+  says the entry was yours, so no reader mistakes it for a Beall's List finding.
 
 Each box carries a **?** beside its name. Resting the pointer on it — or reaching
 it with the Tab key — gives the whole of what that list does, and what leaving it

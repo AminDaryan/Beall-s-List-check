@@ -86,11 +86,27 @@ about it; a whitelisted venue that is on Beall's List still comes back `on_list`
 ## Blacklist semantics (extra predatory entries)
 
 Blacklist entries become real snapshot entries in the `BeallIndex`, so they flow
-through the exact same matching tiers as Beall's own lists (see
+through the same matching tiers as Beall's own lists (see
 [`match.md`](../match/README.md)): domain, ISSN, exact name (with the ≥ 2-word rule), and
 fuzzy name. `blacklist` outranks every Beall list when several entries share a
 domain — the user explicitly asserted it — and it is eligible for fuzzy near-name
 matching.
+
+**They are also asked first, before the tool judges anything.** `BeallIndex`
+indexes the blacklist a second time on its own (`user_index`), and `match_paper`
+consults it before the preprint / no-venue rule. Without that, blacklisting a
+preprint server did nothing whatever: `arxiv.org` returns `no_venue` several
+steps before any matching happens, so papers from arXiv came back unflagged and
+nothing said the entry had been ignored. A blacklist entry is an instruction from
+the person running the check, and an instruction the tool's own judgement can
+overrule is not an instruction.
+
+That early pass uses **exact signals only** — the listed host or a host under it,
+an exact ISSN, an exact name — and, unlike the Beall path, does **not** apply the
+name-corroboration downgrade. That rule exists because a third-party list's name
+may coincide with a different journal; it has no business overruling a name this
+user chose deliberately. A blacklist hit is therefore `on_list`, and the row says
+in words that it came from the reader's own list and on which signal.
 
 ## Web app
 

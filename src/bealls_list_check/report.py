@@ -158,8 +158,11 @@ def _match_subrows(r):
         listed = r.get("matched_name") or "(matched)"
         listed_url = r.get("matched_url") or None
         if listed_url:
+            # A blacklisted venue is on no list but the reader's own, so the
+            # sentence that names the destination must not call it Beall-listed.
             where = ("this hijacked (counterfeit) journal's own website"
                      if r.get("list_source") == "hijacked"
+                     else "this venue's own website" if r.get("list_source") == "blacklist"
                      else "this Beall-listed venue's own website")
             # Style ONLY the entry name as the link; the "Listed as: " label and
             # the explanation stay plain text (same rich-text approach as the

@@ -116,10 +116,23 @@ def venue_signals(paper):
 
 
 class BeallIndex:
-    """Indexes the snapshot entries for O(1) exact lookups + blocked fuzzy."""
+    """Indexes the snapshot entries for O(1) exact lookups + blocked fuzzy.
 
-    def __init__(self, entries):
+    The user's own blacklist entries are indexed a second time, on their own, as
+    ``user_index``.  They are in ``entries`` as well and match there exactly as
+    Beall's do — this second, smaller index exists only so that
+    :func:`match_paper` can ask *"did the person running this check name this
+    venue?"* before it asks any of its own questions.  See the blacklist block
+    there for why that order matters.
+    """
+
+    def __init__(self, entries, _sub=False):
         self.entries = entries
+        self.user_index = None
+        if not _sub:
+            user = [e for e in entries if e.get("list_source") == "blacklist"]
+            if user:
+                self.user_index = BeallIndex(user, _sub=True)
         self.by_domain = {}
         self.by_name = {}
         self.by_issn = {}
@@ -354,6 +367,32 @@ def _review_reason(r: dict) -> str:
     return "This is a soft, lower-confidence match — verify it by hand before acting."
 
 
+def _user_blacklist_hit(user_index, canonical_domain, all_domains, norm_names, issns):
+    """``(entry, matched_on)`` for the user's blacklist, or None.
+
+    The same three exact signals the venue box promises on each row it shows —
+    ISSN, the site or a site under it, the name — tried strongest first, so the
+    ``matched_on`` recorded here reads the same as any other row's and the
+    Summary sheet's breakdown by signal keeps counting them together.
+
+    Every venue domain is offered, not only the canonical one: a blacklist is
+    the user saying *this publisher*, and a record whose canonical URL is
+    elsewhere but whose alternate points at the named site is exactly the case
+    they mean to catch.
+    """
+    for issn in issns:
+        if issn in user_index.by_issn:
+            return _best(user_index.by_issn[issn]), "issn"
+    for dom in ([canonical_domain] if canonical_domain else []) + list(all_domains):
+        entry, matched_on = user_index.domain_match(dom)
+        if entry:
+            return entry, matched_on
+    for nm in norm_names:
+        if nm in user_index.by_name:
+            return _best(user_index.by_name[nm]), "name_exact"
+    return None
+
+
 def match_paper(index: BeallIndex, paper: dict, source_file: str) -> dict:
     """Classify one paper. Never raises: a bad record yields an 'error' result.
 
@@ -410,6 +449,34 @@ def _classify(r: dict, index: BeallIndex, paper: dict) -> dict:
             norm_names.append(nn)
 
     issns = extract_issns(pv.get("issn"))
+
+    # ── the user's own blacklist, asked first ────────────────────────────
+    # Everything below this point is the tool's judgement about a venue.  This
+    # is not: a blacklist entry is an instruction from the person running the
+    # check — *treat this venue as predatory for this run* — and an instruction
+    # that the tool's own judgement can overrule is not an instruction.
+    #
+    # The order is the whole point.  Blacklist entries live in the same index as
+    # Beall's and match there identically, but the preprint rule below returns
+    # `no_venue` before any matching happens, so blacklisting a preprint server
+    # did nothing at all: arxiv.org in the blacklist, papers from arXiv still
+    # `no_venue`, and no message anywhere to say the entry had been ignored.
+    # Asked here, the user's list is answered before the tool decides there is
+    # nothing to answer about.
+    #
+    # Exact signals only — the listed host or a host under it, an exact ISSN, an
+    # exact name — because those are the three ways the box that built the entry
+    # says it will match, and a fuzzy hit on a name someone typed themselves
+    # would flag venues they did not name.  The name match is NOT put through
+    # the corroboration downgrade the Beall path applies: that rule exists
+    # because a third-party list's name may coincide with a different journal,
+    # and it has no business overruling a name this user chose deliberately.
+    if index.user_index is not None:
+        hit = _user_blacklist_hit(index.user_index, canonical_domain, all_domains,
+                                  norm_names, issns)
+        if hit:
+            entry, matched_on = hit
+            return _hit(r, entry, "on_list", matched_on)
 
     # ── no-venue / preprint classification (venue signals only) ──────────
     is_preprint = any(d in PREPRINT_DOMAINS for d in all_domains) or (
