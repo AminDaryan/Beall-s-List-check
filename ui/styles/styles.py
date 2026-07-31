@@ -403,6 +403,16 @@ PAGE_CSS = "<style>" + _TOKENS + _CHROME_CSS + """
             display:inline-flex; align-items:center; justify-content:center;
             background:var(--bl-accent); color:var(--bl-on-accent);
             font-size:1rem; font-weight:700;}
+/* The step's title is an <h2> and the section's an <h3> — the page is read by
+   structure as well as by eye — and both are pinned here because Streamlit
+   styles its own headings: 2.25rem, weight 600, 1rem of vertical padding and a
+   scroll margin, none of which belongs on a title inside a flex bar.  Its rules
+   are as specific as a class and land in the document head, so this needs
+   `!important` rather than a longer selector to win. */
+h2.bl-step-t, h3.bl-opt-t {padding:0 !important; margin:0 !important;
+                           scroll-margin-top:0 !important; line-height:1.3 !important;}
+h2.bl-step-t {font-size:1.3rem !important; font-weight:700 !important;}
+h3.bl-opt-t {font-size:1rem !important; font-weight:700 !important;}
 .bl-step-t {font-size:1.3rem; font-weight:700; letter-spacing:-.01em;
             color:var(--bl-fg);}
 .bl-step-h {font-size:.92rem; color:var(--bl-fg-muted);}
@@ -538,7 +548,8 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
           font-size:.72rem; font-weight:700; line-height:1;
           background:var(--bl-mute-bg); color:var(--bl-fg-faint);
           transition:background-color var(--bl-hover), color var(--bl-hover);}
-.bl-vl-q:hover {background:var(--bl-accent-soft); color:var(--bl-fg);}
+.bl-vl-q:hover, .bl-vl-q:focus-visible {background:var(--bl-accent-soft); color:var(--bl-fg);}
+.bl-vl-q:focus-visible {outline:2px solid var(--bl-accent); outline-offset:2px;}
 /* ── Clear, at the right-hand end of the tab line ──────────────────────────
    The tab row is a band this box already spends; Clear rides on its empty
    right-hand end rather than taking a band of its own under the JSON pane,

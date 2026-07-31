@@ -373,9 +373,15 @@ def step_header(num, title, hint="", state="", tone="idle", into=None, learn="")
     href = tutorial_page.tutorial_href(learn) if learn else ""
     info = (f"<a class='bl-info' href='{href}' target='bl-tutorial' "
             f"title='Read about this step in the Tutorial'>&#9432;</a>") if href else ""
+    # The title is a real <h2>, not a styled span.  The page reads as four steps
+    # and looked like it, but to anything that navigates by structure — a screen
+    # reader's heading list, a browser's outline, "next heading" — it was one <h1>
+    # and 380 words of undifferentiated text.  The number stays out of the heading
+    # so the heading's text is the step's name; the pill and the hint stay out for
+    # the same reason, and because they change while the name does not.
     st_.markdown(
         f"<div class='bl-step'><span class='bl-step-n'>{num}</span>"
-        f"<span class='bl-step-t'>{title}</span>{info}"
+        f"<h2 class='bl-step-t'>{title}</h2>{info}"
         + (f"<span class='bl-step-h'>{hint}</span>" if hint else "")
         + (f"<span class='bl-step-s bl-{tone}'>{state}</span>" if state else "")
         + "</div>", unsafe_allow_html=True)
@@ -604,8 +610,10 @@ def _options_section(icon, title, tag=""):
     """
     box = st.container(border=True)
     tag = f"<span class='bl-opt-s'>{tag}</span>" if tag else ""
+    # <h3>, under Step 3's <h2>: these are subsections of one step, and saying so
+    # is what makes a heading list a table of contents rather than a flat list.
     box.markdown(f"<div class='bl-opt-h'><span class='bl-opt-i'>{icon}</span>"
-                 f"<span class='bl-opt-t'>{title}</span>{tag}</div>",
+                 f"<h3 class='bl-opt-t'>{title}</h3>{tag}</div>",
                  unsafe_allow_html=True)
     return box
 

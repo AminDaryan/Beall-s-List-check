@@ -50,6 +50,25 @@ _MD_IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$", re.M)
 _MD_REL_LINK = re.compile(r"\[([^\]]+)\]\((?!https?://|#)([^)]+)\)")
 
 
+def _repo_link_text(m):
+    """A repository link, as the app has to render it: text, and the path *once*.
+
+    The path is kept because a link that cannot be followed should at least say
+    where it went — but only when the link's own text does not already say it.
+    ``[ui/README.md](../README.md)`` was rendered "ui/README.md (`../README.md`)",
+    which names one file twice and spends the second name on `../`, the one part
+    of it that means nothing to a reader inside the app.  Nine of those in the
+    Tutorial.  ``[match/](../src/.../match/README.md)`` still gets its path,
+    because "match/" alone does not locate anything.
+    """
+    text, target = m.group(1), m.group(2)
+    plain = re.sub(r"[`*_]", "", text).strip().strip("/")
+    named = target.lstrip("./").strip()
+    if plain and (named == plain or named.endswith("/" + plain) or plain.endswith(named)):
+        return text
+    return f"{text} (`{target}`)"
+
+
 # What the app leaves out. The block between these markers is written for someone
 # reading TUTORIAL.md on GitHub before they have the app; inside the app it is
 # instructions for something already done.
@@ -223,7 +242,7 @@ def _render_markdown_file(path, *, skip_app_only=False, static_url="", before_se
         md = md.strip()
         if md:
             md = _MD_HEADING.sub(lambda m: _heading_html(m.group(1), m.group(2)), md)
-            st.markdown(_MD_REL_LINK.sub(r"\1 (`\2`)", md), unsafe_allow_html=True)
+            st.markdown(_MD_REL_LINK.sub(_repo_link_text, md), unsafe_allow_html=True)
 
     pos = 0
     for i, m in enumerate(_MD_IMAGE.finditer(text)):
