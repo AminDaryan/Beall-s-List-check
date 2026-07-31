@@ -177,10 +177,10 @@ hover text carries the detail.
 **Step 2 · Provide the papers.** Drop a `.json` file on the upload box — a list
 of Semantic Scholar records, or a single record — or paste the JSON directly.
 (`.jsonl` is not accepted here; convert it to an array, or use the batch command
-line.) **📦 Load the example corpus** below the box fills the paste area with the
-bundled [example corpus](examples/README.md), for trying the app without
-supplying data. An **Input data quality** panel appears as soon as the papers
-load: an offline check of the metadata *before* anything runs, downloadable as
+line.) The page **opens with the bundled [example corpus](examples/README.md)
+already in the paste box**, so it can be run before anything is supplied; the
+banner says so, and replacing the text with your own papers is what makes it
+yours. An **Input data quality** panel appears as soon as the papers load: an offline check of the metadata *before* anything runs, downloadable as
 `input_data_quality.xlsx`.
 
 **Step 3 · Options.** No setting here is folded away. One checkbox controls

@@ -108,13 +108,12 @@ merged. Select **⚡ Fast check**: rules only, no API key, no cost. The selected
 row is highlighted and its button becomes solid. Nothing else on the page
 changes.
 
-**Step 2 · Provide the papers.** There are two ways to supply your own papers:
-*Upload a file* and *Paste JSON*. At the right-hand end of that row is
-**📦 Load the example corpus**.
-This is not a third way — it fills the paste box with the eight example papers,
-so what is about to be checked is on screen and can be edited. Press it. The app
-answers `✅ Loaded 8 paper(s) — ready to run`. Under that, a closed **Input data
-quality** panel reads **1 of 8 record(s) flagged**. That is paper 6, which has no
+**Step 2 · Provide the papers.** Nothing to do here on a first run: the eight
+example papers are **already in the paste box** when the page opens, which is why
+the app can be run before you have supplied anything. A blue banner says so —
+*The bundled example corpus is loaded — 8 papers from `examples/sample_papers.json`* —
+and it stays blue until you replace the text with your own papers. Under it, a
+closed **Input data quality** panel reads **1 of 8 record(s) flagged**. That is paper 6, which has no
 venue information at all, on purpose. The panel inspects the data *before*
 anything runs, without using the internet. It does not stop the run, and it can
 be downloaded as `input_data_quality.xlsx`. Open it to see which paper was

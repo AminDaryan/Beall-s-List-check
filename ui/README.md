@@ -191,18 +191,27 @@ The upload target is a full-width dashed dropzone that says a file can be droppe
 on it. Streamlit's own is a 68px strip with a Browse button, which does not; it
 is restyled rather than replaced, so it is still the same widget.
 
-The bundled [example corpus](../examples/README.md) is **not** a third source.
-Offering it as one made the input picker mix two different questions — *where is
-your data* and *I have none, show me* — so it is a button, **📦 Load the example
-corpus**, which fills the paste box with the records. That needs no state of its
-own, leaves the page in a shape the user could have reached by hand, and puts the
-corpus on screen where it doubles as a worked example of the input format.
+The page **opens with the bundled [example corpus](../examples/README.md) in the
+paste box**, seeded once per session before Step 2's widgets are built. Almost
+everyone who opens this app opens it once, and for that reader an empty page is a
+page that cannot be tried: the only way to find out whether any of it works was
+to supply real data first, which is the wrong order for the question a new user
+actually has. The corpus also doubles as a worked example of the format the box
+wants, and replacing it is what anyone would do anyway — select all, paste yours.
 
-It sits at the **right-hand end of the picker's own row**, which is the one place
-that says both things at once: it is next to the two sources because it leads to
-the same box, and it is across the row from them because it is not your data. It
-had a band of its own below the input, and a caption beside it explaining itself;
-the caption is now the button's tooltip.
+**Once**, and only on the first render. Seeding every rerun would make the box
+impossible to empty. The flag is set before the file is read, so a missing
+example leaves an empty page rather than a retry on every interaction.
+
+Because the page now arrives holding papers nobody supplied, two places say whose
+they are: Step 2's banner is **blue and names the file** rather than the green
+"Loaded 8 paper(s)" a real corpus gets, and Step 4's summary reads `8 loaded —
+the example`, which is the last thing read before Run. Editing one character of
+the text makes both revert to the ordinary wording.
+
+There was a **📦 Load the example corpus** button. It offered to reach a state
+the page already opens in, and a control whose only job is that is worse than no
+control.
 
 #### The input data-quality panel
 
@@ -338,7 +347,7 @@ The most useful table here — the app is not a strict superset of the CLI.
 | `.jsonl` input | not accepted | `batch_check.py` only |
 | Input data-quality validation | always, for all three checks | main check yes, `batch_check.py` no |
 | Record handling | Fast/Thorough deduplicate on `paperId` → `title`; Batch CSV keeps every record | same |
-| Example corpus | **Load the example corpus** in Step 2 (fills the paste box) | `BEALLS_CORPUS_DIR=examples`, or pass the file |
+| Example corpus | already in Step 2's paste box when the page opens | `BEALLS_CORPUS_DIR=examples`, or pass the file |
 | Workbook **and** CSV | one run, then **Also produce the batch CSV** | two commands |
 
 ## Limits and gotchas

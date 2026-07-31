@@ -193,24 +193,57 @@ def sidebar():
     st.sidebar.caption("📘 New here? Open the **Tutorial** page above.")
 
 
-def _load_example_corpus():
-    """Put the bundled example corpus into the paste box (an ``on_click``).
-
-    The example is not a way of *providing* papers, so it is not offered
-    alongside "Upload a file" and "Paste JSON" — those two are your data, and it
-    is not.  It fills the paste box instead, which needs no extra state, leaves
-    the flow in a shape the user could have reached by hand, and has the side
-    benefit of showing exactly what a corpus looks like.
-
-    Widget state may be assigned from a callback: this runs before the rerun that
-    rebuilds the widgets.
-    """
+@st.cache_data(show_spinner=False)
+def _example_corpus_text():
+    """The bundled example corpus, or "" when it cannot be read."""
     try:
-        st.session_state["paste"] = _EXAMPLE_CORPUS.read_text(encoding="utf-8")
-    except OSError as exc:
-        notices.notify(f"Could not read the example corpus: {exc}", icon="🛑")
+        return _EXAMPLE_CORPUS.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def _seed_example_corpus():
+    """Open the page with the example already in the paste box. Once per session.
+
+    Almost everyone who opens this app opens it once: it is a tool a colleague is
+    pointed at, used for one corpus, and closed.  For that reader an empty page
+    is a page that cannot be tried — the only way to find out whether any of it
+    works was to supply real data first, which is the wrong order for the one
+    question a new user actually has, which is *does this thing work and what
+    does it give me*.
+
+    So the app arrives in a state that runs.  The example fills the paste box,
+    where it doubles as a worked example of the format the box wants, and where
+    replacing it is what anyone would do anyway: select all, paste your own.
+
+    Once, and only on the first render of a session.  Seeding on every rerun
+    would make the box impossible to empty — clear it, and the next rerun would
+    put it back — so the flag is set before the read, and is not conditional on
+    the read succeeding: a missing example file leaves an empty page, not a
+    retry on every interaction.
+
+    Assigning to a widget's key before the widget is created is how Streamlit
+    takes an initial value, so this has to run before Step 2 renders.
+    """
+    if st.session_state.get("seeded_example"):
         return
+    st.session_state["seeded_example"] = True
+    text = _example_corpus_text()
+    if not text:
+        return
+    st.session_state["paste"] = text
     st.session_state["mode"] = "Paste JSON"
+
+
+def _is_example_corpus():
+    """Whether what is loaded is the bundled example rather than the user's data.
+
+    Read by Step 2's banner and Step 4's summary, both of which have to say so:
+    a page that arrives holding papers is a page that can be run without anyone
+    having supplied anything, and "8 paper(s)" in green is exactly what that
+    would look like if it were the user's own.
+    """
+    return bool(st.session_state.get("loaded_example"))
 
 
 # ── The corpus, read once per file rather than once per rerun ────────────────
@@ -256,24 +289,16 @@ def get_papers():
     The widget keys are deliberately independent of the selected check, so
     switching between the three rows in Step 1 keeps the loaded papers.
     """
-    # The picker and the demo share a row: they are two ways of arriving at the
-    # same box, and the demo's button spent a band of its own saying so.  The
-    # picker is unlabelled — "Upload a file" and "Paste JSON" beside a box that
-    # takes papers are not a question anyone needs asked — and the button is
-    # right-aligned so the two real sources keep the left edge, where the eye
-    # starts, and the one that is not your data sits apart from them.
-    pick_col, demo_col = st.columns([6.4, 3.6], vertical_alignment="center")
-    mode = pick_col.radio("How papers are supplied", ["Upload a file", "Paste JSON"],
-                          horizontal=True, key="mode", label_visibility="collapsed")
-    if _EXAMPLE_CORPUS.is_file():
-        with demo_col:
-            st.button("📦 Load the example corpus", key="loadexample", width="stretch",
-                      on_click=_load_example_corpus,
-                      help=f"No data to hand? Fills the paste box with `examples/"
-                           f"{_EXAMPLE_CORPUS.name}` — eight synthetic records exercising "
-                           "every verdict, whose expected result is tabulated in "
-                           "`examples/README.md`.")
-    source, token = None, ""
+    # Unlabelled: "Upload a file" and "Paste JSON" beside a box that takes papers
+    # are not a question anyone needs asked.
+    #
+    # There was a third thing on this row, a "Load the example corpus" button.
+    # The example is in the box when the page opens now, so the button offered to
+    # do something already done — and a control whose only job is to reach the
+    # state you are already in is worse than no control.
+    mode = st.radio("How papers are supplied", ["Upload a file", "Paste JSON"],
+                    horizontal=True, key="mode", label_visibility="collapsed")
+    source, token, pasted = None, "", ""
     if mode == "Upload a file":
         up = st.file_uploader("Papers file (.json)", type=["json"], key="file",
                               label_visibility="collapsed")
@@ -292,6 +317,11 @@ def get_papers():
             # field, which is the part worth not repeating.
             source = pasted
             token = "paste:" + hashlib.sha1(pasted.encode("utf-8")).hexdigest()
+    # Recorded rather than re-derived: two places downstream have to say whose
+    # papers these are, and comparing the text is this function's business, not
+    # theirs.  An edit of a single character makes it the user's own.
+    st.session_state["loaded_example"] = bool(
+        token and mode == "Paste JSON" and pasted == _example_corpus_text())
 
     # What the box will accept, under the box that has to accept it.  It was
     # above, where it was read before there was anything to apply it to and had
@@ -585,7 +615,17 @@ def _step_provide_papers():
                 "ok" if items else "wait", into=head2, learn="your own papers")
     quality_slot = None
     if items is not None:
-        st.success(f"✅ Loaded {len(items)} paper(s) — ready to run.")
+        # Whose papers these are, said where the count is said.  The page opens
+        # holding the example, so "✅ 8 paper(s)" in green — the same words the
+        # user's own corpus gets — would be the app quietly presenting data
+        # nobody supplied as data somebody did.  Blue, and it names the file.
+        if _is_example_corpus():
+            st.info(f"📦 The bundled **example corpus** is loaded — {len(items)} papers from "
+                    f"`examples/{_EXAMPLE_CORPUS.name}`, so this page arrives ready to run. "
+                    "Run it to see what comes back, then replace it above with your own "
+                    "papers. Its expected result is tabulated in `examples/README.md`.")
+        else:
+            st.success(f"✅ Loaded {len(items)} paper(s) — ready to run.")
         # Reserved here, written last: the panel is the slowest thing on the page
         # and everything below it was waiting for it.  See page_check.
         quality_slot = st.container()
@@ -782,8 +822,14 @@ def _step_run(checker, items, llm, options):
               "Both are available on the fast and thorough checks.")
     summary = [
         ("Check", f"{checker.icon} {checker.title}", "", ""),
-        ("Papers", f"{len(items)} loaded" if items else "none yet",
-         "" if items else "bl-sum-todo", ""),
+        # The summary is read immediately before pressing Run, which is the last
+        # moment anyone can notice they are about to check the example instead of
+        # their own corpus.
+        ("Papers", (f"{len(items)} loaded — the example" if _is_example_corpus()
+                    else f"{len(items)} loaded") if items else "none yet",
+         "" if items else "bl-sum-todo",
+         "The bundled example corpus, not your data — replace it in Step 2."
+         if _is_example_corpus() else ""),
         ("Crossref", "On" if crossref else "Off", "" if crossref else "bl-sum-off", ""),
         ("Whitelist", "not used here" if lists_na else
          (f"{len(wl)} venue(s)" if wl else "—"),
@@ -951,6 +997,9 @@ def page_check():
     # list.  Set here rather than there because Step 1's readiness line, drawn
     # first, has to be answering about the same one.
     st.session_state.setdefault("provider", ENV_PROVIDER)
+    # Before Step 2 builds its widgets: what is assigned to a widget's key ahead
+    # of the widget is what the widget opens holding.
+    _seed_example_corpus()
     llm = _step_choose_check(checker)
     items, token, quality_slot = _step_provide_papers()
     options = _step_options(checker, llm)
