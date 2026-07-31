@@ -987,7 +987,10 @@ def page_check():
     genuinely crossed a step boundary — three of them, it turns out, and one
     comment already had to say so in prose.
     """
-    """The four-step flow: choose a check, provide papers, set options, run."""
+    # The old one-line docstring survived the split as a second string literal
+    # below the new one — and Streamlit's magic renders a bare expression, so it
+    # was being *printed at the top of the page*, above the title, on every
+    # render. Caught by retaking the screenshots, which is what they are for.
     st.title("🕵️ Beall's List predatory-venue check")
     st.caption("Is the paper's **journal/publisher on Beall's List** of potentially predatory "
                "venues? Add your papers as JSON, run, and download the Excel report. "

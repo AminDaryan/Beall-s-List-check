@@ -59,10 +59,10 @@ def main():
         settle(page)
 
         # ── 1. The whole form: the check table, papers loaded, quality panel ──
-        # The example corpus is not one of the input sources; it is a button that
-        # fills the paste box, which is what the app then reads.
-        page.get_by_role("button", name="Load the example corpus").click()
-        page.wait_for_selector("text=Loaded 8 paper(s)", timeout=60_000)
+        # Nothing to click: the page opens with the bundled example already in
+        # the paste box, which is what makes it runnable on arrival.  The banner
+        # that says so is the signal that Step 2 has finished parsing it.
+        page.wait_for_selector("text=example corpus", timeout=60_000)
         settle(page)
         page.screenshot(path=str(OUT / "ui-main.png"))
         print("wrote ui-main.png")
@@ -74,7 +74,7 @@ def main():
         # It is scoped to that container: "Fast check" also appears in Step 1.
         page.wait_for_selector(".st-key-runsummary:has-text('Fast check')", timeout=60_000)
         page.get_by_role("button", name="▶ Run check").click()
-        page.wait_for_selector("text=Your Excel is ready below", timeout=RUN_TIMEOUT)
+        page.wait_for_selector("text=the whole workbook is below it", timeout=RUN_TIMEOUT)
         settle(page, TOAST)
         frame(page, page.get_by_text("Result", exact=True))
         page.screenshot(path=str(OUT / "ui-report.png"))
