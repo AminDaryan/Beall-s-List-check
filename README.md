@@ -261,8 +261,8 @@ DOI, which turns a few hundred papers into minutes. Setting `CROSSREF_MAILTO` in
 large runs.
 
 > `batch_check.py` takes `--crossref on|off` only — `flagged` is not accepted
-> there. It also has no whitelist/blacklist, so it reports on every record it is
-> given.
+> there. It takes `--whitelist` and `--blacklist` like the other two, so a CSV
+> and a workbook made from one run agree about the same papers.
 
 ### The thorough check — LLM setup
 

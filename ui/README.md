@@ -323,10 +323,13 @@ a row of bare pills, which failed on the values that do not name their own field
 `Fast check` and `Crossref on` say what they are, but `8 paper(s)` and a lone
 list name do not, and nothing said what would come back at all.
 
-The whitelist and blacklist cells read `not used here` under Batch CSV rather
-than being dropped, so their absence is stated rather than left to be noticed —
-and, since Step 3 no longer offers that check an expander it cannot fill, this is
-the only place the flow mentions them. Hovering either gives the reason.
+The whitelist and blacklist cells report the same thing for all three checks.
+They used to read `not used here` under Batch CSV, because `batch_check.py` had
+never been given the two flags — a gap in that script rather than a property of
+the check, and one that let a single run produce a CSV and a workbook that
+disagreed about the same papers. Under Batch CSV a whitelist also decides how
+many rows the file has, which is the one property scripts reading it lean on, so
+that cell says so on its hover.
 
 The **Run check** button stays disabled until papers are loaded. During the run a
 progress bar and the latest log line are shown. The bar is a true percentage only

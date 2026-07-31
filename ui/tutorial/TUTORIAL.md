@@ -318,10 +318,10 @@ The third check returns three columns: `SS-ID`, `DOI` and `Status`. There is
 The same table also comes back as an Excel file with colours, because a CSV file
 cannot hold colour.
 
-This check classifies every record, so it takes neither a whitelist nor a
-blacklist. Step 3 therefore shows no **venue list** boxes for it, and Step 4's
-summary reads `not used here` for both. The reason appears when the mouse is over
-those words.
+Your **venue lists** apply here as they do to the other two checks. A blacklist
+adds venues for this run; a whitelist selects the papers, so the CSV then holds
+one row per *checked* record rather than one per record supplied — worth knowing
+if a script of yours lines the file up against its own input.
 
 After a run that produced a workbook, a button **Also produce the batch CSV**
 appears. It makes the same CSV file without going back to Step 1. It is a button

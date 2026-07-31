@@ -570,15 +570,20 @@ place:
 The format is documented in
 [`user_lists/README.md`](../../src/bealls_list_check/user_lists/README.md).
 
-**Batch CSV shows no venue lists at all.** It takes neither — there is
-no `--whitelist` or `--blacklist` on
-[`batch_check.py`](../../src/bealls_list_check/batch_check/batch_check.py) to hand
-them to; it classifies every record it is given. The section used to be
-rendered anyway, holding a note saying so, which made a control labelled
-*"narrow the run, or add venues of your own"* promise two things and then
-apologise for having neither. The fact is not lost: Step 4's summary reports
-`Whitelist: not used here` with the reason as hover text, which states it as a
-property of the run rather than as a dead end, and costs no click to find.
+**All three checks show the venue lists.** Batch CSV showed none for a long
+time, and the reason given was that it took neither — true of
+[`batch_check.py`](../../src/bealls_list_check/batch_check/batch_check.py) as it
+stood, and a gap in that script rather than anything about the check. It cost
+more than a missing control: the app offers the CSV as an add-on to a run that
+may have had both lists, so one run could hand back a workbook and a CSV that
+disagreed about the same papers, with only a caption to warn anyone. The script
+takes both flags now and the section is offered everywhere.
+
+One asymmetry survives and is stated on Step 4's hover: under Batch CSV a
+whitelist decides how many *rows* the file has, because a paper it excludes is
+not checked and so is not a row. That is the property scripts reading the file
+lean on, so it is said where the run is confirmed rather than left to be
+discovered.
 
 The step's pill names the options actually in force, each list with the number of
 venues on it (`whitelist (3)`) rather than merely the fact that it is not empty.

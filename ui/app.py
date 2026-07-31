@@ -429,7 +429,10 @@ def _options_state(checker):
         model = selected_model()
         bits.append(f"{selected_provider()} / {model}" if model else selected_provider())
     bits.append("Crossref on" if st.session_state.get("cr", True) else "Crossref off")
-    if checker.kind != "csv":                 # batch mode ignores both lists
+    # All three checks take both lists now, so the pill reports them for all
+    # three.  Batch CSV was the exception only because its script had never been
+    # given the flags.
+    if True:
         # Counted from the list itself rather than from the JSON box's text, so
         # the pill says how many venues are in force instead of only that the box
         # is not empty — and cannot disagree with the rows drawn below it.
@@ -790,9 +793,11 @@ def _step_options(checker, llm):
                  "catching papers where Semantic Scholar has the wrong venue. It costs one "
                  "lookup per paper, and is skipped automatically when there is no internet. "
                  "Uncheck to force a fully offline run.")
-    wl = bl = None
-    if checker.kind != "csv":
-        wl, bl = _venue_list_section()
+    # Offered on every check.  They were hidden for Batch CSV because
+    # batch_check.py took neither flag — a gap in that script rather than a
+    # property of the check, and one that made a single run produce two files
+    # that disagreed about the same papers.  The script takes both now.
+    wl, bl = _venue_list_section()
     aux_lists = {"--whitelist": wl, "--blacklist": bl}
     extra_args = None if crossref else ["--crossref", "off"]
     return _Options(crossref, wl, bl, aux_lists, extra_args,
@@ -813,13 +818,13 @@ def _step_run(checker, items, llm, options):
     step_header(4, "Run", "everything above, in one go",
                 "ready" if items else "add papers first", "ok" if items else "wait",
                 learn="Understanding the report")
-    lists_na = checker.kind == "csv"
-    # Batch CSV's two "not used here" cells carry the reason as hover text. They
-    # are the only place the flow still mentions the lists for that check, now
-    # that Step 3 does not offer an expander it cannot fill.
-    na_why = (f"{checker.title} classifies every record it is given, so it has no scope "
-              "filter and no way to extend the list — batch_check.py takes neither. "
-              "Both are available on the fast and thorough checks.")
+    # The whitelist reads differently on the CSV, and the summary says so on the
+    # hover: on a workbook it decides which papers are reported, on a CSV it also
+    # decides how many rows there are — which is the one property scripts reading
+    # that file lean on.
+    wl_why = ("Only papers from these venues are checked, so the CSV has one row per "
+              "*checked* record rather than one per record supplied."
+              if checker.kind == "csv" and wl else "")
     summary = [
         ("Check", f"{checker.icon} {checker.title}", "", ""),
         # The summary is read immediately before pressing Run, which is the last
@@ -831,12 +836,10 @@ def _step_run(checker, items, llm, options):
          "The bundled example corpus, not your data — replace it in Step 2."
          if _is_example_corpus() else ""),
         ("Crossref", "On" if crossref else "Off", "" if crossref else "bl-sum-off", ""),
-        ("Whitelist", "not used here" if lists_na else
-         (f"{len(wl)} venue(s)" if wl else "—"),
-         "bl-sum-off" if lists_na or not wl else "", na_why if lists_na else ""),
-        ("Blacklist", "not used here" if lists_na else
-         (f"{len(bl)} venue(s)" if bl else "—"),
-         "bl-sum-off" if lists_na or not bl else "", na_why if lists_na else ""),
+        ("Whitelist", f"{len(wl)} venue(s)" if wl else "—",
+         "" if wl else "bl-sum-off", wl_why),
+        ("Blacklist", f"{len(bl)} venue(s)" if bl else "—",
+         "" if bl else "bl-sum-off", ""),
         ("You get back", checker.output_label, "", checker.output_note),
     ]
     if checker.needs_llm:
@@ -906,7 +909,8 @@ def _step_run(checker, items, llm, options):
                     if checker.needs_llm else "large corpora can take a while")
             with st.spinner(f"{checker.title} running… {slow}."):
                 if checker.kind == "csv":
-                    res = runners.run_batch_csv(items, crossref=crossref, on_line=on_line)
+                    res = runners.run_batch_csv(items, crossref=crossref,
+                                                aux_lists=aux_lists, on_line=on_line)
                 else:
                     # The choices reach the check the way the check already looks
                     # for them: openai_client reads LLM_PROVIDER and
@@ -957,14 +961,18 @@ def _step_run(checker, items, llm, options):
         if res.ok and ran.kind == "xlsx":
             st.markdown("**Also need it as a machine-readable list?**")
             st.caption("Runs the batch check over the same papers: `SS-ID, DOI, Status`, "
-                       "**one row per input record in input order, with no deduplication** — "
-                       "so it can have more rows than the workbook. Any whitelist or "
-                       "blacklist is **not** applied, and neither is the LLM's verdict. The "
-                       "deterministic pass, including its Crossref lookups, runs again.")
+                       "**one row per checked record, in input order, with no "
+                       "deduplication** — so it can have more rows than the workbook. Your "
+                       "whitelist and blacklist apply here exactly as they did above; what "
+                       "is not carried over is the thorough check's LLM verdict, which this "
+                       "file has no column for. The rules pass, including its Crossref "
+                       "lookups, runs a second time — the CSV cannot be built from the "
+                       "workbook, because the workbook has already merged the repeats this "
+                       "file is for.")
             if st.button("📄 Also produce the batch CSV", key="addon", disabled=items is None):
                 with st.spinner("Batch check running…"):
                     st.session_state["csv_addon"] = runners.run_batch_csv(
-                        items, crossref=crossref)
+                        items, crossref=crossref, aux_lists=aux_lists)
             addon = st.session_state.get("csv_addon")
             if addon is not None:
                 results.render_csv_result(addon)

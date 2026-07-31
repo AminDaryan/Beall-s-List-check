@@ -119,9 +119,11 @@ CHECKERS: List[Checker] = [
             icon="📄", short_label="Batch CSV", tagline="One row per input record",
             cost_label=_FREE, cost_note=_FREE_NOTE,
             records_label="All kept",
-            records_note="Exactly one CSV row per record you supply, in the order you "
-                         "supplied them — nothing is merged and nothing is dropped, so a "
-                         "corpus that repeats a paper yields more rows than the workbook.",
+            records_note="One CSV row per record you supply, in the order you supplied "
+                         "them — nothing is merged, so a corpus that repeats a paper "
+                         "yields more rows than the workbook. A whitelist is the one "
+                         "thing that removes rows: a paper it excludes is not checked, "
+                         "so it is not a row.",
             output_label="CSV + Excel",
             output_note="bealls_status.csv — three columns, SS-ID, DOI and Status — plus "
                         "the same three columns as a colour-coded bealls_status.xlsx.",
@@ -277,14 +279,19 @@ def _parse_status_csv(csv_bytes: bytes) -> list:
              "Status": r.get("Status", "")} for r in reader]
 
 
-def run_batch_csv(items: list, *, crossref: bool = True, on_line=None,
-                  timeout: Optional[int] = None) -> BatchCsvResult:
+def run_batch_csv(items: list, *, crossref: bool = True, aux_lists: Optional[dict] = None,
+                  on_line=None, timeout: Optional[int] = None) -> BatchCsvResult:
     """Run the batch check over *items* and return the SS-ID/DOI/Status CSV.
 
     Unlike :func:`run_checker` (which feeds a corpus dir and reads back an Excel),
     the batch script takes a single input file as a positional argument and writes
     a CSV — so this uses its own invocation.  Still a subprocess, to keep the
     module-name isolation the top-of-file docstring describes.
+
+    *aux_lists* is the same mapping :func:`run_checker` takes, and is passed on for
+    the same reason: this CSV is offered as an add-on to a run that may have had a
+    whitelist or a blacklist, and one that ignored them would disagree with the
+    workbook beside it about the same papers.
     """
     with tempfile.TemporaryDirectory(prefix="bealls_csv_") as tmp:
         tmp = Path(tmp)
@@ -293,6 +300,12 @@ def run_batch_csv(items: list, *, crossref: bool = True, on_line=None,
         out_file = tmp / "status.csv"
         cmd = [sys.executable, "-u", str(_BATCH_SCRIPT), str(in_file),
                "-o", str(out_file), "--crossref", "on" if crossref else "off"]
+        for flag, entries in (aux_lists or {}).items():
+            if not entries:
+                continue
+            aux_file = tmp / (flag.lstrip("-") + ".json")
+            aux_file.write_text(json.dumps(entries, ensure_ascii=False), encoding="utf-8")
+            cmd += [flag, str(aux_file)]
         env = os.environ.copy()
         if on_line is None:
             proc = subprocess.run(cmd, env=env, cwd=str(REPO_ROOT),
