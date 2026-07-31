@@ -391,6 +391,13 @@ venue whose name is **exactly** its own, which is how a paper filed under *Neura
 Networks* with no ISSN field still counts. What it never does is match a longer
 name that merely contains it.
 
+If the paper carries an ISSN and it is **not** the one on your entry, the row is
+`review` rather than `on_list`. The name says one thing and the number says
+another, and both readings are ordinary: a journal holds one ISSN for print and
+another for online, so this may be the same journal under its other number — or a
+different journal with the same title. The run leaves that to you, and says so in
+the row.
+
 If you *want* that wider net, type the name and press **Add** instead of choosing
 the directory's match: that entry carries a name and nothing else, so the name is
 what it matches on — *IEEE* then covers every *IEEE Transactions on …*.

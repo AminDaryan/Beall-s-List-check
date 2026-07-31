@@ -64,7 +64,13 @@ one thing. A name is a description, and descriptions are shared.
 
 **But 42% of the records in those corpora carry no venue ISSN**, and one naming
 *Neural Networks* without one is still in the journal that was named. So an ISSN
-entry also matches a venue whose name is *exactly* its own. That is not what
+entry also matches a venue whose name is *exactly* its own — and when the paper
+carries an ISSN that is *not* the listed one, that match is `review` rather than
+`on_list` (`name_exact_issn_differs`). Two readings survive there and the run
+cannot choose between them: the same journal under its other registered number —
+print and online hold one each, and a directory often gives only one — or a
+different journal with the same title. Both are ordinary; a person settles it in
+a moment, and adding the second ISSN to the entry settles it for good. That is not what
 over-matched: of the 94 unwanted papers none is in a venue named exactly that,
 and 83 of them carry no ISSN, so the fallback recovers the missing records
 without letting any of them back in. Phrase containment stays reserved for an

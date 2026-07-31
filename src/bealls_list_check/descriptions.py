@@ -69,6 +69,19 @@ SIGNAL_INFO = {
         "respected, so 'Sensors' matches 'IEEE Sensors Journal' but never "
         "'Biosensors' — a short name can therefore reach further than intended.",
     ),
+    "name_exact_issn_differs": (
+        "your blacklisted name matches, but the ISSN does not",
+        "review",
+        "Only from a blacklist supplied for the run: the venue's name is exactly "
+        "the one you listed, and the paper also carries an ISSN that is not the "
+        "one your entry holds. Two readings survive. It may be the same journal "
+        "under its other registered number — a journal holds one ISSN for print "
+        "and another for online, and a directory may have handed over only one. "
+        "Or it may be a different journal that happens to share the title "
+        "exactly. Both are ordinary, so the run refuses to choose: a person can "
+        "settle it by opening the venue, and the row is flagged for review "
+        "rather than asserted.",
+    ),
     "name_fuzzy": (
         "the journal name is very similar to a listed name",
         "review",

@@ -333,6 +333,15 @@ def _review_reason(r: dict) -> str:
     if r["status"] != "review":
         return ""
     mo = r["matched_on"]
+    if mo == "name_exact_issn_differs":
+        listed = r.get("matched_name") or "the entry you listed"
+        return (f"You put '{listed}' on the blacklist for this run, and this venue's "
+                f"name is exactly that — but the paper carries ISSN {r.get('issn') or '?'}, "
+                "which is not the ISSN on your entry. That is either the same journal "
+                "under its other registered number (print and online hold one each, and "
+                "a directory often gives only one), or a different journal with the same "
+                "title. Open the venue to tell which; the run will not assert it either "
+                "way. Adding the second ISSN to your entry settles it for good.")
     if mo == "domain_alternate_url":
         canon = r.get("canonical_domain") or ""
         pub = r.get("matched_name") or "a listed publisher"
@@ -414,7 +423,10 @@ def _review_reason(r: dict) -> str:
 
 
 def _user_blacklist_hit(user_index, canonical_domain, all_domains, norm_names, issns):
-    """``(entry, matched_on)`` for the user's blacklist, or None.
+    """``(entry, matched_on, status)`` for the user's blacklist, or None.
+
+    The status is ``on_list`` except where the paper contradicts the entry it
+    matched — see the exact-name branch below.
 
     The same three exact signals the venue box promises on each row it shows —
     ISSN, the site or a site under it, the name — tried strongest first, so the
@@ -445,14 +457,25 @@ def _user_blacklist_hit(user_index, canonical_domain, all_domains, norm_names, i
     """
     for issn in issns:
         if issn in user_index.by_issn:
-            return _best(user_index.by_issn[issn]), "issn"
+            return _best(user_index.by_issn[issn]), "issn", "on_list"
     for dom in ([canonical_domain] if canonical_domain else []) + list(all_domains):
         entry, matched_on = user_index.domain_match(dom)
         if entry:
-            return entry, matched_on
+            return entry, matched_on, "on_list"
     for nm in norm_names:
         if nm in user_index.by_name:
-            return _best(user_index.by_name[nm]), "name_exact"
+            entry = _best(user_index.by_name[nm])
+            # The name is exactly the listed one — but if this paper carries an
+            # ISSN of its own and it is not the listed one, two readings survive
+            # and the run cannot choose between them: the same journal under its
+            # other registered number (print and online hold one each, and a
+            # directory may have handed over only one), or a different journal
+            # that happens to share the title exactly.  Both are ordinary, so
+            # this is what `review` is for — a person can settle it in a moment
+            # and the run must not assert it either way.
+            if entry.get("issns") and issns:
+                return entry, "name_exact_issn_differs", "review"
+            return entry, "name_exact", "on_list"
     for nm in norm_names:
         padded = f" {nm} "
         for entry in user_index.entries:
@@ -463,7 +486,7 @@ def _user_blacklist_hit(user_index, canonical_domain, all_domains, norm_names, i
                 continue
             listed = entry.get("normalized_name")
             if listed and f" {listed} " in padded:
-                return entry, "name_phrase"
+                return entry, "name_phrase", "on_list"
     return None
 
 
@@ -549,8 +572,8 @@ def _classify(r: dict, index: BeallIndex, paper: dict) -> dict:
         hit = _user_blacklist_hit(index.user_index, canonical_domain, all_domains,
                                   norm_names, issns)
         if hit:
-            entry, matched_on = hit
-            return _hit(r, entry, "on_list", matched_on)
+            entry, matched_on, status = hit
+            return _hit(r, entry, status, matched_on)
 
     # ── no-venue / preprint classification (venue signals only) ──────────
     is_preprint = any(d in PREPRINT_DOMAINS for d in all_domains) or (
