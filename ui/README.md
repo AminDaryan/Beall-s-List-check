@@ -271,12 +271,18 @@ decides what the run spends money on.
   pair, one narrowing the run and the other widening it, so a row reads them as
   the opposites they are.
 
-Each of those is a **bordered block with its own heading** — an icon, the
-subject, and a phrase on what the block decides. They ran together down one
+Each of those is a **bordered block with its own heading**: an icon, the block's
+name in two words at most, and a one-word tag — `REQUIRED`, `RECOMMENDED`,
+`OPTIONAL` — on whether it has to be touched at all. They ran together down one
 column before, separated by a bold line and a caption, which read as one long
 form in which the only way to tell where the LLM stopped and Crossref started was
-to read the labels. The detail stays on each control's own ⓘ; that is what keeps
-a section heading from growing into a paragraph.
+to read the labels.
+
+A heading here is a *label on a block*, not a description of it. The Venue lists
+one said "empty on most runs — one narrows the run, the other widens it", which
+is worth reading once and then in the way every time after, and which the two
+boxes under it say anyway. What each control means stays on that control's own
+ⓘ; that is what keeps a section heading from growing into a paragraph.
 
 No *setting* in Step 3 is folded away. A step whose header claims to summarise
 the settings in force cannot do that while some of them are behind a click. The

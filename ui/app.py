@@ -571,7 +571,7 @@ def _step_provide_papers():
     return items, token, quality_slot
 
 
-def _options_section(icon, title, hint):
+def _options_section(icon, title, tag=""):
     """One bordered block of Step 3, opened as a context manager.
 
     Step 3 holds two or three unrelated decisions — which LLM answers, whether
@@ -580,15 +580,18 @@ def _options_section(icon, title, hint):
     Read quickly, that is one long form; the only way to tell where the LLM
     stopped and Crossref started was to read the labels.
 
-    Each is now its own bordered block with its own heading, so the step is read
-    as the three questions it is.  The heading carries the *subject* and a phrase
-    on what the block decides — the detail stays on each control's own ⓘ, which
-    is what stops a section heading growing into a paragraph.
+    Each is now its own bordered block, so the step is read as the two or three
+    questions it is.  A heading here is a *label on a block*, not a description
+    of it: two words at most, plus *tag* — one word on whether the block has to
+    be touched at all.  It said more once ("empty on most runs — one narrows the
+    run, the other widens it"), which is a sentence worth reading once and then
+    in the way every time after, and it is one the controls below say anyway.
     """
     box = st.container(border=True)
+    tag = f"<span class='bl-opt-s'>{tag}</span>" if tag else ""
     box.markdown(f"<div class='bl-opt-h'><span class='bl-opt-i'>{icon}</span>"
-                 f"<span class='bl-opt-t'>{title}</span>"
-                 f"<span class='bl-opt-s'>{hint}</span></div>", unsafe_allow_html=True)
+                 f"<span class='bl-opt-t'>{title}</span>{tag}</div>",
+                 unsafe_allow_html=True)
     return box
 
 
@@ -612,24 +615,22 @@ def _venue_list_section():
     a pair — one narrows the run, the other widens it — so a row reads them as
     the opposites they are.
     """
-    with _options_section("🎯", "Venue lists",
-                          "empty on most runs — one narrows the run, the other widens it"):
+    with _options_section("🎯", "Venue lists", "optional"):
         wl_col, bl_col = st.columns(2)
-        # Named by the familiar term, with what it does on the ? beside it.  The
-        # heading used to carry both — "Only check these venues · whitelist" —
-        # which said the same thing twice across the widest line in the column,
-        # and said it again on every look.  "Whitelist" alone is ambiguous
-        # ("venues I consider safe" is the opposite of what it does), so the
-        # sentence is not dropped; it is put where an ambiguity is resolved
-        # once, on the mark that exists to be asked.
+        # Named by the familiar term, with everything else on the ? beside it.
+        # The heading carried the explanation itself once — first as a longhand
+        # title beside the word, then as a paragraph under it — and either way
+        # the two widest lines in this step were spent saying, on every look,
+        # what is read once and then known.  It is not dropped: "whitelist"
+        # alone is ambiguous here ("venues I consider safe" is the opposite of
+        # what it does), so the answer stays one hover away.
         with wl_col:
             wl = venue_lists.venue_list_editor(
                 "whitelist", "wl",
-                "Selects the papers. Only papers from these venues are checked, and only "
-                "they appear in the report — the rest are left out of it entirely, not "
-                "listed as skipped. Leave empty to check every paper.",
+                "Only check these venues. Only papers from these venues are checked, and "
+                "only they appear in the report — the rest are left out of it entirely, "
+                "not listed as skipped. Leave empty to check every paper.",
                 "Empty — every paper is checked.",
-                what="Only check these venues",
                 # DOAJ indexes journals, not predatory publishers, so it can help
                 # build this list and has no business building the other one:
                 # appearing in DOAJ is evidence a journal was vetted, which is
@@ -638,10 +639,10 @@ def _venue_list_section():
         with bl_col:
             bl = venue_lists.venue_list_editor(
                 "blacklist", "bl",
-                "Extends the list. These venues count as predatory for this run in "
-                "addition to everything on Beall's List.",
+                "Also treat these venues as predatory. They count as predatory for this "
+                "run in addition to everything on Beall's List. Leave empty to use "
+                "Beall's List as it stands.",
                 "Empty — Beall's List is used as it stands.",
-                what="Also treat these venues as predatory",
                 # Crossref, not DOAJ: a venue worth blacklisting is one no
                 # directory of vetted journals will have, and the DOI registry
                 # screens nobody. See _DIRECTORIES.
@@ -681,7 +682,7 @@ def _step_options(checker, llm):
     # provider without saying which of its models to use just moves the question.
     model = provider = ""
     if checker.needs_llm:
-        with _options_section("🧠", "LLM", "which backend answers, and as which model"):
+        with _options_section("🧠", "LLM", "required"):
             provider_col, model_col = st.columns(2)
             provider = provider_col.selectbox(
                 "LLM provider", llm_providers(), key="provider", on_change=_provider_changed,
@@ -711,7 +712,7 @@ def _step_options(checker, llm):
                      "on, add it to `.env` and restart — `.env` is read once, at startup.")
             model = (model or "").strip()
 
-    with _options_section("🔗", "Crossref", "the official registry, cross-checked by DOI"):
+    with _options_section("🔗", "Crossref", "recommended"):
         # One explanation, on the control.  It used to be said twice — a tooltip
         # and a caption below saying the same thing in the same words — which is
         # the most text this step could spend on its least contested setting.

@@ -961,8 +961,8 @@ def _venue_list_body(key, empty):
                    "**As JSON** tab.")
 
 
-def venue_list_editor(label: str, key: str, hint: str, empty: str,
-                      *, what: str = "", source: str = ""):
+def venue_list_editor(label: str, key: str, about: str, empty: str,
+                      *, source: str = ""):
     """One venue list, edited as a list. Returns the entries, or None if empty.
 
     The return value is the same JSON-shaped list the old text box parsed to, so
@@ -987,23 +987,26 @@ def venue_list_editor(label: str, key: str, hint: str, empty: str,
     an empty blacklist means Beall's List is used as it stands.  One sentence
     covering both would have to be vague about the only fact worth stating.
 
-    *what* is the sentence naming what the list does — "Only check these venues"
-    — carried on a ``?`` beside the label rather than in it.  Both were in the
-    heading once, and the pairing spent the column's widest line restating the
-    label in longhand every time it was looked at.  It is still the answer to
-    "which way round is this one?", which is a question asked once; a mark that
-    can be pointed at is where an answer like that belongs.
+    *about* is everything there is to say about the list — what it does and what
+    leaving it empty means — and all of it lives on the ``?`` beside the label.
+    It was on the page once: first as a longhand heading beside the word, then as
+    a paragraph under it.  Either way the column's widest lines were spent
+    restating, on every look, something read once and then known.  What is left
+    on screen is the word and a mark to ask, which is the whole question the
+    heading has to answer — *which of the two is this?* — and the mark answers
+    the rest to whoever asks it.
     """
     st.session_state.setdefault(f"{key}_venues", [])
     st.session_state.setdefault(key, "")
     venues = st.session_state[f"{key}_venues"]
 
-    # Heading and hint as one block, so a two-line hint and a three-line one
-    # occupy the same band and the add boxes beneath them share a row.
-    mark = (f"<span class='bl-vl-q' title='{html.escape(what, quote=True)}'>?</span>"
-            if what else "")
-    st.markdown(f"<div class='bl-vl-head'><div class='bl-vl-label'>{label}{mark}</div>"
-                f"<div class='bl-vl-hint'>{hint}</div></div>", unsafe_allow_html=True)
+    # The heading is a band of its own, with a height that does not depend on
+    # what it holds, so the two columns' add boxes share a row whatever either
+    # list is called.
+    mark = (f"<span class='bl-vl-q' title='{html.escape(about, quote=True)}'>?</span>"
+            if about else "")
+    st.markdown(f"<div class='bl-vl-head'><div class='bl-vl-label'>{label}{mark}</div></div>",
+                unsafe_allow_html=True)
 
     note = _venue_input(key, source)
     # Always rendered, always one line: this is the search's only feedback, and a

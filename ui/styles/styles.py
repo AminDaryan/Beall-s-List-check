@@ -504,20 +504,28 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
 /* The two columns are aligned band by band rather than by luck: each band below
    is given a height that does not depend on what is in it, so the whitelist's
    controls sit on the same rows as the blacklist's however either is filled.
-   `min-height` on the heading is what stops a three-line hint in one column and
-   a two-line hint in the other from offsetting every control beneath them. */
-.bl-vl-head {min-height:5.4rem;}
+   `min-height` on the heading is what holds that: it was 5.4rem when the band
+   carried a paragraph of explanation under the name — enough for the longer of
+   the two — and it is one line now that the explanation is on the ?.  It stays
+   a fixed floor rather than becoming automatic, because a list named over two
+   lines in one column would otherwise offset every control beneath it. */
+.bl-vl-head {min-height:1.7rem;}
 /* ── Step 3's sections ────────────────────────────────────────────────────
-   One bordered block per decision, each opening with this line: an icon, the
-   subject, and a phrase on what the block settles.  The subject is sized and
-   weighted to be found while scrolling; the phrase after it is not, because it
-   is read once and the controls below say the rest.  Everything else that used
-   to be here in prose is on the controls' own ⓘ. */
+   One bordered block per decision, each opening with this line: an icon, two
+   words naming the block, and one word on whether it has to be touched.  A
+   label, not a description — what the block does is what the controls under it
+   are for, and what they mean is on their own ⓘ.  The gap below is the point of
+   the line as much as the words are: the heading has to read as a heading and
+   not as the first row of the form. */
 .bl-opt-h {display:flex; align-items:baseline; gap:.5rem; flex-wrap:wrap;
-           margin:-.15rem 0 .55rem;}
-.bl-opt-i {font-size:.95rem; line-height:1;}
-.bl-opt-t {font-size:.95rem; font-weight:700; letter-spacing:.01em; color:var(--bl-fg);}
-.bl-opt-s {font-size:.79rem; color:var(--bl-fg-faint);}
+           margin:-.15rem 0 1.05rem;}
+.bl-opt-i {font-size:1rem; line-height:1;}
+.bl-opt-t {font-size:1rem; font-weight:700; letter-spacing:.01em; color:var(--bl-fg);}
+/* The one-word tag, set apart from the name rather than trailing it: a pill,
+   quiet, so "optional" cannot be misread as part of what the section is. */
+.bl-opt-s {font-size:.7rem; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:var(--bl-fg-faint);
+           background:var(--bl-mute-bg); border-radius:999px; padding:.1rem .45rem;}
 
 .bl-vl-label {font-size:.95rem; font-weight:600; color:var(--bl-fg); margin-bottom:.1rem;}
 /* The ? beside a list's name, holding the sentence the name used to be paired
@@ -531,9 +539,6 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
           background:var(--bl-mute-bg); color:var(--bl-fg-faint);
           transition:background-color var(--bl-hover), color var(--bl-hover);}
 .bl-vl-q:hover {background:var(--bl-accent-soft); color:var(--bl-fg);}
-.bl-vl-hint {font-size:.8rem; line-height:1.45; color:var(--bl-fg-faint);}
-.bl-vl-hint code {font-size:.92em; padding:1px 4px; border-radius:4px;
-                  background:color-mix(in srgb, currentColor 13%, transparent);}
 /* ── The venue box, and the Add inside it ──────────────────────────────────
    Add is not a second control beside the box, it is the box's own button: it
    acts on the text in the box and on nothing else, so it belongs at the right

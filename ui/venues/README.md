@@ -27,11 +27,16 @@ not — every band keeps the same offset and the same height, in both columns:
 
 | Band | height | offset below the heading |
 |---|---|---|
-| heading (`.bl-vl-head`) | 86px (`min-height:5.4rem`) | 0 |
-| search box + Add | 48px | 86px |
-| note (`.bl-vl-note`) | 40px (fixed, clipped) | 150px |
-| tab bar (**List** / **{ } As JSON**) | 42px | 190px |
-| list box (`st-key-venuelist-*`) | 190px (`st.container(height=…)`) | 248px |
+| heading (`.bl-vl-head`) | 27px (`min-height:1.7rem`) | 0 |
+| search box + Add | 48px | 27px |
+| note (`.bl-vl-note`) | 40px (fixed, clipped) | 91px |
+| tab bar (**List** / **{ } As JSON**) | 42px | 131px |
+| list box (`st-key-venuelist-*`) | 190px (`st.container(height=…)`) | 189px |
+
+The heading was 86px while it carried a paragraph of explanation under the
+name — sized for the longer of the two lists, so the shorter one paid for it in
+blank space. That paragraph is on the **?** now and the band is one line, which
+is 59px per column back.
 
 Four things buy that:
 
@@ -537,16 +542,20 @@ leaves out are **not examined** rather than cleared. DOAJ is the canonical index
 invites reading the box as *venues I trust, so don't flag them* — which is the
 opposite of what it does.
 
-The two lists are labelled by the familiar term, with what each one does carried
-on the **?** beside it. "Whitelist" alone is ambiguous in this domain — it reads
-just as easily as *venues I consider safe*, which is the opposite of what it does
-— so the sentence is not dropped, only moved to where such a question is answered
-once rather than restated on every look:
+The two lists are labelled by the familiar term, and **everything else is on the
+?** beside it — what the list does, and what leaving it empty means. "Whitelist"
+alone is ambiguous in this domain: it reads just as easily as *venues I consider
+safe*, which is the opposite of what it does. So the explanation is not dropped,
+only moved to where a question asked once is answered once, instead of being
+restated across the column's widest lines on every look:
 
-| Box | On the **?** | Effect | CLI |
-|---|---|---|---|
-| **whitelist** | Only check these venues | Selects the papers. Only these venues are checked and only they are in the report; papers from any other venue are left out of it entirely — **not examined**, which is not the same as cleared. The Summary sheet counts them. | `--whitelist` |
-| **blacklist** | Also treat these venues as predatory | Extends the list, for this run only. | `--blacklist` |
+| Box | What its **?** says | CLI |
+|---|---|---|
+| **whitelist** | *Only check these venues.* Only papers from these venues are checked, and only they appear in the report — the rest are left out of it entirely, not listed as skipped. Leave empty to check every paper. | `--whitelist` |
+| **blacklist** | *Also treat these venues as predatory.* They count as predatory for this run in addition to everything on Beall's List. Leave empty to use Beall's List as it stands. | `--blacklist` |
+
+A paper the whitelist leaves out is **not examined**, which is not the same as
+cleared; the workbook's Summary sheet counts them.
 
 Both fold open to the same JSON the CLI flags take as a *file*, editable in
 place:
