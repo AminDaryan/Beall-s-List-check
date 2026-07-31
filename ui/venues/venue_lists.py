@@ -546,7 +546,7 @@ def _sig_chips(entry, shown=""):
     there are two of them.
     """
     # One chip, for the one identifier this entry is matched on: the most precise
-    # it carries (see match.user_entry_signal).  The row used to list every
+    # it carries (see match.user_entry_signals).  The row used to list every
     # identifier, which was right when every one of them was used and became a
     # promise the run does not keep once the precise one wins — "matches on ISSN
     # 0893-6080 · venue name" on an entry whose name will never be looked at.
@@ -556,7 +556,9 @@ def _sig_chips(entry, shown=""):
     if issns:
         why = ("The journal&#39;s ISSN. A paper is matched when its own ISSN is exactly "
                "this — the surest of the three, because an ISSN belongs to one journal "
-               "and nothing else.")
+               "and nothing else. A record that carries no ISSN at all is matched when "
+               "its venue name is exactly this entry&#39;s name, so those papers are not "
+               "quietly missed; the name is never matched as part of a longer one.")
         if len(issns) > 1:
             why += (" Journals usually hold two, one for the print edition and one for "
                     "the online one; both are kept here, and a paper carrying either is "

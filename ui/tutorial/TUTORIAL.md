@@ -386,9 +386,14 @@ Networks and Learning Systems*, four conferences — where its ISSN reaches the 
 papers in the journal and misses none of them. Each row shows the one identifier
 it will use, so what you see is what the run does.
 
-If you *want* the wider net, type the name and press **Add** instead of choosing
+A record that carries no ISSN is not lost: an entry with an ISSN also matches a
+venue whose name is **exactly** its own, which is how a paper filed under *Neural
+Networks* with no ISSN field still counts. What it never does is match a longer
+name that merely contains it.
+
+If you *want* that wider net, type the name and press **Add** instead of choosing
 the directory's match: that entry carries a name and nothing else, so the name is
-what it matches on.
+what it matches on — *IEEE* then covers every *IEEE Transactions on …*.
 
 Press **Add** — the small button at the right-hand end of the box — to add
 exactly what is typed. It appears as soon as you type something. Typing also

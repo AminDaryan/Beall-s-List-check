@@ -46,9 +46,10 @@ are skipped. A single object (not wrapped in a list) is also accepted.
 
 ## One entry, one identifier
 
-**Each entry is matched on the most precise identifier it carries, and only on
-that one** — ISSN, else domain, else name (`match.user_entry_signal`). It governs
-both lists.
+**Each entry is matched on the most precise identifier it carries** — ISSN, else
+domain, else name (`match.user_entry_signals`) — and an ISSN entry also accepts
+an **exact whole-name** match, for the records that carry no ISSN of their own.
+It governs both lists.
 
 A directory match attaches a journal's official title *and* its ISSN, and letting
 the title match as well turns one journal into every venue whose name contains
@@ -59,10 +60,16 @@ conferences — of which 94 are in venues nobody named. Matched by its ISSN it
 reaches the **20 papers in the journal**, and misses none of them.
 
 An ISSN is to a journal what a DOI is to an article: a registered identifier for
-one thing. A name is a description, and descriptions are shared. The cost is the
-right way round — a record that omits the ISSN is not matched by an ISSN entry,
-and anyone who wants the wider net types the name instead of choosing the
-directory's match.
+one thing. A name is a description, and descriptions are shared.
+
+**But 42% of the records in those corpora carry no venue ISSN**, and one naming
+*Neural Networks* without one is still in the journal that was named. So an ISSN
+entry also matches a venue whose name is *exactly* its own. That is not what
+over-matched: of the 94 unwanted papers none is in a venue named exactly that,
+and 83 of them carry no ISSN, so the fallback recovers the missing records
+without letting any of them back in. Phrase containment stays reserved for an
+entry whose only identifier is a name — someone who types "IEEE" means the
+breadth.
 
 ## Whitelist semantics (scope filter)
 

@@ -115,41 +115,45 @@ def venue_signals(paper):
     return domains, names, extract_issns(pv.get("issn"))
 
 
-def user_entry_signal(entry):
-    """Which identifier one of *the user's* entries is matched on, or "".
+def user_entry_signals(entry):
+    """Which signals one of *the user's* entries may be matched on.
 
-    **An entry is matched by the most precise identifier it carries**, and only
-    by that one.  Returns "issn", "domain" or "name" for a whitelist/blacklist
-    entry, and "" for a Beall entry, which this rule does not govern.
+    An entry is matched on **the most precise identifier it carries** — and, when
+    that identifier is an ISSN, on an exact whole-name match as well.  Returns ()
+    for a Beall entry, which this rule does not govern.
 
-    The rule exists because of what a directory search puts in an entry.
-    Choosing *Neural Networks* out of DOAJ adds the journal's official title and
-    its ISSN, 0893-6080 — and a title like that is a phrase hundreds of other
-    venues contain.  Measured over the corpora in ``docs/``: matching that entry
-    by name reaches 114 papers across 11 venues, of which **94 are in venues
-    nobody named** — a BlackboxNLP workshop, *IEEE Transactions on Neural
-    Networks and Learning Systems*, four conferences.  Matching it by its ISSN
-    reaches exactly the 20 papers in the journal, and misses none of them.
+    The precision half of the rule earns its keep.  Choosing *Neural Networks*
+    out of DOAJ adds the journal's official title and its ISSN, and a title like
+    that is a phrase hundreds of venues contain: measured over the corpora in
+    ``docs/``, matching that entry by phrase reaches 114 papers across 11 venues,
+    94 of them in venues nobody named — a BlackboxNLP workshop, *IEEE
+    Transactions on Neural Networks and Learning Systems*, four conferences.  By
+    ISSN it reaches the 20 papers in the journal.
 
     An ISSN is to a journal what a DOI is to an article: a registered identifier
-    for one thing, issued by one authority.  A name is a description, and
-    descriptions are shared.  So when someone has named a venue precisely enough
-    to carry an ISSN, that is the identifier meant — the title came along with
-    it, and treating the title as a second, wider claim reads their choice as
-    something broader than they made.
+    for one thing.  A name is a description, and descriptions are shared.
 
-    The cost is real and is the right way round: a paper whose record omits the
-    ISSN is not matched by an ISSN entry.  Someone who wants the wider net types
-    the name instead of choosing the directory's match, and gets an entry whose
-    only identifier is that name.
+    **But the paper has to carry the ISSN for that to help, and 42% of the
+    records in those same corpora do not.**  A record naming *Neural Networks*
+    with no ISSN field is in the journal the user named, and dropping it is the
+    kind of miss nobody can see.  So an ISSN entry also matches a venue whose
+    name is *exactly* its own — which is not what caused the over-matching.
+    Phrase containment was: of the 94 unwanted papers, none is in a venue named
+    exactly "Neural Networks", and 83 of them carry no ISSN, so an exact-name
+    fallback recovers the missing records without letting any of them back in.
+
+    Fuzzy near-name matching stays off for these entries for the same reason: a
+    title taken from a directory is not a guess in need of correcting.
     """
     if entry.get("list_source") not in ("whitelist", "blacklist"):
-        return ""
+        return ()
     if entry.get("issns"):
-        return "issn"
+        return ("issn", "name_exact")
     if entry.get("domain"):
-        return "domain"
-    return "name" if entry.get("normalized_name") else ""
+        return ("domain",)
+    # A name typed by hand is the wide net, and meant to be: it matches as a
+    # whole phrase inside a venue's name, which is what "IEEE" is for.
+    return ("name_phrase",) if entry.get("normalized_name") else ()
 
 
 class BeallIndex:
@@ -176,16 +180,20 @@ class BeallIndex:
         self.by_token = {}      # significant token -> set of entry indices
 
         for idx, e in enumerate(entries):
-            signal = user_entry_signal(e)       # "" for every Beall entry
+            # () for every Beall entry, which is governed by the tiers below
+            # rather than by this rule — so `not signals` means "index it all".
+            signals = user_entry_signals(e)
             dom = e.get("domain", "")
-            if dom and dom not in GENERIC_HOSTS and signal in ("", "domain"):
+            if dom and dom not in GENERIC_HOSTS and (not signals or "domain" in signals):
                 self.by_domain.setdefault(dom, []).append(e)
             nm = e.get("normalized_name", "")
-            if nm and signal in ("", "name"):
+            if nm and (not signals or {"name_exact", "name_phrase"} & set(signals)):
                 self.by_name.setdefault(nm, []).append(e)
-            for issn in e.get("issns", []):
-                self.by_issn.setdefault(normalize_issn(issn), []).append(e)
-            if e["list_source"] in FUZZY_LIST_SOURCES and signal in ("", "name"):
+            if not signals or "issn" in signals:
+                for issn in e.get("issns", []):
+                    self.by_issn.setdefault(normalize_issn(issn), []).append(e)
+            if e["list_source"] in FUZZY_LIST_SOURCES and (not signals
+                                                           or "name_phrase" in signals):
                 for tok in significant_tokens(nm):
                     self.by_token.setdefault(tok, set()).add(idx)
 
@@ -448,10 +456,10 @@ def _user_blacklist_hit(user_index, canonical_domain, all_domains, norm_names, i
     for nm in norm_names:
         padded = f" {nm} "
         for entry in user_index.entries:
-            # Only entries whose *most precise* identifier is their name — see
-            # user_entry_signal.  An entry carrying an ISSN has already had its
-            # say above, and its title is not a second, wider claim.
-            if user_entry_signal(entry) != "name":
+            # Only entries whose name is their widest claim — see
+            # user_entry_signals.  An entry carrying an ISSN has had its say
+            # above, by ISSN and by exact name; its title is not also a phrase.
+            if "name_phrase" not in user_entry_signals(entry):
                 continue
             listed = entry.get("normalized_name")
             if listed and f" {listed} " in padded:

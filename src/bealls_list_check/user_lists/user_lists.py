@@ -86,26 +86,31 @@ class WhitelistMatcher:
 
     def __init__(self, entries):
         # Each entry contributes **one** identifier: the most precise it carries.
-        # See ``match.user_entry_signal`` for why, and for what it costs. The
+        # See ``match.user_entry_signals`` for why, and for what it costs. The
         # short version: choosing a journal out of a directory attaches its
         # official title *and* its ISSN, and treating the title as a second claim
         # widens the entry to every venue whose name contains that phrase — for
         # "Neural Networks", from one journal to eleven venues.
-        from match import user_entry_signal
-        self.domains, self.name_phrases, self.issns = set(), set(), set()
+        from match import user_entry_signals
+        self.domains, self.name_phrases, self.exact_names = set(), set(), set()
+        self.issns = set()
         for e in entries:
-            signal = user_entry_signal(e)
-            if signal == "issn":
+            signals = user_entry_signals(e)
+            if "issn" in signals:
                 self.issns.update(e["issns"])
-            elif signal == "domain":
+            if "domain" in signals:
                 self.domains.add(e["domain"])
-            elif signal == "name":
+            if "name_exact" in signals and e["normalized_name"]:
+                # The fallback for a record that carries no ISSN of its own — 42%
+                # of them do not. Whole-name equality, never containment.
+                self.exact_names.add(e["normalized_name"])
+            if "name_phrase" in signals and e["normalized_name"]:
                 # Space-padded, so the test is whole-word phrase containment.
                 self.name_phrases.add(f" {e['normalized_name']} ")
 
     @property
     def active(self):
-        return bool(self.domains or self.name_phrases or self.issns)
+        return bool(self.domains or self.name_phrases or self.exact_names or self.issns)
 
     def _domain_in_scope(self, host):
         if not host:
@@ -125,6 +130,8 @@ class WhitelistMatcher:
         if any(i in self.issns for i in issns):
             return True
         if any(self._domain_in_scope(d) for d in domains):
+            return True
+        if any(n in self.exact_names for n in names):
             return True
         padded = [f" {n} " for n in names]
         return any(phrase in pn for phrase in self.name_phrases for pn in padded)
