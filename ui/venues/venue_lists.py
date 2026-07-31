@@ -545,8 +545,14 @@ def _sig_chips(entry, shown=""):
     is exactly the question they got asked.  One pill, and the tooltip says why
     there are two of them.
     """
+    # One chip, for the one identifier this entry is matched on: the most precise
+    # it carries (see match.user_entry_signal).  The row used to list every
+    # identifier, which was right when every one of them was used and became a
+    # promise the run does not keep once the precise one wins — "matches on ISSN
+    # 0893-6080 · venue name" on an entry whose name will never be looked at.
     chips = []
     issns = list(entry.get("issns") or [])
+    domain = entry.get("domain")
     if issns:
         why = ("The journal&#39;s ISSN. A paper is matched when its own ISSN is exactly "
                "this — the surest of the three, because an ISSN belongs to one journal "
@@ -561,7 +567,7 @@ def _sig_chips(entry, shown=""):
         label = ("ISSN" if issns == [shown] else
                  "ISSN " + " · ".join(html.escape(i) for i in issns))
         chips.append(f"<span class='bl-sig bl-sig-issn' title='{why}'>{label}</span>")
-    if entry.get("domain"):
+    if domain and not issns:
         shared = venue_lookup.site_is_shared(f"https://{entry['domain']}")
         why = ("The venue's website. A paper is matched when its venue sits on this "
                "host or any host under it — and this one looks like a shared publisher "
@@ -572,11 +578,13 @@ def _sig_chips(entry, shown=""):
         chips.append(f"<span class='bl-sig bl-sig-site{' bl-sig-wide' if shared else ''}' "
                      f"title='{html.escape(why, quote=True)}'>"
                      f"{'⚠ ' if shared else ''}site {html.escape(entry['domain'])}</span>")
-    if entry.get("name"):
+    if entry.get("name") and not issns and not domain:
         chips.append("<span class='bl-sig' title='The venue&#39;s name. A paper is matched "
                      "when this name appears as a whole word inside the paper&#39;s own "
                      "venue name — so a short or common name can also match journals you "
-                     "did not mean.'>venue name</span>")
+                     "did not mean. An entry that also carries an ISSN or a website is "
+                     "matched on that instead, because a name is shared and those are "
+                     "not.'>venue name</span>")
     if not chips:
         return ""
     return "<span class='bl-vl-on'>matches on</span>" + "".join(chips)

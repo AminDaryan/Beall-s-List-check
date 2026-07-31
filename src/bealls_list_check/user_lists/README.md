@@ -44,9 +44,29 @@ are skipped. A single object (not wrapped in a list) is also accepted.
 | `domain` / `url` | The venue's website — either key works (`url` wins if both are given). Matched exactly or as a subdomain, so a **publisher** domain covers all its journals (`ojs.x.com` matches a listed `x.com`). |
 | `issns` | Optional list of ISSNs. Matched exactly by **both** lists — an ISSN hit flags a paper `on_list` from a blacklist, and puts it in scope from a whitelist. The most precise of the three: an ISSN names one journal, while a name can be shared and a domain can be a whole publisher. An entry may carry nothing else. |
 
+## One entry, one identifier
+
+**Each entry is matched on the most precise identifier it carries, and only on
+that one** — ISSN, else domain, else name (`match.user_entry_signal`). It governs
+both lists.
+
+A directory match attaches a journal's official title *and* its ISSN, and letting
+the title match as well turns one journal into every venue whose name contains
+that phrase. Measured over the corpora in `docs/`: a *Neural Networks* entry
+matched by its title reaches **114 papers across 11 venues** — a BlackboxNLP
+workshop, *IEEE Transactions on Neural Networks and Learning Systems*, four
+conferences — of which 94 are in venues nobody named. Matched by its ISSN it
+reaches the **20 papers in the journal**, and misses none of them.
+
+An ISSN is to a journal what a DOI is to an article: a registered identifier for
+one thing. A name is a description, and descriptions are shared. The cost is the
+right way round — a record that omits the ISSN is not matched by an ISSN entry,
+and anyone who wants the wider net types the name instead of choosing the
+directory's match.
+
 ## Whitelist semantics (scope filter)
 
-A paper is *in scope* if **any** of the following matches:
+A paper is *in scope* when the entry's own signal matches:
 
 - one of its venue ISSNs is whitelisted;
 - any of its venue domains is the same as, or a subdomain of, a whitelisted

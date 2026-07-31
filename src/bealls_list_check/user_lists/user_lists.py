@@ -85,10 +85,23 @@ class WhitelistMatcher:
     """Decides whether a paper's venue is in the user's whitelist scope."""
 
     def __init__(self, entries):
-        self.domains = {e["domain"] for e in entries if e["domain"]}
-        # Stored space-padded so we can test for whole-word phrase containment.
-        self.name_phrases = {f" {e['normalized_name']} " for e in entries if e["normalized_name"]}
-        self.issns = {i for e in entries for i in e["issns"]}
+        # Each entry contributes **one** identifier: the most precise it carries.
+        # See ``match.user_entry_signal`` for why, and for what it costs. The
+        # short version: choosing a journal out of a directory attaches its
+        # official title *and* its ISSN, and treating the title as a second claim
+        # widens the entry to every venue whose name contains that phrase — for
+        # "Neural Networks", from one journal to eleven venues.
+        from match import user_entry_signal
+        self.domains, self.name_phrases, self.issns = set(), set(), set()
+        for e in entries:
+            signal = user_entry_signal(e)
+            if signal == "issn":
+                self.issns.update(e["issns"])
+            elif signal == "domain":
+                self.domains.add(e["domain"])
+            elif signal == "name":
+                # Space-padded, so the test is whole-word phrase containment.
+                self.name_phrases.add(f" {e['normalized_name']} ")
 
     @property
     def active(self):

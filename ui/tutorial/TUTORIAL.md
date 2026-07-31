@@ -378,6 +378,20 @@ type decides how the venue is matched, and the row that appears says which:
 An ISSN is the most precise, so prefer it when you mean one particular journal.
 A website or a name is the right choice when you mean a whole publisher.
 
+**An entry is matched on the most precise identifier it carries, and only on
+that one.** Choosing a journal from the directory attaches its official title
+*and* its ISSN, and the ISSN is then what the run uses; the title is how you
+recognise the row, not a second, wider claim. It matters more than it sounds:
+across the corpora in `docs/`, matching a *Neural Networks* entry by its title
+reaches 114 papers in 11 venues — a workshop, *IEEE Transactions on Neural
+Networks and Learning Systems*, four conferences — where its ISSN reaches the 20
+papers in the journal and misses none of them. Each row shows the one identifier
+it will use, so what you see is what the run does.
+
+If you *want* the wider net, type the name and press **Add** instead of choosing
+the directory's match: that entry carries a name and nothing else, so the name is
+what it matches on.
+
 Press **Add** — the small button at the right-hand end of the box — to add
 exactly what is typed. It appears as soon as you type something. Typing also
 searches a venue directory (see below), and choosing one of its matches adds that
