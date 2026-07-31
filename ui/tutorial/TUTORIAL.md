@@ -458,7 +458,7 @@ venue.
 
 ### Editing the list as JSON
 
-Each box has two tabs. **{ } As JSON** shows the same list in the format the
+Each box has two tabs. **JSON** shows the same list in the format the
 command line reads from a file. Paste one in and it appears as rows on the
 **List** tab; edit the rows and the JSON follows.
 

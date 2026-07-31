@@ -174,7 +174,13 @@ a paste box. Accepted input:
 Anything else is rejected with a message rather than a traceback. **`.jsonl` is
 not accepted** — convert it to an array first, or use `batch_check.py` on the
 command line, which reads `.jsonl`, `.ndjson` and `.json`. Streamlit's upload
-limit is 200 MB per file. An expander shows the expected shape.
+limit is 200 MB per file.
+
+The step opens with the question — **How do you want to add your papers?** — and
+what the format is comes *under* the box that has to accept it, with an expander
+showing the expected shape. Both used to sit above the picker, where they were
+read before there was anything to apply them to and had to be scrolled back to
+afterwards; a format is checked against a file at the moment the file is chosen.
 
 The upload target is a full-width dashed dropzone that says a file can be dropped
 on it. Streamlit's own is a 68px strip with a Browse button, which does not; it

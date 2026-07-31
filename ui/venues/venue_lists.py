@@ -57,9 +57,9 @@ except Exception:
 
 # ── Step 3's venue lists ─────────────────────────────────────────────────────
 # A venue list is a *list*, and it is now edited as one: rows with a ✕, built by
-# searching DOAJ or by typing, with the JSON it serialises to kept underneath in
-# a fold.  It used to be a 90px textarea holding raw JSON, which made the format
-# the interface — every add was text surgery, every removal was careful text
+# searching DOAJ or by typing, with the JSON it serialises to on the second tab
+# of the same box.  It used to be a 90px textarea holding raw JSON, which made
+# the format the interface — every add was text surgery, every removal was careful text
 # surgery, and after half a dozen entries the box was a wall of braces that no
 # longer answered the only question it is there to answer, which is *which
 # venues is this run scoped to*.
@@ -80,7 +80,7 @@ except Exception:
 
 # Rows are Streamlit widgets, and a pasted list of 200 venues would be 400 of
 # them.  Past this many the list stops being rendered row-by-row and says so;
-# every entry is still in force, and the fold below holds all of them.
+# every entry is still in force, and the JSON tab holds all of them.
 _MAX_SHOWN_VENUES = 25
 
 
@@ -958,7 +958,7 @@ def _venue_list_body(key, empty):
     if len(venues) > _MAX_SHOWN_VENUES:
         st.caption(f"…and {len(venues) - _MAX_SHOWN_VENUES} more not listed here. "
                    f"All {len(venues)} are in force; the full list is on the "
-                   "**As JSON** tab.")
+                   "**JSON** tab.")
 
 
 def venue_list_editor(label: str, key: str, about: str, empty: str,
@@ -1008,12 +1008,22 @@ def venue_list_editor(label: str, key: str, about: str, empty: str,
     st.markdown(f"<div class='bl-vl-head'><div class='bl-vl-label'>{label}{mark}</div></div>",
                 unsafe_allow_html=True)
 
+    # The note is written *above* the box it describes, in the place a field's
+    # description goes, because that is what it mostly is: standing at an empty
+    # box it says what can be typed, and it is wanted before the typing rather
+    # than after it.  Once there is a term it reports what the directory found,
+    # which reads no worse above the box than below it — the term is right there
+    # either way.  It was under the box only because it was thought of as
+    # feedback, and feedback is the smaller half of its job.
+    #
+    # The slot is reserved first and written after the box has run, because what
+    # the note says depends on the keystroke the box just sent.  Always rendered,
+    # always one line: a note that appeared only when it had something to say
+    # would take everything below it up and down the page as the query changed.
+    note_slot = st.empty()
     note = _venue_input(key, source)
-    # Always rendered, always one line: this is the search's only feedback, and a
-    # note that appeared only when it had something to say would take the list
-    # below it up and down the page as the query changed.
-    st.markdown(f"<div class='bl-vl-note'>{html.escape(note)}</div>",
-                unsafe_allow_html=True)
+    note_slot.markdown(f"<div class='bl-vl-note'>{html.escape(note)}</div>",
+                       unsafe_allow_html=True)
 
     # The list and its JSON are two views of one thing, so they are two tabs of
     # one box rather than a box and a fold beneath it.  As a fold they read as
@@ -1027,31 +1037,41 @@ def venue_list_editor(label: str, key: str, about: str, empty: str,
     # without being looked at.  They are given the same height for the same
     # reason every other band here has a fixed one: the column below must not
     # move when the tab changes.
-    rows_tab, json_tab = st.tabs(["List", "{ } As JSON"])
-    with rows_tab:
-        # A fixed height with its own scrollbar: the one part of this column
-        # whose contents grow, given a size that does not.  Streamlit's `height=`
-        # is used rather than a stylesheet rule so the scroll behaviour is the
-        # container's own and survives a change to its internals.
-        with st.container(height=styles.VENUE_BOX_HEIGHT, border=True, key=f"venuelist-{key}"):
-            _venue_list_body(key, empty)
-    with json_tab:
-        st.text_area(
-            "Venue list as JSON", key=key, height=styles.VENUE_BOX_HEIGHT,
-            label_visibility="collapsed", on_change=_venue_json_edited, args=(key,),
-            placeholder='[{"name": "IEEE", "domain": "ieee.org"}, "Nature"]',
-            help='The same list, in the format the check reads: a JSON list of '
-                 '`{"name", "domain", "issns"}` objects, or bare strings like `"Nature"` to '
-                 'match by name alone. Paste one from a colleague or a previous run and it '
-                 'appears as rows on the **List** tab. Edits land when the box loses focus '
-                 '(or on Ctrl+Enter).')
-        error = st.session_state.get(f"{key}_jsonerr")
-        if error:
-            st.error(error)
-        # Always rendered, disabled when there is nothing to clear: a button that
-        # comes and goes with the list would move the fold's own contents.
-        st.button("Clear the list", key=f"{key}_clear", on_click=_clear_venues,
-                  args=(key,), disabled=not venues,
-                  help="Remove every entry from this list.")
+    with st.container(key=f"venuetabs-{key}"):
+        # Clear sits at the right-hand end of the tab line, on the one row this
+        # box already spends on chrome, rather than under the JSON pane where it
+        # was — reachable only from the tab that has least to do with it, and
+        # costing a band of its own.  It is written before the tabs so it lands
+        # ahead of them in the DOM and can be lifted onto their row by the
+        # stylesheet; being out of flow, it adds no height to the column.
+        with st.container(key=f"venueclear-{key}"):
+            # Always rendered, disabled when there is nothing to clear: a button
+            # that came and went would take its band's height with it.
+            st.button("Clear the list", key=f"{key}_clear", on_click=_clear_venues,
+                      args=(key,), disabled=not venues,
+                      help="Remove every entry from this list.")
+        rows_tab, json_tab = st.tabs(["List", "JSON"])
+        with rows_tab:
+            # A fixed height with its own scrollbar: the one part of this column
+            # whose contents grow, given a size that does not.  Streamlit's
+            # `height=` is used rather than a stylesheet rule so the scroll
+            # behaviour is the container's own and survives a change to its
+            # internals.
+            with st.container(height=styles.VENUE_BOX_HEIGHT, border=True,
+                              key=f"venuelist-{key}"):
+                _venue_list_body(key, empty)
+        with json_tab:
+            st.text_area(
+                "Venue list as JSON", key=key, height=styles.VENUE_BOX_HEIGHT,
+                label_visibility="collapsed", on_change=_venue_json_edited, args=(key,),
+                placeholder='[{"name": "IEEE", "domain": "ieee.org"}, "Nature"]',
+                help='The same list, in the format the check reads: a JSON list of '
+                     '`{"name", "domain", "issns"}` objects, or bare strings like `"Nature"` '
+                     'to match by name alone. Paste one from a colleague or a previous run '
+                     'and it appears as rows on the **List** tab. Edits land when the box '
+                     'loses focus (or on Ctrl+Enter).')
+            error = st.session_state.get(f"{key}_jsonerr")
+            if error:
+                st.error(error)
 
     return list(venues) or None

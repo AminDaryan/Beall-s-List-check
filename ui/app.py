@@ -256,13 +256,8 @@ def get_papers():
     The widget keys are deliberately independent of the selected check, so
     switching between the three rows in Step 1 keeps the loaded papers.
     """
-    st.caption("Input format: Semantic Scholar **paper records** — JSON objects carrying a "
-               "`publicationVenue`, not links or titles. A **list** of them, or a "
-               "**single** one.")
-    with st.expander("See expected format"):
-        st.code(_S2_EXAMPLE, language="json")
-    mode = st.radio("Provide papers via", ["Upload a file", "Paste JSON"],
-                    horizontal=True, key="mode")
+    mode = st.radio("How do you want to add your papers?",
+                    ["Upload a file", "Paste JSON"], horizontal=True, key="mode")
     source, token = None, ""
     if mode == "Upload a file":
         up = st.file_uploader("Papers file (.json)", type=["json"], key="file",
@@ -282,6 +277,16 @@ def get_papers():
             # field, which is the part worth not repeating.
             source = pasted
             token = "paste:" + hashlib.sha1(pasted.encode("utf-8")).hexdigest()
+
+    # What the box will accept, under the box that has to accept it.  It was
+    # above, where it was read before there was anything to apply it to and had
+    # to be scrolled back to afterwards; a format is checked against a file at
+    # the moment the file is chosen, which is here.
+    st.caption("Input format: Semantic Scholar **paper records** — JSON objects carrying a "
+               "`publicationVenue`, not links or titles. A **list** of them, or a "
+               "**single** one.")
+    with st.expander("See expected format"):
+        st.code(_S2_EXAMPLE, language="json")
 
     # The demo, kept clearly apart from the two real sources above.
     if _EXAMPLE_CORPUS.is_file():
@@ -626,7 +631,7 @@ def _venue_list_section():
         # what it does), so the answer stays one hover away.
         with wl_col:
             wl = venue_lists.venue_list_editor(
-                "whitelist", "wl",
+                "Whitelist", "wl",
                 "Only check these venues. Only papers from these venues are checked, and "
                 "only they appear in the report — the rest are left out of it entirely, "
                 "not listed as skipped. Leave empty to check every paper.",
@@ -638,7 +643,7 @@ def _venue_list_section():
                 source="doaj")
         with bl_col:
             bl = venue_lists.venue_list_editor(
-                "blacklist", "bl",
+                "Blacklist", "bl",
                 "Also treat these venues as predatory. They count as predatory for this "
                 "run in addition to everything on Beall's List. Leave empty to use "
                 "Beall's List as it stands.",

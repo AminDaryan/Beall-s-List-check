@@ -539,6 +539,21 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
           background:var(--bl-mute-bg); color:var(--bl-fg-faint);
           transition:background-color var(--bl-hover), color var(--bl-hover);}
 .bl-vl-q:hover {background:var(--bl-accent-soft); color:var(--bl-fg);}
+/* ── Clear, at the right-hand end of the tab line ──────────────────────────
+   The tab row is a band this box already spends; Clear rides on its empty
+   right-hand end rather than taking a band of its own under the JSON pane,
+   which is the tab with least to do with it.  Absolute, so it contributes no
+   height and the two columns' bands stay level; written before the tabs so it
+   is behind them in the DOM and cannot take a tab's click.
+
+   The 22px is measured, not chosen: the wrapper's first in-flow child is the
+   tab list and Streamlit's block gap puts it 16px down, so 16 plus half of what
+   the 42px row has left over centres a 29px button on it. */
+[class*="st-key-venuetabs-"] {position:relative;}
+[class*="st-key-venueclear-"] {position:absolute; top:22px; right:0; z-index:2;
+                               width:auto;}
+[class*="st-key-venueclear-"] button {padding:.15rem .6rem; min-height:0;
+                                      font-size:.78rem;}
 /* ── The venue box, and the Add inside it ──────────────────────────────────
    Add is not a second control beside the box, it is the box's own button: it
    acts on the text in the box and on nothing else, so it belongs at the right

@@ -6,7 +6,7 @@
 ### The venue lists are edited as lists
 
 Each list is a column of rows with a ✕ on each, built by typing or by searching
-DOAJ. The JSON it serialises to is the **{ } As JSON** tab of the same box, not a
+DOAJ. The JSON it serialises to is the **JSON** tab of the same box, not a
 fold beneath it: same list, two ways of looking at it, one at a time. Both panes
 render on every run, so the JSON stays in sync without being opened and switching
 tabs costs no rerun. The controls come first and the rows follow: the list is the
@@ -28,10 +28,10 @@ not — every band keeps the same offset and the same height, in both columns:
 | Band | height | offset below the heading |
 |---|---|---|
 | heading (`.bl-vl-head`) | 27px (`min-height:1.7rem`) | 0 |
-| search box + Add | 48px | 27px |
-| note (`.bl-vl-note`) | 40px (fixed, clipped) | 91px |
-| tab bar (**List** / **{ } As JSON**) | 42px | 131px |
-| list box (`st-key-venuelist-*`) | 190px (`st.container(height=…)`) | 189px |
+| note (`.bl-vl-note`) | 40px (fixed, clipped) | 27px |
+| search box + Add | 48px | 67px |
+| tab bar (**List** / **JSON**), with **Clear the list** at its right-hand end | 42px | 147px |
+| list box (`st-key-venuelist-*`) | 190px (`st.container(height=…)`) | 205px |
 
 The heading was 86px while it carried a paragraph of explanation under the
 name — sized for the longer of the two lists, so the shorter one paid for it in
@@ -51,7 +51,10 @@ Four things buy that:
 - **Nothing is conditionally rendered.** Both comboboxes, both notes, both tab
   bars and both **Clear the list** buttons are always present, Clear merely
   disabled when there is nothing to clear, because a control that comes and goes
-  takes its band's height with it. The tabs are the same bargain: both panes are
+  takes its band's height with it. Clear is absolutely positioned at the
+  right-hand end of the tab row — a band the box already spends — rather than
+  under the JSON pane, which is the tab with least to do with it and cost a band
+  of its own. The tabs are the same bargain: both panes are
   built every run and the inactive one is hidden client-side, so the band below
   cannot move when the tab changes.
 
