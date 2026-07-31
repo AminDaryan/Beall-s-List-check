@@ -109,7 +109,8 @@ row is highlighted and its button becomes solid. Nothing else on the page
 changes.
 
 **Step 2 · Provide the papers.** There are two ways to supply your own papers:
-*Upload a file* and *Paste JSON*. Below them is **📦 Load the example corpus**.
+*Upload a file* and *Paste JSON*. At the right-hand end of that row is
+**📦 Load the example corpus**.
 This is not a third way — it fills the paste box with the eight example papers,
 so what is about to be checked is on screen and can be edited. Press it. The app
 answers `✅ Loaded 8 paper(s) — ready to run`. Under that, a closed **Input data

@@ -188,11 +188,16 @@ is restyled rather than replaced, so it is still the same widget.
 
 The bundled [example corpus](../examples/README.md) is **not** a third source.
 Offering it as one made the input picker mix two different questions — *where is
-your data* and *I have none, show me* — so it is a button below the input,
-**📦 Load the example corpus**, which fills the paste box with the records. That
-needs no state of its own, leaves the page in a shape the user could have reached
-by hand, and puts the corpus on screen where it doubles as a worked example of
-the input format.
+your data* and *I have none, show me* — so it is a button, **📦 Load the example
+corpus**, which fills the paste box with the records. That needs no state of its
+own, leaves the page in a shape the user could have reached by hand, and puts the
+corpus on screen where it doubles as a worked example of the input format.
+
+It sits at the **right-hand end of the picker's own row**, which is the one place
+that says both things at once: it is next to the two sources because it leads to
+the same box, and it is across the row from them because it is not your data. It
+had a band of its own below the input, and a caption beside it explaining itself;
+the caption is now the button's tooltip.
 
 #### The input data-quality panel
 

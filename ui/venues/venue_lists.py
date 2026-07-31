@@ -1020,10 +1020,21 @@ def venue_list_editor(label: str, key: str, about: str, empty: str,
     # the note says depends on the keystroke the box just sent.  Always rendered,
     # always one line: a note that appeared only when it had something to say
     # would take everything below it up and down the page as the query changed.
-    note_slot = st.empty()
+    #
+    # `st.container` and not `st.empty`, which is the obvious way to reserve a
+    # slot and the wrong one here.  An empty slot is *cleared* before it is
+    # written, so its contents are a new element every run: the browser threw the
+    # note's node away and built another one on every interaction anywhere on the
+    # page — identical text, visibly redrawn. A container's child is delivered in
+    # the same position each run and diffed like any other element, so a note
+    # that has not changed is left alone.  (Verified in the running app by
+    # marking the node and toggling an unrelated widget: with `empty` the mark is
+    # gone, with `container` it survives.)
+    note_slot = st.container()
     note = _venue_input(key, source)
-    note_slot.markdown(f"<div class='bl-vl-note'>{html.escape(note)}</div>",
-                       unsafe_allow_html=True)
+    with note_slot:
+        st.markdown(f"<div class='bl-vl-note'>{html.escape(note)}</div>",
+                    unsafe_allow_html=True)
 
     # The list and its JSON are two views of one thing, so they are two tabs of
     # one box rather than a box and a fold beneath it.  As a fold they read as

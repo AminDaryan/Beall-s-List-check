@@ -256,8 +256,23 @@ def get_papers():
     The widget keys are deliberately independent of the selected check, so
     switching between the three rows in Step 1 keeps the loaded papers.
     """
-    mode = st.radio("How do you want to add your papers?",
-                    ["Upload a file", "Paste JSON"], horizontal=True, key="mode")
+    # The picker and the demo share a row: they are two ways of arriving at the
+    # same box, and the demo's button spent a band of its own saying so.  The
+    # picker is unlabelled — "Upload a file" and "Paste JSON" beside a box that
+    # takes papers are not a question anyone needs asked — and the button is
+    # right-aligned so the two real sources keep the left edge, where the eye
+    # starts, and the one that is not your data sits apart from them.
+    pick_col, demo_col = st.columns([6.4, 3.6], vertical_alignment="center")
+    mode = pick_col.radio("How papers are supplied", ["Upload a file", "Paste JSON"],
+                          horizontal=True, key="mode", label_visibility="collapsed")
+    if _EXAMPLE_CORPUS.is_file():
+        with demo_col:
+            st.button("📦 Load the example corpus", key="loadexample", width="stretch",
+                      on_click=_load_example_corpus,
+                      help=f"No data to hand? Fills the paste box with `examples/"
+                           f"{_EXAMPLE_CORPUS.name}` — eight synthetic records exercising "
+                           "every verdict, whose expected result is tabulated in "
+                           "`examples/README.md`.")
     source, token = None, ""
     if mode == "Upload a file":
         up = st.file_uploader("Papers file (.json)", type=["json"], key="file",
@@ -287,15 +302,6 @@ def get_papers():
                "**single** one.")
     with st.expander("See expected format"):
         st.code(_S2_EXAMPLE, language="json")
-
-    # The demo, kept clearly apart from the two real sources above.
-    if _EXAMPLE_CORPUS.is_file():
-        left, right = st.columns([2.4, 7.6], vertical_alignment="center")
-        left.button("📦 Load the example corpus", key="loadexample", width="stretch",
-                    on_click=_load_example_corpus)
-        right.caption(f"No data to hand? Fills the paste box with `examples/"
-                      f"{_EXAMPLE_CORPUS.name}` — eight synthetic records exercising every "
-                      "verdict, whose expected result is tabulated in `examples/README.md`.")
 
     if not token:
         return None, ""
@@ -480,9 +486,13 @@ def _step_choose_check(checker):
     # the option already chosen.
     step_header(1, "Choose a check", "what to run over your papers",
                 f"{checker.icon} {checker.title}", "ok", learn="First run")
+    # The second sentence used to read "Hover a Cost, Records or Returns pill for
+    # the detail", which is an instruction about the page rather than anything
+    # about the checks, and it names the pills by their column headings — which
+    # are on screen a line below it, so it points at what it is standing next to.
+    # The pills carry hover text; that is a property of the table, not news.
     st.caption("All three run the same deterministic engine. They differ in what they add "
-               "on top of it, what they cost, and what you get back. "
-               "Hover a **Cost**, **Records** or **Returns** pill for the detail.")
+               "on top of it, what they cost, and what you get back.")
 
     # The header sits in a bordered container like the rows below it, so that the
     # container's padding is identical and the columns line up exactly.
