@@ -7,18 +7,25 @@
 > Your own papers come after that. Every step says what should appear on screen,
 > so a run can be checked instead of assumed.
 >
-> Every control is described in [ui/README.md](../README.md). The project as a whole
-> is described in the main [README](../README.md).
+> Every control is described in [the web app's README](../README.md). The project
+> as a whole is described in the [main README](../../README.md).
 
 ## What this tool checks
 
 For every paper, the app answers one question: **is the paper's journal or
 publisher on [Beall's List](https://beallslist.net)?**
 
-Beall's List names journals and publishers that may be *predatory* — they charge
-a publication fee but skip the quality checks a real journal carries out.
-Throughout this guide and in the report, the journal or publisher of a paper is
-called its **venue**.
+Beall's List names journals and publishers that may be **predatory**: they charge
+a publication fee but skip the quality checks a real journal carries out — no
+serious peer review, no editorial oversight. The term was given currency by the
+librarian Jeffrey Beall, whose 2012 comment in *Nature*,
+[Predatory publishers are corrupting open access](https://doi.org/10.1038/489179a),
+is the short read on why such venues matter; for a broader survey see
+[predatory publishing](https://en.wikipedia.org/wiki/Predatory_publishing).
+
+Throughout this guide and in the report, the journal or publisher a paper
+appeared in is called its **venue**. Every term of this kind is collected in
+[the glossary](#7-a-short-glossary) at the end.
 
 Three points are worth knowing before the first run:
 
@@ -27,8 +34,11 @@ Three points are worth knowing before the first run:
 - Beall's List is unofficial and disputed, and the app uses a copy of it made on
   one fixed date. A match is therefore **a claim, not proof**. Matches that are
   not certain are marked for a person to look at, never stated as fact.
-- The input is **Semantic Scholar paper records** — JSON data with a
-  `publicationVenue` field. Links, titles and PDF files are not accepted.
+- The input is **[Semantic Scholar](https://www.semanticscholar.org) paper
+  records**: entries from that free academic search service, written in
+  [JSON](https://www.json.org/json-en.html) — a plain-text format for structured
+  data — and carrying a `publicationVenue` field. Links, titles and PDF files are
+  not accepted.
 
 <!-- app:skip-start -->
 ## Before you start
@@ -69,8 +79,9 @@ this system"*, use this command instead:
 bash ./run_ui.sh
 ```
 
-The first time, this also installs Streamlit into `.venv`. It then prints a web
-address, usually `http://localhost:8501`. If that port is already in use,
+The first time, this also installs [Streamlit](https://streamlit.io) — the Python
+library the interface is built with — into `.venv`. It then prints a web address,
+usually `http://localhost:8501`. If that port is already in use,
 Streamlit takes the next free one — so open the address that was printed, not the
 one written here.
 
@@ -120,10 +131,10 @@ be downloaded as `input_data_quality.xlsx`. Open it to see which paper was
 flagged and why.
 
 **Step 3 · Options.** Change nothing here. **Crossref** is on by default and
-should stay on, and the two **venue list** boxes below it are empty, which is
-what almost every run wants. (Choosing the thorough check adds an **LLM
-provider** and a **Model / deployment** list here as well — see
-[section 4](#4-the-thorough-check-optional).)
+should stay on, and the two **venue list** boxes below it are empty, which is what
+almost every run wants. The thorough check adds two more controls to this step,
+**LLM provider** and **Model / deployment**; they are described in
+[section 4](#4-the-thorough-check-optional).
 
 **Step 4 · Run.** A labelled summary repeats what is about to happen: which
 check, how many papers, whether Crossref is on, which extra lists are used, and
@@ -134,7 +145,9 @@ back and forth instead of filling up. Eight papers finish in a few seconds.
 ### What you should see
 
 A green success message appears, together with a **download button** for
-`bealls_list_results.xlsx` and a preview of the workbook's first sheet. The eight
+`bealls_list_results.xlsx` and a preview of the workbook's first sheet. The same
+button appears again below the preview, so the file can be taken from either end
+of it. The eight
 papers come out as follows. These results were checked against the list copy made
 on 2026-06-10; a newer copy may give a different answer for some venues.
 
@@ -142,9 +155,9 @@ on 2026-06-10; a newer copy may give a different answer for some venues.
 |---|---|---|---|
 | 1 | The venue's own website is a listed site. This is the strongest signal. | `on_list` | `on_list` |
 | 2 | A well-known journal that is not on the list. | `clean` | `clean` |
-| 3 | A preprint: there is no journal publisher to check. | `no_venue` | `no_venue` |
+| 3 | A [preprint](https://en.wikipedia.org/wiki/Preprint) — a paper posted before peer review, on a server such as [arXiv](https://arxiv.org) — so there is no journal publisher to check. | `no_venue` | `no_venue` |
 | 4 | The venue *name* matches, but the paper's own website does not confirm it. | `on_list` | `review` |
-| 5 | A well-established journal whose DOI confirms the venue. | `clean` | `clean` |
+| 5 | A well-established journal whose [DOI](https://www.doi.org) confirms the venue. | `clean` | `clean` |
 | 6 | No venue information at all. | `no_venue` | `no_venue` |
 | 7 | A match on the vanity-press list (publishers that print whatever an author pays for). That list is weak evidence, so the result is never certain. | `review` | `review` |
 | 8 | A second web address points to a listed site; the main one does not. | `on_list` | `review` |
@@ -158,9 +171,9 @@ in [examples/README.md](../../examples/README.md).
 
 ![A finished run, with the workbook preview](../static/ui-report.png)
 
-The preview on screen shows the **first 40 rows of the first sheet**. The
-workbook itself has five sheets, and the download button gives you the whole
-file.
+The preview on screen shows the **first 40 rows of the first sheet**. The workbook
+itself has five sheets, and a **download button above and below the preview**
+gives you the whole file.
 
 | Sheet | What is in it |
 |---|---|
@@ -174,7 +187,7 @@ Every paper gets exactly one **status**:
 
 | Status | Colour | What it means |
 |---|---|---|
-| `on_list` | 🔴 red | Strong match: the venue's own website, an exact ISSN, or an exact name confirmed by the website, on one of the main lists. |
+| `on_list` | 🔴 red | Strong match: the venue's own website, an exact [ISSN](https://portal.issn.org), or an exact name confirmed by the website, on one of the main lists. |
 | `review` | 🟠 orange | Weak or unclear match. A person has to decide. This is not an accusation. |
 | `clean` | 🟢 green | The venue was identified and is **not** on the list. |
 | `no_venue` | ⚪ grey | A preprint, or a record with no venue. There is nothing to check. |
@@ -206,9 +219,12 @@ the text directly. Two shapes are accepted:
 A JSON object that is none of these is refused with a message naming the fields
 it was looking for, rather than being read as one paper with nothing in it.
 
-`.jsonl` files are **not** accepted in the app. Convert such a file into a JSON
-list first, or use `batch_check.py` on the command line, which reads `.jsonl`,
-`.ndjson` and `.json`. Streamlit accepts uploads of up to 200 MB per file.
+`.jsonl` files are **not** accepted in the app. That format —
+[JSON Lines](https://jsonlines.org), one complete record per line, with no commas
+or brackets holding them together — is common in data pipelines but is not what
+the box reads. Convert such a file into a JSON list first, or use
+`batch_check.py` on the command line, which reads `.jsonl`, `.ndjson` and
+`.json`. Uploads may be up to 200 MB per file.
 
 The check only uses the fields that describe the venue. A record with the minimum
 needed:
@@ -235,8 +251,12 @@ good as this data, which is why the **Input data quality** panel appears before
 the run, and why the Crossref check is on by default.
 
 A real run takes **minutes rather than seconds**. With Crossref on, the app
-contacts the registry once for each different DOI. Setting `CROSSREF_MAILTO` in
-`.env` moves those requests into Crossref's faster "polite pool".
+contacts the registry once for each different DOI. Putting your e-mail address in
+`CROSSREF_MAILTO` in `.env` moves those requests into Crossref's **polite pool**:
+a separate, faster queue the registry reserves for callers who identify
+themselves. It is described in
+[Crossref's REST API documentation](https://www.crossref.org/documentation/retrieve-metadata/rest-api/),
+and it costs nothing but the address.
 
 ## 4 · The thorough check (optional)
 
@@ -251,8 +271,8 @@ This is the only part of the app that needs an account with an LLM provider, and
 the only part that costs money. Before using it:
 
 1. Set `LLM_PROVIDER` in `.env` to `azure` (the default), `openai`, `anthropic`,
-   `mistral`, `gemini`, or `ollama` (a model running on your own machine: no key,
-   no cost).
+   `mistral`, `gemini`, or `ollama` — [Ollama](https://ollama.com) runs a model on
+   your own machine, so it needs no account, no key and no money.
 2. Fill in the key for that provider, and put the model name in
    `AZURE_OPENAI_DEPLOYMENT` — for **every** provider, not only Azure. The name
    of that setting is historical.
@@ -279,8 +299,9 @@ that will actually be used, and the finished workbook records both on its
 Selecting this check tests the configuration of whichever provider is selected
 and names any key or web address that is missing, *before* any money is spent.
 The test only confirms that the values are filled in. It does not confirm that
-they are correct, and it says nothing about whether the model exists — a name
-typed into **Other** is answered for by the provider, on the first request.
+they are correct, and it says nothing about whether the model exists: a name you
+type into the model box yourself is answered for by the provider, on the first
+request.
 
 The cost depends on the number of **different venues with the status `review`**,
 not on the number of papers: the rows are grouped by venue, and each group costs
@@ -327,13 +348,16 @@ to see that they are empty is the point of their being on the page:
 - **blacklist** — adds venues to the list, treating them as predatory for this
   run only.
 
-Each box carries a **?** beside its name giving the same sentence in the app.
+Each box carries a **?** beside its name. Resting the pointer on it — or reaching
+it with the Tab key — gives the whole of what that list does, and what leaving it
+empty means.
 
 A paper left out by the whitelist was **not examined**. Its absence from the
-report says nothing about it — not that it is fine, and not that it is not — so
-a whitelist is for asking about a set of venues, never for clearing the rest.
-The Summary sheet states how many papers were excluded, so a report of 50 rows
-made from a corpus of 500 says so on its face.
+report says nothing about it: not that it is fine, and not that it is not. Use a
+whitelist to ask about a chosen set of venues — never to clear the rest.
+
+The Summary sheet counts the papers that were excluded, so a report of 50 rows
+made from 500 papers states that difference itself.
 
 Whitelisting a venue never hides a finding about it: a whitelisted venue that is
 on Beall's List still comes back `on_list`.
@@ -398,7 +422,8 @@ things:
 
 **Choose one and it is added**, with its official title and ISSN, so you do not
 have to look either up. There is no Add button beside each match; choosing is the
-action. The line under the box says how many were found — `8 of 138`, say.
+action. The line above the box reports what the directory found — `8 of 138
+match(es)`, say.
 
 The menu shows the eight best matches. If there are more, its last row offers
 them: **▾ Show 20 more** keeps what you typed and lengthens the list.
@@ -415,14 +440,15 @@ matches whose address looks like a shared platform are marked with a **⚠**;
 Crossref does not record an address at all. If you do want a publisher's whole
 site, type its domain into the box instead.
 
-Out of the box both boxes ask their directory over the internet as you type, so
-both need a connection — unless you have downloaded that directory on the
-**Settings** page, in which case the box searches the copy on your own computer
-and needs nothing. Nothing is downloaded unless you ask for it there. While a box
-is asking over the internet, the **Add** button turns into a small spinner — the
-answer takes about a tenth of a second from DOAJ and about half a second from
-Crossref, and the spinner is how you know the box is still working rather than
-finished with nothing to show.
+By default both boxes ask their directory over the internet as you type, so both
+need a connection. The **Settings** page can change that: download a directory
+there, and the box searches the copy on your own computer instead, needing no
+connection at all. Nothing is downloaded unless you ask for it.
+
+While a box is waiting for an answer over the internet, the **Add** button turns
+into a small spinner. DOAJ answers in about a tenth of a second and Crossref in
+about half a second, so the spinner is brief — but it is the difference between
+*still looking* and *finished, with nothing to show*.
 
 > These searches only help you *name* a venue. Whether a journal is in DOAJ or
 > Crossref has no effect on any verdict — the check asks whether the venue is on
@@ -449,8 +475,8 @@ turn a search box off — both answers work, and the app starts on the first one
 
 **Nothing is downloaded until you choose "On this computer"**, and choosing "Over
 the internet" again keeps the file — so choosing the copy a second time is
-instant rather than another download. A copy older than a fortnight is replaced
-on its own, so there is nothing to refresh by hand. The line under each pair of
+instant rather than another download. A copy older than two weeks is replaced
+automatically, so there is nothing to refresh by hand. The line under each pair of
 options reports what is actually on your computer: how many journals, how big,
 and how long ago it arrived.
 
@@ -475,7 +501,31 @@ A plain text entry is matched by name. An object can carry a `name`, a `domain`,
 `issns`, or any combination. The format is described in full in
 [user_lists/README.md](../../src/bealls_list_check/user_lists/README.md).
 
-## 7 · Common problems
+## 7 · A short glossary
+
+Every term this guide uses in a particular way, in one place, with somewhere to
+read further. Nothing here has to be memorised to use the app; it is here so that
+no sentence in this guide depends on a word you were expected to already know.
+
+| Term | What it means here |
+|---|---|
+| **Venue** | The journal or publisher a paper appeared in. This app judges the venue, never the paper. |
+| **Predatory venue** | A venue that charges to publish but skips the checks a real journal performs. Background: [predatory publishing](https://en.wikipedia.org/wiki/Predatory_publishing); the argument that named the problem: [Beall, *Nature* 489, 179 (2012)](https://doi.org/10.1038/489179a). |
+| **[Beall's List](https://beallslist.net)** | The list of possibly predatory journals and publishers this app checks against. Unofficial, disputed, and used here as a copy made on one fixed date. |
+| **[Semantic Scholar](https://www.semanticscholar.org)** | A free academic search service. Its paper records are what this app reads; its [API](https://api.semanticscholar.org) is one way to obtain them. |
+| **[JSON](https://www.json.org/json-en.html)** | A plain-text format for structured data. The paper records are written in it, and so are the venue lists. |
+| **[JSON Lines](https://jsonlines.org)** (`.jsonl`) | A different format: one complete record per line. Common in data pipelines, **not** accepted by the app. |
+| **[DOI](https://www.doi.org)** | Digital Object Identifier — the permanent code that identifies one article, such as `10.1038/489179a`. |
+| **[ISSN](https://portal.issn.org)** | International Standard Serial Number — the eight-digit code that identifies one journal. The most precise way to name a venue. |
+| **[Crossref](https://www.crossref.org)** | The registry where publishers deposit DOIs. The app looks up each DOI there to confirm a venue. Being in it means someone paid a membership, nothing more. |
+| **[DOAJ](https://doaj.org)** | Directory of Open Access Journals — about 23,000 journals that passed its editorial screening. Used to help you *name* a venue, never to judge one. |
+| **[Preprint](https://en.wikipedia.org/wiki/Preprint)** | A paper posted before peer review, on a server such as [arXiv](https://arxiv.org). It has no journal, so there is nothing for this app to check. |
+| **LLM** | Large language model — the kind of system behind ChatGPT. Used by the thorough check only, and only to advise on venues the rules left uncertain. |
+| **[Streamlit](https://streamlit.io)** | The Python library this app's interface is built with. It is why the page reloads itself whenever you change something. |
+| **Corpus** | The set of papers handed to one run. |
+| **Whitelist / blacklist** | Your own two venue lists: one selects which papers are checked, the other adds venues to treat as predatory. See [section 6](#6-crossref-and-your-own-venue-lists). |
+
+## 8 · Common problems
 
 | Problem | Cause and solution |
 |---|---|
@@ -489,14 +539,14 @@ A plain text entry is matched by name. An object can carry a `name`, a `domain`,
 | The report file name ends in a date and time | The normal file was locked, usually because it is open in Excel. The run saves to `bealls_list_results_YYYYMMDD_HHMMSS.xlsx` instead, so nothing is lost. |
 | The result belongs to a different check than the selected one | A result stays on screen when the selection changes, and keeps the name of the check that produced it. Run again to replace it. |
 | Two runs return each other's file | Results go to one shared folder under fixed names. Run one check at a time — one browser tab, and not alongside the command line. |
-| The status preview has no colour | The coloured table needs pandas, which is normally installed together with Streamlit. Without it the table still works, only without colour. |
+| The status preview has no colour | The coloured table needs [pandas](https://pandas.pydata.org), a Python data-analysis library normally installed together with Streamlit. Without it the table still works, only without colour. |
 
 ## Where to go next
 
-- [ui/README.md](../README.md) — the reference: every control, both downloads, and
-  the table of differences between the app and the command line.
-- [README.md](../README.md) — the project: the verdicts, the workbook, the list
-  copy, and the limits to keep in mind when using the results.
+- [The web app's README](../README.md) — the reference: every control, both
+  downloads, and the table of differences between the app and the command line.
+- [The main README](../../README.md) — the project: the verdicts, the workbook, the
+  list copy, and the limits to keep in mind when using the results.
 - [examples/README.md](../../examples/README.md) — the example papers, and the rule
   each one demonstrates.
 - [match/README.md](../../src/bealls_list_check/match/README.md) and
