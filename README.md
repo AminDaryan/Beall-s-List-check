@@ -183,24 +183,54 @@ banner says so, and replacing the text with your own papers is what makes it
 yours. An **Input data quality** panel appears as soon as the papers load: an offline check of the metadata *before* anything runs, downloadable as
 `input_data_quality.xlsx`.
 
-**Step 3 · Options.** No setting here is folded away. One checkbox controls
-**Crossref**; clearing it is equivalent to `--crossref off`. Under **Venue
-lists**, a whitelist (*only check these venues*) and a blacklist (*also treat
-these venues as predatory*) sit side by side and apply to the Fast and Thorough
-checks only — Batch CSV classifies every record. Each is built as a list of rows from a single box: type a name, a website or an
-ISSN and press Add. Typing also searches a venue directory as you go and offers its journals
-underneath, so one can be added with its official title and ISSN: the whitelist
-searches the [DOAJ](https://doaj.org), the blacklist the
-[Crossref](https://www.crossref.org) journal registry, because a venue worth
-blacklisting is not in a directory of vetted journals. Both can be held offline —
-see **Settings** below. If
-nothing matches, Add takes the text as typed. Every row reads **matches on · ISSN 1234-5678 · venue name** — naming each identifier it carries and its value,
-because that is what decides the run's scope. A journal's ISSNs share **one**
-pill (**ISSN 1980-4164 · 1413-2311**): nearly every journal registers two, one
-for the print edition and one for the online one, and two pills each reading
-*ISSN* read as two journals rather than one journal's two numbers. Either of them
-matches. The same list is editable as JSON,
-in the format the CLI flags read from a file, on the box's **JSON** tab.
+**Step 3 · Options.** No setting here is folded away. Each decision is its own
+bordered block: **LLM** (thorough check only), **Crossref** — one checkbox,
+clearing it is equivalent to `--crossref off` — and **Venue lists**.
+
+The two venue lists are a **whitelist** (*only check these venues*) and a
+**blacklist** (*also treat these venues as predatory*), side by side, and **all
+three checks take both**. Each is built as a list of rows from a single box: type a name, a website or an
+ISSN and press Add.
+
+Typing also searches a venue directory as you go and offers its journals
+underneath, so a venue can be added with its official title and ISSN already
+filled in. The whitelist searches the [DOAJ](https://doaj.org); the blacklist
+searches the [Crossref](https://www.crossref.org) journal registry, because a
+venue worth blacklisting is not in a directory of vetted journals. Both can be
+held offline — see **Settings** below. If nothing matches, Add takes the text as
+typed. The same list is editable as JSON, in the format the CLI flags read from a
+file, on the box's **JSON** tab.
+
+**Each entry is matched on one identifier: the most precise it carries.** An
+ISSN if it has one, else a website, else its name. Each row shows the one it will
+use, so what is on screen is what the run does:
+
+| The entry carries | It matches | And not |
+|---|---|---|
+| an **ISSN** (what a directory match gives you) | papers with that ISSN, and papers whose venue name is **exactly** the entry's name | a longer name that merely contains it |
+| a **website** (`ieee.org`) | that host and every host under it | anything the site does not host |
+| a **name** only (typed by hand) | any venue name containing it as a whole word — *IEEE* covers every *IEEE Transactions on …* | *nature* inside *signature* |
+
+The reason is arithmetic rather than taste. Across the corpora in `docs/`,
+blacklisting the journal *Neural Networks* by its **title** reaches 114 papers in
+11 venues — a workshop, *IEEE Transactions on Neural Networks and Learning
+Systems*, four conferences — of which **94 are in venues nobody named**. By its
+**ISSN** it reaches the 20 papers in the journal and misses none. An ISSN is to a
+journal what a DOI is to an article: a registered identifier for one thing. A
+name is a description, and descriptions are shared.
+
+A blacklist entry is an **instruction**, not a hint, so it is applied before the
+check forms any opinion of its own: blacklist a preprint server and papers from
+it are flagged, where the run would otherwise have recorded `no_venue` and never
+consulted your list at all.
+
+The exact-name half of the ISSN rule exists because **42% of the records in those
+corpora carry no venue ISSN at all**, and one naming *Neural Networks* without
+one is still in the journal that was named. Where the paper carries an ISSN that is *not* the listed one, the row is
+**`review`**, not `on_list`. Two readings survive: the same journal under its
+other registered number, since print and online editions hold one each and a
+directory often gives only one — or a different journal with the same title. A journal's ISSNs share **one** pill (**ISSN 1980-4164 · 1413-2311**), and
+either of them matches, so adding the second settles that fork for good.
 The Thorough check
 additionally gets an **LLM provider** picker and a **Model / deployment** picker,
 which decide what answers this run: the provider list is the six supported
@@ -244,8 +274,8 @@ Activate the environment first (`.\.venv\Scripts\Activate.ps1`, or
 python src/bealls_list_check/bealls_list_check.py            # fast check
 python src/bealls_list_check/bealls_llm_check.py --limit 50  # optional LLM pass (cheap test)
 
-# narrow the scope, or add your own predatory venues (both take a JSON file —
-# see user_lists/README.md for the format)
+# select which papers are checked, or add your own predatory venues (both take a
+# JSON file — see user_lists/README.md for the format; batch_check.py takes them too)
 python src/bealls_list_check/bealls_list_check.py --whitelist wl.json --blacklist bl.json
 
 # batch mode: JSONL in, CSV (SS-ID, DOI, Status) out — for scripts/servers
@@ -319,7 +349,10 @@ Every paper gets exactly one **status**, colour-coded in the report:
 | `error` | ⚫ dark | The record couldn't be processed (the reason is shown in the row). |
 
 The ***core* lists** are predatory *publishers*, standalone *journals*, and
-*hijacked* journals — plus any venues you add via `--blacklist`. The two
+*hijacked* journals. A venue you add via `--blacklist` is flagged the same way
+but is never presented as one of Beall's: its row names the source as *your own
+blacklist (not Beall's List)* and says, in words, that the run treats it as
+predatory because you said to. The two
 remaining lists are deliberately weaker: a match against *fake-metrics* companies
 or *vanity presses* is **always** downgraded to `review`, never asserted as
 `on_list`, because neither is a predatory-journal signal.

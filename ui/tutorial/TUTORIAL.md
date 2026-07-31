@@ -336,9 +336,9 @@ by its DOI to confirm the venue. Switching it off forces a fully offline run:
 faster, but the results are less certain. Example papers 4 and 8 fall back from
 `on_list` to `review` without it.
 
-Below it, under **Venue lists**, are two optional boxes, available on the fast
-check and the thorough check. They are empty on almost every run, and being able
-to see that they are empty is the point of their being on the page:
+Below it, under **Venue lists**, are two optional boxes, available on **all three
+checks**. They are empty on almost every run, and being able to see that they are
+empty is the point of their being on the page:
 
 - **whitelist** — selects the papers: only those from the venues on it are
   checked, and only those appear in the report. A paper from any other venue is
@@ -364,70 +364,89 @@ on Beall's List still comes back `on_list`.
 
 ### Adding a venue
 
-Each list has **one box**. Type a name, a website or an ISSN into it; what you
-type decides how the venue is matched, and the row that appears says which:
+Each list has **one box**. Type a name, a website or an ISSN into it and press
+**Add** — the small button at the right-hand end of the box, which appears as
+soon as you type something. Typing also searches a venue directory as you go (see
+[the next section](#finding-a-venue-in-a-directory)), and choosing one of its
+matches adds that venue instead, with its official title and ISSN already filled
+in. Added venues appear in the box below; remove one with the **✕** beside it.
 
-| What you type | Example | What it matches |
+#### One entry, one identifier
+
+**An entry is matched on the most precise identifier it carries, and only on that
+one.** This is the single most important thing to know about these two boxes,
+because it decides how far an entry reaches:
+
+| Your entry carries | It matches | It does **not** match |
 |---|---|---|
-| An ISSN | `2666-2485` | That one journal, exactly. |
-| A website | `ieee.org` | That site and everything under it — so a publisher's address covers all of its journals. |
-| Anything else | `Journal of Widgets` | Any venue name containing those words. |
+| an **ISSN** — what choosing a directory match gives you | papers with that ISSN, and papers whose venue name is **exactly** the entry's name | a longer venue name that merely contains it |
+| a **website**, e.g. `ieee.org` | that host and every host under it, so a publisher's address covers all of its journals | venues the site does not host |
+| a **name** only — what typing text and pressing Add gives you | any venue whose name contains it as a whole word: *IEEE* covers every *IEEE Transactions on …* | a word inside another word: *nature* never matches *signature* |
 
-An ISSN is the most precise, so prefer it when you mean one particular journal.
-A website or a name is the right choice when you mean a whole publisher.
+Each row shows the one identifier it will use, so what is on the screen is what
+the run does.
 
-**An entry is matched on the most precise identifier it carries, and only on
-that one.** Choosing a journal from the directory attaches its official title
-*and* its ISSN, and the ISSN is then what the run uses; the title is how you
-recognise the row, not a second, wider claim. It matters more than it sounds:
-across the corpora in `docs/`, matching a *Neural Networks* entry by its title
-reaches 114 papers in 11 venues — a workshop, *IEEE Transactions on Neural
-Networks and Learning Systems*, four conferences — where its ISSN reaches the 20
-papers in the journal and misses none of them. Each row shows the one identifier
-it will use, so what you see is what the run does.
+**Why an ISSN silences the name.** Choosing *Neural Networks* from the directory
+adds the journal's official title *and* its ISSN, `0893-6080`. If the title also
+matched, the entry would reach far beyond the journal you picked. Measured over
+the example corpora in this project:
 
-A record that carries no ISSN is not lost: an entry with an ISSN also matches a
-venue whose name is **exactly** its own, which is how a paper filed under *Neural
-Networks* with no ISSN field still counts. What it never does is match a longer
-name that merely contains it.
+| That one entry, matched by | Papers flagged | In venues you named |
+|---|---|---|
+| its **title** | 114, across 11 venues | 20 |
+| its **ISSN** | 20 | 20 |
 
-If the paper carries an ISSN and it is **not** the one on your entry, the row is
-`review` rather than `on_list`. The name says one thing and the number says
-another, and both readings are ordinary: a journal holds one ISSN for print and
-another for online, so this may be the same journal under its other number — or a
-different journal with the same title. The run leaves that to you, and says so in
-the row.
+The other 94 were a workshop, *IEEE Transactions on Neural Networks and Learning
+Systems*, and four conferences — none of them the journal. An
+[ISSN](https://portal.issn.org) is to a journal what a [DOI](https://www.doi.org)
+is to an article: a registered identifier for exactly one thing. A name is a
+description, and descriptions are shared.
 
-If you *want* that wider net, type the name and press **Add** instead of choosing
-the directory's match: that entry carries a name and nothing else, so the name is
-what it matches on — *IEEE* then covers every *IEEE Transactions on …*.
+**Why the exact name still counts.** Not every record carries an ISSN — in those
+same corpora, 42% do not. A record naming *Neural Networks* with no ISSN field is
+still in the journal you named, so an ISSN entry also matches a venue whose name
+is **exactly** its own. That is not what over-reached: none of those 94 papers is
+in a venue named exactly *Neural Networks*.
 
-Press **Add** — the small button at the right-hand end of the box — to add
-exactly what is typed. It appears as soon as you type something. Typing also
-searches a venue directory (see below), and choosing one of its matches adds that
-venue instead.
+**When the two disagree.** If the paper carries an ISSN and it is *not* the one
+on your entry, the row is **`review`**, never `on_list`. The name says one thing
+and the number says another, and both readings are ordinary:
 
-Added venues appear in the box underneath. Remove one with the **✕** beside it.
+- the **same journal under its other number** — a journal registers one ISSN for
+  print and another for online, and a directory often hands over only one; or
+- a **different journal with the same title**.
+
+The run refuses to choose, and the row says why. Adding the journal's second ISSN
+to your entry settles it for good — a row can hold both, and either one matches.
+
+**If you want the wide net**, type the name and press **Add** instead of choosing
+the directory's match. That entry carries a name and nothing else, so the name is
+what it matches on.
+
+#### Reading a row
 
 Each row says **what the check will look for**, not just what the venue is
 called:
 
 > **IEEE Open Journal of Systems Engineering**
-> MATCHES ON · `ISSN 2771-9987` · `venue name`
+> MATCHES ON · `ISSN 2771-9987`
 
-That row will match a paper whose ISSN is exactly `2771-9987`, and also any paper
-whose venue name contains that title as a whole phrase. Hover a label to read
-what it matches and how widely. The labels are worth a glance, because they
-differ in how much they cover:
+That row matches a paper whose ISSN is exactly `2771-9987`, and a paper whose
+venue name is exactly *IEEE Open Journal of Systems Engineering*. Hover the label
+to read what it matches and how widely:
 
 | Label | Matches | How wide |
 |---|---|---|
-| `ISSN 1234-5678` | papers with exactly that ISSN | one journal, and nothing else |
+| `ISSN 1234-5678` | papers with exactly that ISSN, or with exactly this entry's venue name | one journal, and nothing else |
 | `site example.com` | papers whose venue is on that host, or any host under it | every journal on that site |
-| `venue name` | papers whose venue name contains this name as a whole word — so a blacklisted *ACM Transactions on Multimedia Computing, Communications, and Applications* also catches the record Semantic Scholar files under that name followed by `(TOMCCAP)` | depends on the name — a short or common one catches journals you did not mean |
+| `venue name` | papers whose venue name contains this name as a whole word | depends on the name — a short or common one catches journals you did not mean |
 
 A **⚠** on a site label means the address looks like a shared publisher platform,
 so it covers every journal hosted there rather than just this one.
+
+A journal's two ISSNs share **one** label (**ISSN 1980-4164 · 1413-2311**),
+because they are one journal's two registrations — print and online — not two
+journals. Either of them matches.
 
 ### Finding a venue in a directory
 
