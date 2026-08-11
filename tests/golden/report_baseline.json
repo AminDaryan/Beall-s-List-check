@@ -1,0 +1,3187 @@
+{
+ "sheets": [
+  {
+   "title": "Results",
+   "max_row": 58,
+   "max_column": 6,
+   "freeze_panes": "A3",
+   "merged_ranges": [
+    "A11:A14",
+    "A15:A18",
+    "A19:A22",
+    "A1:A2",
+    "A23:A26",
+    "A27:A30",
+    "A31:A34",
+    "A35:A38",
+    "A39:A42",
+    "A3:A6",
+    "A43:A46",
+    "A47:A50",
+    "A51:A54",
+    "A55:A58",
+    "A7:A10",
+    "B11:B14",
+    "B15:B18",
+    "B19:B22",
+    "B1:B2",
+    "B23:B26",
+    "B27:B30",
+    "B31:B34",
+    "B35:B38",
+    "B39:B42",
+    "B3:B6",
+    "B43:B46",
+    "B47:B50",
+    "B51:B54",
+    "B55:B58",
+    "B7:B10",
+    "C1:E1",
+    "E11:E14",
+    "E15:E18",
+    "E19:E22",
+    "E23:E26",
+    "E27:E30",
+    "E31:E34",
+    "E35:E38",
+    "E3:E6",
+    "E41:E42",
+    "E43:E46",
+    "E47:E50",
+    "E51:E54",
+    "E55:E58",
+    "E7:E10",
+    "F13:F14",
+    "F17:F18",
+    "F1:F2",
+    "F21:F22",
+    "F25:F26",
+    "F29:F30",
+    "F33:F34",
+    "F37:F38",
+    "F41:F42",
+    "F43:F46",
+    "F47:F50",
+    "F51:F54",
+    "F55:F58",
+    "F5:F6",
+    "F9:F10"
+   ],
+   "column_widths": {
+    "A": 6.0,
+    "B": 12.0,
+    "C": 60.0,
+    "D": 44.0,
+    "E": 40.0,
+    "F": 60.0
+   },
+   "row_heights": {
+    "1": 22.0,
+    "2": 22.0,
+    "3": 30.0,
+    "4": 16.0,
+    "5": 22.5,
+    "6": 22.5,
+    "7": 30.0,
+    "8": 16.0,
+    "9": 22.5,
+    "10": 22.5,
+    "11": 30.0,
+    "12": 16.0,
+    "13": 16.0,
+    "14": 16.0,
+    "15": 16.0,
+    "16": 16.0,
+    "17": 22.5,
+    "18": 22.5,
+    "19": 30.0,
+    "20": 16.0,
+    "21": 45.0,
+    "22": 45.0,
+    "23": 30.0,
+    "24": 16.0,
+    "25": 70.0,
+    "26": 70.0,
+    "27": 30.0,
+    "28": 16.0,
+    "29": 37.5,
+    "30": 37.5,
+    "31": 30.0,
+    "32": 16.0,
+    "33": 37.5,
+    "34": 37.5,
+    "35": 30.0,
+    "36": 16.0,
+    "37": 37.5,
+    "38": 37.5,
+    "39": 45.0,
+    "40": 16.0,
+    "41": 60.0,
+    "42": 60.0,
+    "43": 16.0,
+    "44": 16.0,
+    "45": 16.0,
+    "46": 16.0,
+    "47": 16.0,
+    "48": 16.0,
+    "49": 16.0,
+    "50": 16.0,
+    "51": 16.0,
+    "52": 16.0,
+    "53": 16.0,
+    "54": 16.0,
+    "55": 16.0,
+    "56": 16.0,
+    "57": 16.0,
+    "58": 16.0
+   },
+   "cells": [
+    {
+     "ref": "A1",
+     "value": "#",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "B1",
+     "value": "Status",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "C1",
+     "value": "Paper specifications",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "F1",
+     "value": "Match",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "C2",
+     "value": "Paper",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "D2",
+     "value": "Semantic Scholar venue",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "E2",
+     "value": "Mentioned in",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "A3",
+     "value": 1
+    },
+    {
+     "ref": "B3",
+     "value": "on_list",
+     "fill": "00FFC7CE",
+     "bold": true
+    },
+    {
+     "ref": "C3",
+     "value": "Title: [domain -> on_list (publishers)]"
+    },
+    {
+     "ref": "D3",
+     "value": "Venue: Some Journal"
+    },
+    {
+     "ref": "E3",
+     "value": "Some Journal",
+     "link": "http://dodgypub.test/j1"
+    },
+    {
+     "ref": "F3",
+     "value": "Listed as: Dodgy Publishing Group  (the link opens this Beall-listed venue's own website, not the paper)",
+     "link": "http://dodgypub.test/"
+    },
+    {
+     "ref": "C4",
+     "value": "Year: 2020"
+    },
+    {
+     "ref": "D4",
+     "value": "Type: journal"
+    },
+    {
+     "ref": "F4",
+     "value": "Beall list: predatory publisher"
+    },
+    {
+     "ref": "C5",
+     "value": "Source: fixture.json"
+    },
+    {
+     "ref": "D5",
+     "value": "Domain: dodgypub.test",
+     "link": "http://dodgypub.test/j1"
+    },
+    {
+     "ref": "F5",
+     "value": "Why flagged: the venue's own website (dodgypub.test) is on Beall's List as 'Dodgy Publishing Group' — the most reliable signal."
+    },
+    {
+     "ref": "C6",
+     "value": "DOI: 10.1000/a",
+     "link": "https://doi.org/10.1000/a"
+    },
+    {
+     "ref": "D6",
+     "value": "ISSN: —"
+    },
+    {
+     "ref": "A7",
+     "value": 2,
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "B7",
+     "value": "on_list",
+     "fill": "00FFC7CE",
+     "bold": true
+    },
+    {
+     "ref": "C7",
+     "value": "Title: [domain_subdomain -> on_list]",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D7",
+     "value": "Venue: Sub Journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E7",
+     "value": "Sub Journal",
+     "fill": "00F2F4F8",
+     "link": "http://ojs.subhost.test/x"
+    },
+    {
+     "ref": "F7",
+     "value": "Listed as: Subhost Press  (the link opens this Beall-listed venue's own website, not the paper)",
+     "fill": "00F2F4F8",
+     "link": "http://subhost.test/"
+    },
+    {
+     "ref": "C8",
+     "value": "Year: 2021",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D8",
+     "value": "Type: journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "F8",
+     "value": "Beall list: predatory publisher",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C9",
+     "value": "Source: fixture.json",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D9",
+     "value": "Domain: ojs.subhost.test",
+     "fill": "00F2F4F8",
+     "link": "http://ojs.subhost.test/x"
+    },
+    {
+     "ref": "F9",
+     "value": "Why flagged: the venue's website (ojs.subhost.test) sits under the listed site of 'Subhost Press' — a high-confidence match.",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C10",
+     "value": "DOI: 10.1000/b",
+     "fill": "00F2F4F8",
+     "link": "https://doi.org/10.1000/b"
+    },
+    {
+     "ref": "D10",
+     "value": "ISSN: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "A11",
+     "value": 3
+    },
+    {
+     "ref": "B11",
+     "value": "on_list",
+     "fill": "00FFC7CE",
+     "bold": true
+    },
+    {
+     "ref": "C11",
+     "value": "Title: [issn -> on_list (standalone)]"
+    },
+    {
+     "ref": "D11",
+     "value": "Venue: Journal of Dubious Results"
+    },
+    {
+     "ref": "E11",
+     "value": "—"
+    },
+    {
+     "ref": "F11",
+     "value": "Listed as: Journal of Dubious Results  (the link opens this Beall-listed venue's own website, not the paper)",
+     "link": "http://dubious.test/"
+    },
+    {
+     "ref": "C12",
+     "value": "Year: 2022"
+    },
+    {
+     "ref": "D12",
+     "value": "Type: journal"
+    },
+    {
+     "ref": "F12",
+     "value": "Beall list: standalone predatory journal"
+    },
+    {
+     "ref": "C13",
+     "value": "Source: fixture.json"
+    },
+    {
+     "ref": "D13",
+     "value": "Domain: —"
+    },
+    {
+     "ref": "F13",
+     "value": "Why flagged: the venue's ISSN (1111-2222) matches the listed 'Journal of Dubious Results' — a high-confidence match."
+    },
+    {
+     "ref": "C14",
+     "value": "DOI: 10.1000/c",
+     "link": "https://doi.org/10.1000/c"
+    },
+    {
+     "ref": "D14",
+     "value": "ISSN: 1111-2222"
+    },
+    {
+     "ref": "A15",
+     "value": 4,
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "B15",
+     "value": "on_list",
+     "fill": "00FFC7CE",
+     "bold": true
+    },
+    {
+     "ref": "C15",
+     "value": "Title: [name_exact, listed entry has no site -> on_list]",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D15",
+     "value": "Venue: Bulletin of Unlisted Sites",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E15",
+     "value": "Bulletin of Unlisted Sites",
+     "fill": "00F2F4F8",
+     "link": "http://somewhere-else.test/x"
+    },
+    {
+     "ref": "F15",
+     "value": "Listed as: Bulletin of Unlisted Sites",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C16",
+     "value": "Year: 2023",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D16",
+     "value": "Type: journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "F16",
+     "value": "Beall list: standalone predatory journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C17",
+     "value": "Source: fixture.json",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D17",
+     "value": "Domain: somewhere-else.test",
+     "fill": "00F2F4F8",
+     "link": "http://somewhere-else.test/x"
+    },
+    {
+     "ref": "F17",
+     "value": "Why flagged: the venue name 'Bulletin of Unlisted Sites' exactly matches the listed 'Bulletin of Unlisted Sites' — a high-confidence match.",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C18",
+     "value": "DOI: 10.1000/d",
+     "fill": "00F2F4F8",
+     "link": "https://doi.org/10.1000/d"
+    },
+    {
+     "ref": "D18",
+     "value": "ISSN: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "A19",
+     "value": 5
+    },
+    {
+     "ref": "B19",
+     "value": "review",
+     "fill": "00FFD79A",
+     "bold": true
+    },
+    {
+     "ref": "C19",
+     "value": "Title: [name_exact uncorroborated -> review]"
+    },
+    {
+     "ref": "D19",
+     "value": "Venue: Journal of Shared Titles"
+    },
+    {
+     "ref": "E19",
+     "value": "Journal of Shared Titles",
+     "link": "http://elsewhere.test/x"
+    },
+    {
+     "ref": "F19",
+     "value": "Listed as: Journal of Shared Titles  (the link opens this Beall-listed venue's own website, not the paper)",
+     "link": "http://sharedtitle.test/"
+    },
+    {
+     "ref": "C20",
+     "value": "Year: 2023"
+    },
+    {
+     "ref": "D20",
+     "value": "Type: journal"
+    },
+    {
+     "ref": "F20",
+     "value": "Beall list: standalone predatory journal"
+    },
+    {
+     "ref": "C21",
+     "value": "Source: fixture.json"
+    },
+    {
+     "ref": "D21",
+     "value": "Domain: elsewhere.test",
+     "link": "http://elsewhere.test/x"
+    },
+    {
+     "ref": "F21",
+     "value": "Why flagged: The venue NAME matches the listed 'Journal of Shared Titles', but that listed venue's own website (sharedtitle.test) is not where this paper's journal is at elsewhere.test. Many journals share a name, so this may be a different journal — verify it is really the listed one before excluding."
+    },
+    {
+     "ref": "C22",
+     "value": "DOI: 10.1000/e",
+     "link": "https://doi.org/10.1000/e"
+    },
+    {
+     "ref": "D22",
+     "value": "ISSN: —"
+    },
+    {
+     "ref": "A23",
+     "value": 6,
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "B23",
+     "value": "review",
+     "fill": "00FFD79A",
+     "bold": true
+    },
+    {
+     "ref": "C23",
+     "value": "Title: [hijacked by name -> review]",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D23",
+     "value": "Venue: Cloned Medical Review",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E23",
+     "value": "Cloned Medical Review",
+     "fill": "00F2F4F8",
+     "link": "http://authentic.test/j"
+    },
+    {
+     "ref": "F23",
+     "value": "Listed as: Cloned Medical Review  (the link opens this hijacked (counterfeit) journal's own website, not the paper)",
+     "fill": "00F2F4F8",
+     "link": "http://clone.test/"
+    },
+    {
+     "ref": "C24",
+     "value": "Year: 2022",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D24",
+     "value": "Type: journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "F24",
+     "value": "Beall list: hijacked / cloned journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C25",
+     "value": "Source: fixture.json",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D25",
+     "value": "Domain: authentic.test",
+     "fill": "00F2F4F8",
+     "link": "http://authentic.test/j"
+    },
+    {
+     "ref": "F25",
+     "value": "Why flagged: This paper's venue name ('Cloned Medical Review') matches the listed hijacked journal 'Cloned Medical Review', whose counterfeit website is clone.test, on Beall's List (that entry is the link in the 'Listed as' row above). A hijacked journal is a counterfeit website that impersonates a real journal by copying its exact name, so a name match alone cannot tell the genuine journal from the counterfeit — this paper may well be in the genuine one. Here the paper's venue gives its own website (authentic.test), which differ from the counterfeit's website (clone.test) on the list, which suggests it is the genuine journal. Verify before excluding.",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C26",
+     "value": "DOI: 10.1000/f",
+     "fill": "00F2F4F8",
+     "link": "https://doi.org/10.1000/f"
+    },
+    {
+     "ref": "D26",
+     "value": "ISSN: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "A27",
+     "value": 7
+    },
+    {
+     "ref": "B27",
+     "value": "review",
+     "fill": "00FFD79A",
+     "bold": true
+    },
+    {
+     "ref": "C27",
+     "value": "Title: [vanity_press (weak) -> review]"
+    },
+    {
+     "ref": "D27",
+     "value": "Venue: Vanity Books Ltd"
+    },
+    {
+     "ref": "E27",
+     "value": "Vanity Books Ltd",
+     "link": "http://vanitybooks.test/b"
+    },
+    {
+     "ref": "F27",
+     "value": "Listed as: Vanity Books Ltd  (the link opens this Beall-listed venue's own website, not the paper)",
+     "link": "http://vanitybooks.test/"
+    },
+    {
+     "ref": "C28",
+     "value": "Year: 2019"
+    },
+    {
+     "ref": "D28",
+     "value": "Type: journal"
+    },
+    {
+     "ref": "F28",
+     "value": "Beall list: vanity press (book publisher)"
+    },
+    {
+     "ref": "C29",
+     "value": "Source: fixture.json"
+    },
+    {
+     "ref": "D29",
+     "value": "Domain: vanitybooks.test",
+     "link": "http://vanitybooks.test/b"
+    },
+    {
+     "ref": "F29",
+     "value": "Why flagged: This matched 'Vanity Books Ltd' on one of Beall's WEAK lists — a vanity/book publisher or a company selling fake metrics, not a predatory journal as such. A match here is surfaced for a human to weigh; it is not a predatory-journal finding on its own."
+    },
+    {
+     "ref": "C30",
+     "value": "DOI: 10.1000/g",
+     "link": "https://doi.org/10.1000/g"
+    },
+    {
+     "ref": "D30",
+     "value": "ISSN: —"
+    },
+    {
+     "ref": "A31",
+     "value": 8,
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "B31",
+     "value": "review",
+     "fill": "00FFD79A",
+     "bold": true
+    },
+    {
+     "ref": "C31",
+     "value": "Title: [misleading_metric (weak) -> review]",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D31",
+     "value": "Venue: Global Impact Factor Co",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E31",
+     "value": "Global Impact Factor Co",
+     "fill": "00F2F4F8",
+     "link": "http://fakemetric.test/m"
+    },
+    {
+     "ref": "F31",
+     "value": "Listed as: Global Impact Factor Co  (the link opens this Beall-listed venue's own website, not the paper)",
+     "fill": "00F2F4F8",
+     "link": "http://fakemetric.test/"
+    },
+    {
+     "ref": "C32",
+     "value": "Year: 2019",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D32",
+     "value": "Type: journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "F32",
+     "value": "Beall list: fake-metrics company",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C33",
+     "value": "Source: fixture.json",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D33",
+     "value": "Domain: fakemetric.test",
+     "fill": "00F2F4F8",
+     "link": "http://fakemetric.test/m"
+    },
+    {
+     "ref": "F33",
+     "value": "Why flagged: This matched 'Global Impact Factor Co' on one of Beall's WEAK lists — a vanity/book publisher or a company selling fake metrics, not a predatory journal as such. A match here is surfaced for a human to weigh; it is not a predatory-journal finding on its own.",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C34",
+     "value": "DOI: 10.1000/h",
+     "fill": "00F2F4F8",
+     "link": "https://doi.org/10.1000/h"
+    },
+    {
+     "ref": "D34",
+     "value": "ISSN: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "A35",
+     "value": 9
+    },
+    {
+     "ref": "B35",
+     "value": "review",
+     "fill": "00FFD79A",
+     "bold": true
+    },
+    {
+     "ref": "C35",
+     "value": "Title: [name_fuzzy -> review]"
+    },
+    {
+     "ref": "D35",
+     "value": "Venue: Journal of Dubius Results"
+    },
+    {
+     "ref": "E35",
+     "value": "—"
+    },
+    {
+     "ref": "F35",
+     "value": "Listed as: Journal of Dubious Results  (the link opens this Beall-listed venue's own website, not the paper)",
+     "link": "http://dubious.test/"
+    },
+    {
+     "ref": "C36",
+     "value": "Year: 2021"
+    },
+    {
+     "ref": "D36",
+     "value": "Type: journal"
+    },
+    {
+     "ref": "F36",
+     "value": "Beall list: standalone predatory journal"
+    },
+    {
+     "ref": "C37",
+     "value": "Source: fixture.json"
+    },
+    {
+     "ref": "D37",
+     "value": "Domain: —"
+    },
+    {
+     "ref": "F37",
+     "value": "Why flagged: The venue's name is a very close but inexact match (at least 93% similar) to the listed 'Journal of Dubious Results' — for example a typo or spelling variant. Because it is not an exact match, it is flagged for a check rather than treated as confirmed."
+    },
+    {
+     "ref": "C38",
+     "value": "DOI: 10.1000/i",
+     "link": "https://doi.org/10.1000/i"
+    },
+    {
+     "ref": "D38",
+     "value": "ISSN: —"
+    },
+    {
+     "ref": "A39",
+     "value": 10,
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "B39",
+     "value": "review",
+     "fill": "00FFD79A",
+     "bold": true
+    },
+    {
+     "ref": "C39",
+     "value": "Title: [alternate URLs, two lists -> review (joined)]",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D39",
+     "value": "Venue: Merged Venue",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E39",
+     "value": "Merged Venue  (innocent.test)",
+     "fill": "00F2F4F8",
+     "link": "http://innocent.test/j"
+    },
+    {
+     "ref": "F39",
+     "value": "Listed as: Cloned Medical Review; Dodgy Publishing Group  (the link opens this Beall-listed venue's own website, not the paper)",
+     "fill": "00F2F4F8",
+     "link": "http://clone.test/"
+    },
+    {
+     "ref": "C40",
+     "value": "Year: 2024",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D40",
+     "value": "Type: journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E40",
+     "value": "Merged Venue  (clone.test)",
+     "fill": "00F2F4F8",
+     "link": "http://clone.test/a"
+    },
+    {
+     "ref": "F40",
+     "value": "Beall list: hijacked / cloned journal; predatory publisher",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C41",
+     "value": "Source: fixture.json",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D41",
+     "value": "Domain: innocent.test",
+     "fill": "00F2F4F8",
+     "link": "http://innocent.test/j"
+    },
+    {
+     "ref": "E41",
+     "value": "Merged Venue  (dodgypub.test)",
+     "fill": "00F2F4F8",
+     "link": "http://dodgypub.test/b"
+    },
+    {
+     "ref": "F41",
+     "value": "Why flagged: Matched only via an ALTERNATE venue URL, not the canonical one: the paper's venue is innocent.test, but Semantic Scholar also lists an alternate URL for it — http://clone.test/a; http://dodgypub.test/b — that points to the listed Cloned Medical Review; Dodgy Publishing Group. Semantic Scholar sometimes merges same-named journals, so that publisher may belong to a different journal than this paper's — verify they match.",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C42",
+     "value": "DOI: 10.1000/j",
+     "fill": "00F2F4F8",
+     "link": "https://doi.org/10.1000/j"
+    },
+    {
+     "ref": "D42",
+     "value": "ISSN: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "A43",
+     "value": 11
+    },
+    {
+     "ref": "B43",
+     "value": "clean",
+     "fill": "00C6EFCE",
+     "bold": true
+    },
+    {
+     "ref": "C43",
+     "value": "Title: [clean]"
+    },
+    {
+     "ref": "D43",
+     "value": "Venue: Respectable Journal"
+    },
+    {
+     "ref": "E43",
+     "value": "Respectable Journal",
+     "link": "http://respectable.test/j"
+    },
+    {
+     "ref": "F43",
+     "value": "The venue was identified and is not on Beall's List."
+    },
+    {
+     "ref": "C44",
+     "value": "Year: 2023"
+    },
+    {
+     "ref": "D44",
+     "value": "Type: journal"
+    },
+    {
+     "ref": "C45",
+     "value": "Source: fixture.json"
+    },
+    {
+     "ref": "D45",
+     "value": "Domain: respectable.test",
+     "link": "http://respectable.test/j"
+    },
+    {
+     "ref": "C46",
+     "value": "DOI: 10.1000/k",
+     "link": "https://doi.org/10.1000/k"
+    },
+    {
+     "ref": "D46",
+     "value": "ISSN: 9999-8888"
+    },
+    {
+     "ref": "A47",
+     "value": 12,
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "B47",
+     "value": "no_venue",
+     "fill": "00D9D9D9",
+     "bold": true
+    },
+    {
+     "ref": "C47",
+     "value": "Title: [preprint -> no_venue]",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D47",
+     "value": "Venue: arXiv",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E47",
+     "value": "arXiv",
+     "fill": "00F2F4F8",
+     "link": "https://arxiv.org/abs/1"
+    },
+    {
+     "ref": "F47",
+     "value": "No journal venue to classify — this is a preprint, or the record has no venue information.",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C48",
+     "value": "Year: 2024",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D48",
+     "value": "Type: repository",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C49",
+     "value": "Source: fixture.json",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D49",
+     "value": "Domain: arxiv.org",
+     "fill": "00F2F4F8",
+     "link": "https://arxiv.org/abs/1"
+    },
+    {
+     "ref": "C50",
+     "value": "DOI: 10.1000/l",
+     "fill": "00F2F4F8",
+     "link": "https://doi.org/10.1000/l"
+    },
+    {
+     "ref": "D50",
+     "value": "ISSN: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "A51",
+     "value": 13
+    },
+    {
+     "ref": "B51",
+     "value": "no_venue",
+     "fill": "00D9D9D9",
+     "bold": true
+    },
+    {
+     "ref": "C51",
+     "value": "Title: [no venue information -> no_venue]"
+    },
+    {
+     "ref": "D51",
+     "value": "Venue: —"
+    },
+    {
+     "ref": "E51",
+     "value": "—"
+    },
+    {
+     "ref": "F51",
+     "value": "No journal venue to classify — this is a preprint, or the record has no venue information."
+    },
+    {
+     "ref": "C52",
+     "value": "Year: 2020"
+    },
+    {
+     "ref": "D52",
+     "value": "Type: —"
+    },
+    {
+     "ref": "C53",
+     "value": "Source: fixture.json"
+    },
+    {
+     "ref": "D53",
+     "value": "Domain: —"
+    },
+    {
+     "ref": "C54",
+     "value": "DOI: —"
+    },
+    {
+     "ref": "D54",
+     "value": "ISSN: —"
+    },
+    {
+     "ref": "A55",
+     "value": 14,
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "B55",
+     "value": "error",
+     "fill": "00C00000",
+     "bold": true
+    },
+    {
+     "ref": "C55",
+     "value": "Title: [bad record -> error]",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D55",
+     "value": "Venue: Broken",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E55",
+     "value": "—",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "F55",
+     "value": "Error: TypeError: 'int' object is not iterable",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C56",
+     "value": "Year: 2020",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D56",
+     "value": "Type: journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C57",
+     "value": "Source: fixture.json",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D57",
+     "value": "Domain: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C58",
+     "value": "DOI: 10.1000/n",
+     "fill": "00F2F4F8",
+     "link": "https://doi.org/10.1000/n"
+    },
+    {
+     "ref": "D58",
+     "value": "ISSN: —",
+     "fill": "00F2F4F8"
+    }
+   ]
+  },
+  {
+   "title": "Flagged only",
+   "max_row": 42,
+   "max_column": 6,
+   "freeze_panes": "A3",
+   "merged_ranges": [
+    "A11:A14",
+    "A15:A18",
+    "A19:A22",
+    "A1:A2",
+    "A23:A26",
+    "A27:A30",
+    "A31:A34",
+    "A35:A38",
+    "A39:A42",
+    "A3:A6",
+    "A7:A10",
+    "B11:B14",
+    "B15:B18",
+    "B19:B22",
+    "B1:B2",
+    "B23:B26",
+    "B27:B30",
+    "B31:B34",
+    "B35:B38",
+    "B39:B42",
+    "B3:B6",
+    "B7:B10",
+    "C1:E1",
+    "E11:E14",
+    "E15:E18",
+    "E19:E22",
+    "E25:E26",
+    "E27:E30",
+    "E31:E34",
+    "E35:E38",
+    "E39:E42",
+    "E3:E6",
+    "E7:E10",
+    "F13:F14",
+    "F17:F18",
+    "F1:F2",
+    "F21:F22",
+    "F25:F26",
+    "F29:F30",
+    "F33:F34",
+    "F37:F38",
+    "F41:F42",
+    "F5:F6",
+    "F9:F10"
+   ],
+   "column_widths": {
+    "A": 6.0,
+    "B": 12.0,
+    "C": 60.0,
+    "D": 44.0,
+    "E": 40.0,
+    "F": 60.0
+   },
+   "row_heights": {
+    "1": 22.0,
+    "2": 22.0,
+    "3": 30.0,
+    "4": 16.0,
+    "5": 22.5,
+    "6": 22.5,
+    "7": 30.0,
+    "8": 16.0,
+    "9": 22.5,
+    "10": 22.5,
+    "11": 30.0,
+    "12": 16.0,
+    "13": 16.0,
+    "14": 16.0,
+    "15": 16.0,
+    "16": 16.0,
+    "17": 22.5,
+    "18": 22.5,
+    "19": 30.0,
+    "20": 16.0,
+    "21": 70.0,
+    "22": 70.0,
+    "23": 45.0,
+    "24": 16.0,
+    "25": 60.0,
+    "26": 60.0,
+    "27": 30.0,
+    "28": 16.0,
+    "29": 37.5,
+    "30": 37.5,
+    "31": 30.0,
+    "32": 16.0,
+    "33": 45.0,
+    "34": 45.0,
+    "35": 30.0,
+    "36": 16.0,
+    "37": 37.5,
+    "38": 37.5,
+    "39": 30.0,
+    "40": 16.0,
+    "41": 37.5,
+    "42": 37.5
+   },
+   "cells": [
+    {
+     "ref": "A1",
+     "value": "#",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "B1",
+     "value": "Status",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "C1",
+     "value": "Paper specifications",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "F1",
+     "value": "Match",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "C2",
+     "value": "Paper",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "D2",
+     "value": "Semantic Scholar venue",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "E2",
+     "value": "Mentioned in",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "A3",
+     "value": 1
+    },
+    {
+     "ref": "B3",
+     "value": "on_list",
+     "fill": "00FFC7CE",
+     "bold": true
+    },
+    {
+     "ref": "C3",
+     "value": "Title: [domain -> on_list (publishers)]"
+    },
+    {
+     "ref": "D3",
+     "value": "Venue: Some Journal"
+    },
+    {
+     "ref": "E3",
+     "value": "Some Journal",
+     "link": "http://dodgypub.test/j1"
+    },
+    {
+     "ref": "F3",
+     "value": "Listed as: Dodgy Publishing Group  (the link opens this Beall-listed venue's own website, not the paper)",
+     "link": "http://dodgypub.test/"
+    },
+    {
+     "ref": "C4",
+     "value": "Year: 2020"
+    },
+    {
+     "ref": "D4",
+     "value": "Type: journal"
+    },
+    {
+     "ref": "F4",
+     "value": "Beall list: predatory publisher"
+    },
+    {
+     "ref": "C5",
+     "value": "Source: fixture.json"
+    },
+    {
+     "ref": "D5",
+     "value": "Domain: dodgypub.test",
+     "link": "http://dodgypub.test/j1"
+    },
+    {
+     "ref": "F5",
+     "value": "Why flagged: the venue's own website (dodgypub.test) is on Beall's List as 'Dodgy Publishing Group' — the most reliable signal."
+    },
+    {
+     "ref": "C6",
+     "value": "DOI: 10.1000/a",
+     "link": "https://doi.org/10.1000/a"
+    },
+    {
+     "ref": "D6",
+     "value": "ISSN: —"
+    },
+    {
+     "ref": "A7",
+     "value": 2,
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "B7",
+     "value": "on_list",
+     "fill": "00FFC7CE",
+     "bold": true
+    },
+    {
+     "ref": "C7",
+     "value": "Title: [domain_subdomain -> on_list]",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D7",
+     "value": "Venue: Sub Journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E7",
+     "value": "Sub Journal",
+     "fill": "00F2F4F8",
+     "link": "http://ojs.subhost.test/x"
+    },
+    {
+     "ref": "F7",
+     "value": "Listed as: Subhost Press  (the link opens this Beall-listed venue's own website, not the paper)",
+     "fill": "00F2F4F8",
+     "link": "http://subhost.test/"
+    },
+    {
+     "ref": "C8",
+     "value": "Year: 2021",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D8",
+     "value": "Type: journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "F8",
+     "value": "Beall list: predatory publisher",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C9",
+     "value": "Source: fixture.json",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D9",
+     "value": "Domain: ojs.subhost.test",
+     "fill": "00F2F4F8",
+     "link": "http://ojs.subhost.test/x"
+    },
+    {
+     "ref": "F9",
+     "value": "Why flagged: the venue's website (ojs.subhost.test) sits under the listed site of 'Subhost Press' — a high-confidence match.",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C10",
+     "value": "DOI: 10.1000/b",
+     "fill": "00F2F4F8",
+     "link": "https://doi.org/10.1000/b"
+    },
+    {
+     "ref": "D10",
+     "value": "ISSN: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "A11",
+     "value": 3
+    },
+    {
+     "ref": "B11",
+     "value": "on_list",
+     "fill": "00FFC7CE",
+     "bold": true
+    },
+    {
+     "ref": "C11",
+     "value": "Title: [issn -> on_list (standalone)]"
+    },
+    {
+     "ref": "D11",
+     "value": "Venue: Journal of Dubious Results"
+    },
+    {
+     "ref": "E11",
+     "value": "—"
+    },
+    {
+     "ref": "F11",
+     "value": "Listed as: Journal of Dubious Results  (the link opens this Beall-listed venue's own website, not the paper)",
+     "link": "http://dubious.test/"
+    },
+    {
+     "ref": "C12",
+     "value": "Year: 2022"
+    },
+    {
+     "ref": "D12",
+     "value": "Type: journal"
+    },
+    {
+     "ref": "F12",
+     "value": "Beall list: standalone predatory journal"
+    },
+    {
+     "ref": "C13",
+     "value": "Source: fixture.json"
+    },
+    {
+     "ref": "D13",
+     "value": "Domain: —"
+    },
+    {
+     "ref": "F13",
+     "value": "Why flagged: the venue's ISSN (1111-2222) matches the listed 'Journal of Dubious Results' — a high-confidence match."
+    },
+    {
+     "ref": "C14",
+     "value": "DOI: 10.1000/c",
+     "link": "https://doi.org/10.1000/c"
+    },
+    {
+     "ref": "D14",
+     "value": "ISSN: 1111-2222"
+    },
+    {
+     "ref": "A15",
+     "value": 4,
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "B15",
+     "value": "on_list",
+     "fill": "00FFC7CE",
+     "bold": true
+    },
+    {
+     "ref": "C15",
+     "value": "Title: [name_exact, listed entry has no site -> on_list]",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D15",
+     "value": "Venue: Bulletin of Unlisted Sites",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E15",
+     "value": "Bulletin of Unlisted Sites",
+     "fill": "00F2F4F8",
+     "link": "http://somewhere-else.test/x"
+    },
+    {
+     "ref": "F15",
+     "value": "Listed as: Bulletin of Unlisted Sites",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C16",
+     "value": "Year: 2023",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D16",
+     "value": "Type: journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "F16",
+     "value": "Beall list: standalone predatory journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C17",
+     "value": "Source: fixture.json",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D17",
+     "value": "Domain: somewhere-else.test",
+     "fill": "00F2F4F8",
+     "link": "http://somewhere-else.test/x"
+    },
+    {
+     "ref": "F17",
+     "value": "Why flagged: the venue name 'Bulletin of Unlisted Sites' exactly matches the listed 'Bulletin of Unlisted Sites' — a high-confidence match.",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C18",
+     "value": "DOI: 10.1000/d",
+     "fill": "00F2F4F8",
+     "link": "https://doi.org/10.1000/d"
+    },
+    {
+     "ref": "D18",
+     "value": "ISSN: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "A19",
+     "value": 5
+    },
+    {
+     "ref": "B19",
+     "value": "review",
+     "fill": "00FFD79A",
+     "bold": true
+    },
+    {
+     "ref": "C19",
+     "value": "Title: [hijacked by name -> review]"
+    },
+    {
+     "ref": "D19",
+     "value": "Venue: Cloned Medical Review"
+    },
+    {
+     "ref": "E19",
+     "value": "Cloned Medical Review",
+     "link": "http://authentic.test/j"
+    },
+    {
+     "ref": "F19",
+     "value": "Listed as: Cloned Medical Review  (the link opens this hijacked (counterfeit) journal's own website, not the paper)",
+     "link": "http://clone.test/"
+    },
+    {
+     "ref": "C20",
+     "value": "Year: 2022"
+    },
+    {
+     "ref": "D20",
+     "value": "Type: journal"
+    },
+    {
+     "ref": "F20",
+     "value": "Beall list: hijacked / cloned journal"
+    },
+    {
+     "ref": "C21",
+     "value": "Source: fixture.json"
+    },
+    {
+     "ref": "D21",
+     "value": "Domain: authentic.test",
+     "link": "http://authentic.test/j"
+    },
+    {
+     "ref": "F21",
+     "value": "Why flagged: This paper's venue name ('Cloned Medical Review') matches the listed hijacked journal 'Cloned Medical Review', whose counterfeit website is clone.test, on Beall's List (that entry is the link in the 'Listed as' row above). A hijacked journal is a counterfeit website that impersonates a real journal by copying its exact name, so a name match alone cannot tell the genuine journal from the counterfeit — this paper may well be in the genuine one. Here the paper's venue gives its own website (authentic.test), which differ from the counterfeit's website (clone.test) on the list, which suggests it is the genuine journal. Verify before excluding."
+    },
+    {
+     "ref": "C22",
+     "value": "DOI: 10.1000/f",
+     "link": "https://doi.org/10.1000/f"
+    },
+    {
+     "ref": "D22",
+     "value": "ISSN: —"
+    },
+    {
+     "ref": "A23",
+     "value": 6,
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "B23",
+     "value": "review",
+     "fill": "00FFD79A",
+     "bold": true
+    },
+    {
+     "ref": "C23",
+     "value": "Title: [alternate URLs, two lists -> review (joined)]",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D23",
+     "value": "Venue: Merged Venue",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E23",
+     "value": "Merged Venue  (innocent.test)",
+     "fill": "00F2F4F8",
+     "link": "http://innocent.test/j"
+    },
+    {
+     "ref": "F23",
+     "value": "Listed as: Cloned Medical Review; Dodgy Publishing Group  (the link opens this Beall-listed venue's own website, not the paper)",
+     "fill": "00F2F4F8",
+     "link": "http://clone.test/"
+    },
+    {
+     "ref": "C24",
+     "value": "Year: 2024",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D24",
+     "value": "Type: journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E24",
+     "value": "Merged Venue  (clone.test)",
+     "fill": "00F2F4F8",
+     "link": "http://clone.test/a"
+    },
+    {
+     "ref": "F24",
+     "value": "Beall list: hijacked / cloned journal; predatory publisher",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C25",
+     "value": "Source: fixture.json",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D25",
+     "value": "Domain: innocent.test",
+     "fill": "00F2F4F8",
+     "link": "http://innocent.test/j"
+    },
+    {
+     "ref": "E25",
+     "value": "Merged Venue  (dodgypub.test)",
+     "fill": "00F2F4F8",
+     "link": "http://dodgypub.test/b"
+    },
+    {
+     "ref": "F25",
+     "value": "Why flagged: Matched only via an ALTERNATE venue URL, not the canonical one: the paper's venue is innocent.test, but Semantic Scholar also lists an alternate URL for it — http://clone.test/a; http://dodgypub.test/b — that points to the listed Cloned Medical Review; Dodgy Publishing Group. Semantic Scholar sometimes merges same-named journals, so that publisher may belong to a different journal than this paper's — verify they match.",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C26",
+     "value": "DOI: 10.1000/j",
+     "fill": "00F2F4F8",
+     "link": "https://doi.org/10.1000/j"
+    },
+    {
+     "ref": "D26",
+     "value": "ISSN: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "A27",
+     "value": 7
+    },
+    {
+     "ref": "B27",
+     "value": "review",
+     "fill": "00FFD79A",
+     "bold": true
+    },
+    {
+     "ref": "C27",
+     "value": "Title: [misleading_metric (weak) -> review]"
+    },
+    {
+     "ref": "D27",
+     "value": "Venue: Global Impact Factor Co"
+    },
+    {
+     "ref": "E27",
+     "value": "Global Impact Factor Co",
+     "link": "http://fakemetric.test/m"
+    },
+    {
+     "ref": "F27",
+     "value": "Listed as: Global Impact Factor Co  (the link opens this Beall-listed venue's own website, not the paper)",
+     "link": "http://fakemetric.test/"
+    },
+    {
+     "ref": "C28",
+     "value": "Year: 2019"
+    },
+    {
+     "ref": "D28",
+     "value": "Type: journal"
+    },
+    {
+     "ref": "F28",
+     "value": "Beall list: fake-metrics company"
+    },
+    {
+     "ref": "C29",
+     "value": "Source: fixture.json"
+    },
+    {
+     "ref": "D29",
+     "value": "Domain: fakemetric.test",
+     "link": "http://fakemetric.test/m"
+    },
+    {
+     "ref": "F29",
+     "value": "Why flagged: This matched 'Global Impact Factor Co' on one of Beall's WEAK lists — a vanity/book publisher or a company selling fake metrics, not a predatory journal as such. A match here is surfaced for a human to weigh; it is not a predatory-journal finding on its own."
+    },
+    {
+     "ref": "C30",
+     "value": "DOI: 10.1000/h",
+     "link": "https://doi.org/10.1000/h"
+    },
+    {
+     "ref": "D30",
+     "value": "ISSN: —"
+    },
+    {
+     "ref": "A31",
+     "value": 8,
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "B31",
+     "value": "review",
+     "fill": "00FFD79A",
+     "bold": true
+    },
+    {
+     "ref": "C31",
+     "value": "Title: [name_exact uncorroborated -> review]",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D31",
+     "value": "Venue: Journal of Shared Titles",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E31",
+     "value": "Journal of Shared Titles",
+     "fill": "00F2F4F8",
+     "link": "http://elsewhere.test/x"
+    },
+    {
+     "ref": "F31",
+     "value": "Listed as: Journal of Shared Titles  (the link opens this Beall-listed venue's own website, not the paper)",
+     "fill": "00F2F4F8",
+     "link": "http://sharedtitle.test/"
+    },
+    {
+     "ref": "C32",
+     "value": "Year: 2023",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D32",
+     "value": "Type: journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "F32",
+     "value": "Beall list: standalone predatory journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C33",
+     "value": "Source: fixture.json",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D33",
+     "value": "Domain: elsewhere.test",
+     "fill": "00F2F4F8",
+     "link": "http://elsewhere.test/x"
+    },
+    {
+     "ref": "F33",
+     "value": "Why flagged: The venue NAME matches the listed 'Journal of Shared Titles', but that listed venue's own website (sharedtitle.test) is not where this paper's journal is at elsewhere.test. Many journals share a name, so this may be a different journal — verify it is really the listed one before excluding.",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C34",
+     "value": "DOI: 10.1000/e",
+     "fill": "00F2F4F8",
+     "link": "https://doi.org/10.1000/e"
+    },
+    {
+     "ref": "D34",
+     "value": "ISSN: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "A35",
+     "value": 9
+    },
+    {
+     "ref": "B35",
+     "value": "review",
+     "fill": "00FFD79A",
+     "bold": true
+    },
+    {
+     "ref": "C35",
+     "value": "Title: [name_fuzzy -> review]"
+    },
+    {
+     "ref": "D35",
+     "value": "Venue: Journal of Dubius Results"
+    },
+    {
+     "ref": "E35",
+     "value": "—"
+    },
+    {
+     "ref": "F35",
+     "value": "Listed as: Journal of Dubious Results  (the link opens this Beall-listed venue's own website, not the paper)",
+     "link": "http://dubious.test/"
+    },
+    {
+     "ref": "C36",
+     "value": "Year: 2021"
+    },
+    {
+     "ref": "D36",
+     "value": "Type: journal"
+    },
+    {
+     "ref": "F36",
+     "value": "Beall list: standalone predatory journal"
+    },
+    {
+     "ref": "C37",
+     "value": "Source: fixture.json"
+    },
+    {
+     "ref": "D37",
+     "value": "Domain: —"
+    },
+    {
+     "ref": "F37",
+     "value": "Why flagged: The venue's name is a very close but inexact match (at least 93% similar) to the listed 'Journal of Dubious Results' — for example a typo or spelling variant. Because it is not an exact match, it is flagged for a check rather than treated as confirmed."
+    },
+    {
+     "ref": "C38",
+     "value": "DOI: 10.1000/i",
+     "link": "https://doi.org/10.1000/i"
+    },
+    {
+     "ref": "D38",
+     "value": "ISSN: —"
+    },
+    {
+     "ref": "A39",
+     "value": 10,
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "B39",
+     "value": "review",
+     "fill": "00FFD79A",
+     "bold": true
+    },
+    {
+     "ref": "C39",
+     "value": "Title: [vanity_press (weak) -> review]",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D39",
+     "value": "Venue: Vanity Books Ltd",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E39",
+     "value": "Vanity Books Ltd",
+     "fill": "00F2F4F8",
+     "link": "http://vanitybooks.test/b"
+    },
+    {
+     "ref": "F39",
+     "value": "Listed as: Vanity Books Ltd  (the link opens this Beall-listed venue's own website, not the paper)",
+     "fill": "00F2F4F8",
+     "link": "http://vanitybooks.test/"
+    },
+    {
+     "ref": "C40",
+     "value": "Year: 2019",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D40",
+     "value": "Type: journal",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "F40",
+     "value": "Beall list: vanity press (book publisher)",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C41",
+     "value": "Source: fixture.json",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D41",
+     "value": "Domain: vanitybooks.test",
+     "fill": "00F2F4F8",
+     "link": "http://vanitybooks.test/b"
+    },
+    {
+     "ref": "F41",
+     "value": "Why flagged: This matched 'Vanity Books Ltd' on one of Beall's WEAK lists — a vanity/book publisher or a company selling fake metrics, not a predatory journal as such. A match here is surfaced for a human to weigh; it is not a predatory-journal finding on its own.",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C42",
+     "value": "DOI: 10.1000/g",
+     "fill": "00F2F4F8",
+     "link": "https://doi.org/10.1000/g"
+    },
+    {
+     "ref": "D42",
+     "value": "ISSN: —",
+     "fill": "00F2F4F8"
+    }
+   ]
+  },
+  {
+   "title": "Data quality",
+   "max_row": 10,
+   "max_column": 7,
+   "freeze_panes": "A3",
+   "merged_ranges": [
+    "A1:A2",
+    "A3:A6",
+    "A7:A10",
+    "B1:B2",
+    "B3:B6",
+    "B7:B10",
+    "C1:E1",
+    "E5:E6",
+    "E7:E10",
+    "F1:F2",
+    "F5:F6",
+    "F7:F10",
+    "G1:G2",
+    "G3:G4",
+    "G5:G6",
+    "G7:G10"
+   ],
+   "column_widths": {
+    "A": 6.0,
+    "B": 12.0,
+    "C": 60.0,
+    "D": 44.0,
+    "E": 40.0,
+    "F": 60.0,
+    "G": 60.0
+   },
+   "row_heights": {
+    "1": 22.0,
+    "2": 22.0,
+    "3": 45.0,
+    "4": 16.0,
+    "5": 60.0,
+    "6": 60.0,
+    "7": 16.0,
+    "8": 16.0,
+    "9": 16.0,
+    "10": 16.0
+   },
+   "cells": [
+    {
+     "ref": "A1",
+     "value": "#",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "B1",
+     "value": "Status",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "C1",
+     "value": "Paper specifications",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "F1",
+     "value": "Match",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "G1",
+     "value": "Data-quality issue",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "C2",
+     "value": "Paper",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "D2",
+     "value": "Semantic Scholar venue",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "E2",
+     "value": "Mentioned in",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "A3",
+     "value": 1
+    },
+    {
+     "ref": "B3",
+     "value": "review",
+     "fill": "00FFD79A",
+     "bold": true
+    },
+    {
+     "ref": "C3",
+     "value": "Title: [alternate URLs, two lists -> review (joined)]"
+    },
+    {
+     "ref": "D3",
+     "value": "Venue: Merged Venue"
+    },
+    {
+     "ref": "E3",
+     "value": "Merged Venue  (innocent.test)",
+     "link": "http://innocent.test/j"
+    },
+    {
+     "ref": "F3",
+     "value": "Listed as: Cloned Medical Review; Dodgy Publishing Group  (the link opens this Beall-listed venue's own website, not the paper)",
+     "link": "http://clone.test/"
+    },
+    {
+     "ref": "G3",
+     "value": "Merged venue: this record points at 2 different publishers' sites."
+    },
+    {
+     "ref": "C4",
+     "value": "Year: 2024"
+    },
+    {
+     "ref": "D4",
+     "value": "Type: journal"
+    },
+    {
+     "ref": "E4",
+     "value": "Merged Venue  (clone.test)",
+     "link": "http://clone.test/a"
+    },
+    {
+     "ref": "F4",
+     "value": "Beall list: hijacked / cloned journal; predatory publisher"
+    },
+    {
+     "ref": "C5",
+     "value": "Source: fixture.json"
+    },
+    {
+     "ref": "D5",
+     "value": "Domain: innocent.test",
+     "link": "http://innocent.test/j"
+    },
+    {
+     "ref": "E5",
+     "value": "Merged Venue  (dodgypub.test)",
+     "link": "http://dodgypub.test/b"
+    },
+    {
+     "ref": "F5",
+     "value": "Why flagged: Matched only via an ALTERNATE venue URL, not the canonical one: the paper's venue is innocent.test, but Semantic Scholar also lists an alternate URL for it — http://clone.test/a; http://dodgypub.test/b — that points to the listed Cloned Medical Review; Dodgy Publishing Group. Semantic Scholar sometimes merges same-named journals, so that publisher may belong to a different journal than this paper's — verify they match."
+    },
+    {
+     "ref": "G5",
+     "value": "Fixture warning, second line."
+    },
+    {
+     "ref": "C6",
+     "value": "DOI: 10.1000/j",
+     "link": "https://doi.org/10.1000/j"
+    },
+    {
+     "ref": "D6",
+     "value": "ISSN: —"
+    },
+    {
+     "ref": "A7",
+     "value": 2,
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "B7",
+     "value": "no_venue",
+     "fill": "00D9D9D9",
+     "bold": true
+    },
+    {
+     "ref": "C7",
+     "value": "Title: [no venue information -> no_venue]",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D7",
+     "value": "Venue: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "E7",
+     "value": "—",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "F7",
+     "value": "No journal venue to classify — this is a preprint, or the record has no venue information.",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "G7",
+     "value": "No venue information in this record.",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C8",
+     "value": "Year: 2020",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D8",
+     "value": "Type: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C9",
+     "value": "Source: fixture.json",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D9",
+     "value": "Domain: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "C10",
+     "value": "DOI: —",
+     "fill": "00F2F4F8"
+    },
+    {
+     "ref": "D10",
+     "value": "ISSN: —",
+     "fill": "00F2F4F8"
+    }
+   ]
+  },
+  {
+   "title": "Summary",
+   "max_row": 36,
+   "max_column": 2,
+   "freeze_panes": null,
+   "merged_ranges": [],
+   "column_widths": {
+    "A": 40.0,
+    "B": 60.0
+   },
+   "row_heights": {},
+   "cells": [
+    {
+     "ref": "A1",
+     "value": "Metric",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "B1",
+     "value": "Value",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "A2",
+     "value": "Total papers checked",
+     "bold": true
+    },
+    {
+     "ref": "B2",
+     "value": 14
+    },
+    {
+     "ref": "A3",
+     "value": "On Beall's List (high confidence)",
+     "bold": true
+    },
+    {
+     "ref": "B3",
+     "value": 4
+    },
+    {
+     "ref": "A4",
+     "value": "Needs review (soft match)",
+     "bold": true
+    },
+    {
+     "ref": "B4",
+     "value": 6
+    },
+    {
+     "ref": "A5",
+     "value": "Clean (venue identified, not listed)",
+     "bold": true
+    },
+    {
+     "ref": "B5",
+     "value": 1
+    },
+    {
+     "ref": "A6",
+     "value": "No venue (preprint / no info)",
+     "bold": true
+    },
+    {
+     "ref": "B6",
+     "value": 2
+    },
+    {
+     "ref": "A7",
+     "value": "Errors",
+     "bold": true
+    },
+    {
+     "ref": "B7",
+     "value": 1
+    },
+    {
+     "ref": "A8",
+     "value": "Excluded by the whitelist (not examined, in no sheet)",
+     "bold": true
+    },
+    {
+     "ref": "B8",
+     "value": 3
+    },
+    {
+     "ref": "A9",
+     "value": "Records with data-quality warnings",
+     "bold": true
+    },
+    {
+     "ref": "B9",
+     "value": 2
+    },
+    {
+     "ref": "A11",
+     "value": "Flagged papers by how the venue matched",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "B11",
+     "value": "Count",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "A12",
+     "value": "  the journal's own website is on the list  [domain]",
+     "bold": true
+    },
+    {
+     "ref": "B12",
+     "value": 3
+    },
+    {
+     "ref": "A13",
+     "value": "  the journal/publisher name exactly matches the list  [name_exact]",
+     "bold": true
+    },
+    {
+     "ref": "B13",
+     "value": 3
+    },
+    {
+     "ref": "A14",
+     "value": "  an alternate web link points to a listed site  [domain_alternate_url]",
+     "bold": true
+    },
+    {
+     "ref": "B14",
+     "value": 1
+    },
+    {
+     "ref": "A15",
+     "value": "  the journal's website is part of a listed site  [domain_subdomain]",
+     "bold": true
+    },
+    {
+     "ref": "B15",
+     "value": 1
+    },
+    {
+     "ref": "A16",
+     "value": "  the journal's ISSN is on the list  [issn]",
+     "bold": true
+    },
+    {
+     "ref": "B16",
+     "value": 1
+    },
+    {
+     "ref": "A17",
+     "value": "  the journal name is very similar to a listed name  [name_fuzzy]",
+     "bold": true
+    },
+    {
+     "ref": "B17",
+     "value": 1
+    },
+    {
+     "ref": "A19",
+     "value": "Flagged papers by Beall list",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "B19",
+     "value": "Count",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "A20",
+     "value": "  standalone predatory journal",
+     "bold": true
+    },
+    {
+     "ref": "B20",
+     "value": 4
+    },
+    {
+     "ref": "A21",
+     "value": "  predatory publisher",
+     "bold": true
+    },
+    {
+     "ref": "B21",
+     "value": 2
+    },
+    {
+     "ref": "A22",
+     "value": "  hijacked / cloned journal",
+     "bold": true
+    },
+    {
+     "ref": "B22",
+     "value": 1
+    },
+    {
+     "ref": "A23",
+     "value": "  hijacked / cloned journal; predatory publisher",
+     "bold": true
+    },
+    {
+     "ref": "B23",
+     "value": 1
+    },
+    {
+     "ref": "A24",
+     "value": "  fake-metrics company",
+     "bold": true
+    },
+    {
+     "ref": "B24",
+     "value": 1
+    },
+    {
+     "ref": "A25",
+     "value": "  vanity press (book publisher)",
+     "bold": true
+    },
+    {
+     "ref": "B25",
+     "value": 1
+    },
+    {
+     "ref": "A27",
+     "value": "Run metadata",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "A28",
+     "value": "Snapshot scraped (UTC)",
+     "bold": true
+    },
+    {
+     "ref": "B28",
+     "value": "2026-01-01T00:00:00+00:00"
+    },
+    {
+     "ref": "A29",
+     "value": "Snapshot entries",
+     "bold": true
+    },
+    {
+     "ref": "B29",
+     "value": 8
+    },
+    {
+     "ref": "A30",
+     "value": "Snapshot source",
+     "bold": true
+    },
+    {
+     "ref": "B30",
+     "value": "https://example.test/fixture"
+    },
+    {
+     "ref": "A31",
+     "value": "Corpus files",
+     "bold": true
+    },
+    {
+     "ref": "B31",
+     "value": "fixture.json"
+    },
+    {
+     "ref": "A32",
+     "value": "Check run (local)",
+     "bold": true
+    },
+    {
+     "ref": "B32",
+     "value": "<TIMESTAMP>"
+    },
+    {
+     "ref": "A34",
+     "value": "Caveat",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "A35",
+     "value": "Interpretation",
+     "bold": true
+    },
+    {
+     "ref": "B35",
+     "value": "Synthetic fixture snapshot — not real data."
+    },
+    {
+     "ref": "A36",
+     "value": "'on_list' = exact domain/ISSN/name match. 'review' = fuzzy or soft match — verify by hand before trusting."
+    }
+   ]
+  },
+  {
+   "title": "Legend",
+   "max_row": 70,
+   "max_column": 3,
+   "freeze_panes": null,
+   "merged_ranges": [
+    "A10:C10",
+    "A11:C11",
+    "A12:C12",
+    "A13:C13",
+    "A14:C14",
+    "A15:C15",
+    "A16:C16",
+    "A4:C4",
+    "A5:C5",
+    "A66:C66",
+    "A67:C67",
+    "A68:C68",
+    "A69:C69",
+    "A6:C6",
+    "A70:C70",
+    "A7:C7"
+   ],
+   "column_widths": {
+    "A": 24.0,
+    "B": 16.0,
+    "C": 95.0
+   },
+   "row_heights": {},
+   "cells": [
+    {
+     "ref": "A1",
+     "value": "Beall's List Check — Legend / Data Dictionary",
+     "bold": true
+    },
+    {
+     "ref": "A3",
+     "value": "What this report is — input → output",
+     "bold": true
+    },
+    {
+     "ref": "A4",
+     "value": "• WHAT IT DOES: each paper's publication venue (its journal/publisher) is compared against Beall's List of allegedly predatory venues, and given a STATUS (see the next section)."
+    },
+    {
+     "ref": "A5",
+     "value": "• INPUT: one Semantic Scholar (\"S2\") record per paper, giving the venue's name, website, ISSN and DOI. The check classifies each paper from this metadata as it is; when a record's metadata looks incomplete or self-contradictory, that paper is also listed on the 'Data quality' sheet so you know to double-check it before trusting its result."
+    },
+    {
+     "ref": "A6",
+     "value": "• OUTPUT (the sheets in this file): Results = every paper; Flagged only = just the on_list + review papers to act on; Data quality = papers whose Semantic Scholar metadata looks suspect, plus those whose DOI was cross-checked against Crossref; Summary = counts + run details; Legend = this page. The thorough check adds an 'LLM review' column on Flagged only."
+    },
+    {
+     "ref": "A7",
+     "value": "• NOT proof: Beall's List is an unofficial, archived (~2021), CONTESTED list, so read 'on_list' as \"appears on the list\", not \"is predatory\". See the Caveats at the bottom."
+    },
+    {
+     "ref": "A9",
+     "value": "Glossary — terms used in this report",
+     "bold": true
+    },
+    {
+     "ref": "A10",
+     "value": "• Semantic Scholar (\"S2\") — the scholarly search engine (semanticscholar.org) whose per-paper metadata is the INPUT to this check."
+    },
+    {
+     "ref": "A11",
+     "value": "• Beall's List — an unofficial, archived, contested catalogue of alleged predatory publishers and journals (five lists; see below)."
+    },
+    {
+     "ref": "A12",
+     "value": "• Venue — the journal or conference a paper was published in; this is what the check classifies (not the paper's content)."
+    },
+    {
+     "ref": "A13",
+     "value": "• DOI — a paper's permanent identifier / link (e.g. 10.1002/rev3.3433)."
+    },
+    {
+     "ref": "A14",
+     "value": "• ISSN — the 8-digit number unique to a journal (e.g. 0079-2047)."
+    },
+    {
+     "ref": "A15",
+     "value": "• Domain — the venue's website host (e.g. mdpi.com); the most reliable match signal."
+    },
+    {
+     "ref": "A16",
+     "value": "• Crossref — the publisher-deposited registry used by default (disable with --crossref off) to double-check Semantic Scholar's venue/ISSN and to settle uncertain 'review' verdicts."
+    },
+    {
+     "ref": "A18",
+     "value": "STATUS values (and the row color used in Results)",
+     "bold": true
+    },
+    {
+     "ref": "A19",
+     "value": "Status",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "B19",
+     "value": "Confidence",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "C19",
+     "value": "Meaning",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "A20",
+     "value": "on_list",
+     "fill": "00FFC7CE",
+     "bold": true
+    },
+    {
+     "ref": "B20",
+     "value": "high"
+    },
+    {
+     "ref": "C20",
+     "value": "Venue matched a CORE Beall list (predatory publishers, standalone journals, or hijacked journals) by a high-confidence signal: exact domain, subdomain of a listed domain, exact ISSN, or exact name. Read as \"appears on Beall's List.\""
+    },
+    {
+     "ref": "A21",
+     "value": "review",
+     "fill": "00FFD79A",
+     "bold": true
+    },
+    {
+     "ref": "B21",
+     "value": "verify"
+    },
+    {
+     "ref": "C21",
+     "value": "A softer or contested match: fuzzy name, open-access PDF host, an alternate venue URL, or a WEAK list (vanity-press / misleading-metrics). Check by hand."
+    },
+    {
+     "ref": "A22",
+     "value": "clean",
+     "fill": "00C6EFCE",
+     "bold": true
+    },
+    {
+     "ref": "B22",
+     "value": "—"
+    },
+    {
+     "ref": "C22",
+     "value": "The venue was identified and did NOT match any Beall entry."
+    },
+    {
+     "ref": "A23",
+     "value": "no_venue",
+     "fill": "00D9D9D9",
+     "bold": true
+    },
+    {
+     "ref": "B23",
+     "value": "—"
+    },
+    {
+     "ref": "C23",
+     "value": "Preprint server (e.g. arXiv) or no venue metadata — there is no journal/publisher to classify."
+    },
+    {
+     "ref": "A24",
+     "value": "error",
+     "fill": "00C00000",
+     "bold": true
+    },
+    {
+     "ref": "B24",
+     "value": "—"
+    },
+    {
+     "ref": "C24",
+     "value": "The record could not be processed; the Python error is shown in the first row of the 'Match' column."
+    },
+    {
+     "ref": "A26",
+     "value": "How the venue matched (shown inside the 'Why flagged' line)",
+     "bold": true
+    },
+    {
+     "ref": "A27",
+     "value": "How it matched (part of the 'Why flagged' text)",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "B27",
+     "value": "Result",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "C27",
+     "value": "What it means — with a fixed real example",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "A28",
+     "value": "the journal's own website is on the list",
+     "bold": true
+    },
+    {
+     "ref": "B28",
+     "value": "on_list"
+    },
+    {
+     "ref": "C28",
+     "value": "The journal's website address is itself on Beall's List. Example: a paper in a journal hosted at www.scirp.org is matched because scirp.org (Scientific Research Publishing) is a publisher on the list — the journal's own home is a listed site. This is the most reliable signal."
+    },
+    {
+     "ref": "A29",
+     "value": "the journal's website is part of a listed site",
+     "bold": true
+    },
+    {
+     "ref": "B29",
+     "value": "on_list"
+    },
+    {
+     "ref": "C29",
+     "value": "The journal's website is a section of a bigger website that is on the list. Example: a journal at ojs.bilpublishing.com is matched because it sits under bilpublishing.com (Bilingual Publishing Co.), a listed publisher."
+    },
+    {
+     "ref": "A30",
+     "value": "the journal's ISSN is on the list",
+     "bold": true
+    },
+    {
+     "ref": "B30",
+     "value": "on_list"
+    },
+    {
+     "ref": "C30",
+     "value": "An ISSN is the unique ID number every journal has. Here the journal's ISSN equals the ISSN of a journal on the list. (Rarely used, because Beall's List mostly records names and websites, not ISSNs.)"
+    },
+    {
+     "ref": "A31",
+     "value": "the journal/publisher name exactly matches the list",
+     "bold": true
+    },
+    {
+     "ref": "B31",
+     "value": "on_list"
+    },
+    {
+     "ref": "C31",
+     "value": "The journal or publisher name is exactly the same as a name on the list (capitalisation, accents and punctuation are ignored). Example: a venue named 'OMICS Publishing Group' matches the listed 'OMICS Publishing Group'. Asserted as on_list only when the paper's OWN venue website is the listed site too; if the name matches but the website is different (many journals share a name), it is downgraded to review."
+    },
+    {
+     "ref": "A32",
+     "value": "the name matched and the DOI confirms the journal",
+     "bold": true
+    },
+    {
+     "ref": "B32",
+     "value": "on_list"
+    },
+    {
+     "ref": "C32",
+     "value": "The venue name matched a listed journal, and the paper's DOI (checked against Crossref, the publisher registry) shows — by publisher website or ISSN, not the shared name — that the paper really is in that listed journal. This resolves the 'many journals share a name' doubt, so it is asserted as on_list. Example: a venue named like a listed journal whose DOI registers it to that journal's own ISSN."
+    },
+    {
+     "ref": "A33",
+     "value": "the journal name is very similar to a listed name",
+     "bold": true
+    },
+    {
+     "ref": "B33",
+     "value": "review"
+    },
+    {
+     "ref": "C33",
+     "value": "The name is almost — but not exactly — the same as a listed name (at least 93% similar): a spelling variant or typo, e.g. 'Internatonal Journal of Science' vs the listed 'International Journal of Science'. Because it is not exact it is only ever flagged for review, never as a definite hit."
+    },
+    {
+     "ref": "A34",
+     "value": "an alternate web link points to a listed site",
+     "bold": true
+    },
+    {
+     "ref": "B34",
+     "value": "review"
+    },
+    {
+     "ref": "C34",
+     "value": "The venue's main website looks fine, but one of the OTHER web links Semantic Scholar lists for it points to a listed site (e.g. a scirp.org link). Semantic Scholar sometimes merges two journals that share a name, so that link may belong to a different journal — a human should check."
+    },
+    {
+     "ref": "A35",
+     "value": "an alternate link matched and the DOI confirms it",
+     "bold": true
+    },
+    {
+     "ref": "B35",
+     "value": "on_list"
+    },
+    {
+     "ref": "C35",
+     "value": "An alternate web link for the venue pointed to a listed site, and the paper's DOI (checked against Crossref, the publisher registry) shows it was actually published there. The DOI resolves the 'merged journals' doubt that would otherwise keep this as review, so it is asserted as on_list. Example: a venue whose main site is fine but whose alternate link is scirp.org, where the DOI registers the paper to SCIRP."
+    },
+    {
+     "ref": "A36",
+     "value": "the PDF is hosted on a listed site",
+     "bold": true
+    },
+    {
+     "ref": "B36",
+     "value": "review"
+    },
+    {
+     "ref": "C36",
+     "value": "The journal itself could not be identified, but the free PDF of the paper is hosted on a listed site (e.g. scirp.org). Suggestive but not conclusive, so it is flagged for review."
+    },
+    {
+     "ref": "A37",
+     "value": "the PDF is on a listed site and the DOI confirms it",
+     "bold": true
+    },
+    {
+     "ref": "B37",
+     "value": "on_list"
+    },
+    {
+     "ref": "C37",
+     "value": "The paper's free PDF sits on a listed site, and the paper's DOI (checked against Crossref, the publisher registry) shows it was actually published there — not merely re-hosted. The DOI resolves the re-hosting doubt, so this is asserted as on_list. Example: a paper whose only listed signal is a frontiersin.org PDF, where the DOI registers the paper to Frontiers."
+    },
+    {
+     "ref": "A39",
+     "value": "'Beall list' — which list the matched entry came from",
+     "bold": true
+    },
+    {
+     "ref": "A40",
+     "value": "Beall list (shown in the 'Match' column)",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "B40",
+     "value": "Weight",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "C40",
+     "value": "Meaning",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "A41",
+     "value": "predatory publisher",
+     "bold": true
+    },
+    {
+     "ref": "B41",
+     "value": "core list"
+    },
+    {
+     "ref": "C41",
+     "value": "A predatory publisher — Beall's main list."
+    },
+    {
+     "ref": "A42",
+     "value": "standalone predatory journal",
+     "bold": true
+    },
+    {
+     "ref": "B42",
+     "value": "core list"
+    },
+    {
+     "ref": "C42",
+     "value": "A single predatory journal that is not part of a larger publisher."
+    },
+    {
+     "ref": "A43",
+     "value": "hijacked / cloned journal",
+     "bold": true
+    },
+    {
+     "ref": "B43",
+     "value": "core list"
+    },
+    {
+     "ref": "C43",
+     "value": "A fake journal impersonating a legitimate one by reusing its name and look (only the fake side is listed). A name-only match is downgraded to review, since the clone reuses the real journal's name; only a website match is asserted as on_list. Such a review is cleared to clean when the paper is proven not to be the counterfeit — its venue is the authentic journal's own site, or its DOI resolves (Crossref) to a real publisher that is neither the counterfeit nor on the list — with the reason kept on the Data-quality sheet."
+    },
+    {
+     "ref": "A44",
+     "value": "vanity press (book publisher)",
+     "bold": true
+    },
+    {
+     "ref": "B44",
+     "value": "weak — review only"
+    },
+    {
+     "ref": "C44",
+     "value": "A book/monograph publisher (e.g. IGI Global). Not a journal-quality signal, so a match here is downgraded to review."
+    },
+    {
+     "ref": "A45",
+     "value": "fake-metrics company",
+     "bold": true
+    },
+    {
+     "ref": "B45",
+     "value": "weak — review only"
+    },
+    {
+     "ref": "C45",
+     "value": "A company selling fake impact-factor metrics — not a venue at all, so a match is downgraded to review."
+    },
+    {
+     "ref": "A46",
+     "value": "your own blacklist (not Beall's List)",
+     "bold": true
+    },
+    {
+     "ref": "B46",
+     "value": "supplied for this run"
+    },
+    {
+     "ref": "C46",
+     "value": "Not one of Beall's lists: a venue named in the blacklist given to this run, which the check treats as predatory because it was told to. Matched on the site, the ISSN or the exact name — whichever the entry carried — and asked before anything else, so it applies even to a venue the check would otherwise not classify at all, such as a preprint server. Nothing here reflects Beall's List; remove the entry and the row goes with it."
+    },
+    {
+     "ref": "A48",
+     "value": "Layout of the Results / Flagged-only sheets",
+     "bold": true
+    },
+    {
+     "ref": "A49",
+     "value": "Column",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "B49",
+     "value": "Rows (top -> bottom)",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "C49",
+     "value": "Meaning",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "A50",
+     "value": "(blocks)",
+     "bold": true
+    },
+    {
+     "ref": "B50",
+     "value": "4 rows per paper"
+    },
+    {
+     "ref": "C50",
+     "value": "Each paper occupies a block that is 4 rows tall for every column EXCEPT 'Mentioned in', which grows to fit all its linked venues (so a paper with 10 linked venues is 10 rows tall). Within a block each column's values are merged to fill it — a column with one value is a single cell spanning the whole block, never blank padding rows. Alternating blocks are lightly shaded so they are easy to tell apart."
+    },
+    {
+     "ref": "A51",
+     "value": "#",
+     "bold": true
+    },
+    {
+     "ref": "B51",
+     "value": "(merged)"
+    },
+    {
+     "ref": "C51",
+     "value": "Sequential paper number; the cell spans the paper's whole block."
+    },
+    {
+     "ref": "A52",
+     "value": "Status",
+     "bold": true
+    },
+    {
+     "ref": "B52",
+     "value": "(merged)"
+    },
+    {
+     "ref": "C52",
+     "value": "Classification of the paper (see the Status section); spans the block and is colored by status."
+    },
+    {
+     "ref": "A53",
+     "value": "Paper specifications",
+     "bold": true
+    },
+    {
+     "ref": "B53",
+     "value": "(header band)"
+    },
+    {
+     "ref": "C53",
+     "value": "A grouping header over the next three columns (Paper, Semantic Scholar venue, Mentioned in) — everything describing the paper itself, as opposed to why it was flagged ('Match')."
+    },
+    {
+     "ref": "A54",
+     "value": "Paper",
+     "bold": true
+    },
+    {
+     "ref": "B54",
+     "value": "Title / Year / Source / DOI"
+    },
+    {
+     "ref": "C54",
+     "value": "Paper identity, one field per row. 'Source' is which corpus JSON the paper came from. The DOI row is a link to the article at its publisher."
+    },
+    {
+     "ref": "A55",
+     "value": "Semantic Scholar venue",
+     "bold": true
+    },
+    {
+     "ref": "B55",
+     "value": "Venue / Type / Domain / ISSN"
+    },
+    {
+     "ref": "C55",
+     "value": "The publication venue exactly as Semantic Scholar reports it, one field per row. 'Type' is journal/conference (conferences are out of scope); 'Domain' is the venue website host — the main match key — and links to the venue's site. (Named 'Semantic Scholar venue' to distinguish it from the 'Mentioned in' names beside it.)"
+    },
+    {
+     "ref": "A56",
+     "value": "Mentioned in",
+     "bold": true
+    },
+    {
+     "ref": "B56",
+     "value": "one row per linked venue"
+    },
+    {
+     "ref": "C56",
+     "value": "Each journal / publisher / venue tied to the paper THAT HAS A WEB LINK, showing the venue name and linking to the venue's own site. (The venue type — journal/conference — is not repeated here; it is in the 'Type' field of the Semantic Scholar venue column.) Venues with no link are omitted, and there is one entry per distinct venue URL (canonical + alternates), so a merged-venue record shows every site it points at, each disambiguated by its host. This is the one column whose block grows to fit them all (6 linked venues -> a 6-row block; the other columns keep their fields, merged to fit)."
+    },
+    {
+     "ref": "A57",
+     "value": "Match",
+     "bold": true
+    },
+    {
+     "ref": "B57",
+     "value": "Listed as / Beall list / Why flagged"
+    },
+    {
+     "ref": "C57",
+     "value": "Why the paper was flagged, one field per row. 'Listed as' is the Beall's List entry that matched — its link opens THAT entry's own website (the listed/predatory venue), NOT this paper's venue; 'Beall list' is which list it came from (see the 'Beall list' section); 'Why flagged' is a single plain-English line naming HOW it matched (see the 'How the venue matched' section) and the concrete listed entry. For clean / no_venue / error rows the first row shows a short note and the rest are blank."
+    },
+    {
+     "ref": "A58",
+     "value": "LLM review",
+     "bold": true
+    },
+    {
+     "ref": "B58",
+     "value": "(Flagged-only, LLM workbook)"
+    },
+    {
+     "ref": "C58",
+     "value": "Present only on the Flagged-only sheet of bealls_llm_results.xlsx, and only for 'review' papers: the LLM's recommendation — Predatory (exclude) / Legitimate (keep) / Uncertain (check) — plus the entity it matched and a one-line reason, to help you resolve each review paper. The LLM never sets 'on_list' on its own."
+    },
+    {
+     "ref": "A60",
+     "value": "The 'Data quality' sheet",
+     "bold": true
+    },
+    {
+     "ref": "A61",
+     "value": "Column",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "B61",
+     "value": "Rows (top -> bottom)",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "C61",
+     "value": "Meaning",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "A62",
+     "value": "(which papers)",
+     "bold": true
+    },
+    {
+     "ref": "B62",
+     "value": "one block per paper"
+    },
+    {
+     "ref": "C62",
+     "value": "Lists the papers whose Semantic Scholar record looks suspect — so a verdict above isn't trusted blindly — PLUS any paper whose DOI was checked against Crossref, showing what that check found. A row here is therefore not automatically a problem: it may simply be the record of a venue that Crossref confirmed or cleared. This sheet is omitted entirely when there is nothing at all to report."
+    },
+    {
+     "ref": "A63",
+     "value": "Data-quality issue",
+     "bold": true
+    },
+    {
+     "ref": "B63",
+     "value": "one row per issue"
+    },
+    {
+     "ref": "C63",
+     "value": "The specific problem(s) found: no venue info, a malformed DOI/ISSN, leftover HTML codes in the name, a 'merged venue' (one record pointing at several publishers' sites), and — when the Crossref cross-check is enabled — a venue/ISSN that disagrees with the publisher-deposited record. For a 'merged venue' the check also looks up the paper's DOI in Crossref and names the journal it was actually published in, so you don't have to. Appearing here is a 'check this by hand' flag, not proof the verdict is wrong."
+    },
+    {
+     "ref": "A65",
+     "value": "Caveats — read before interpreting results",
+     "bold": true
+    },
+    {
+     "ref": "A66",
+     "value": "• Beall's List is an unofficial, archived, frozen (~2021), CONTESTED list. A match is an allegation as of the snapshot date, not proof a venue is predatory."
+    },
+    {
+     "ref": "A67",
+     "value": "• Being on the list is contested. Frontiers, for example, is on the list but widely considered legitimate, so 'on_list' = \"appears on the list,\" not \"is predatory.\" (MDPI is in the site's 'Excluded — decide after reading' section, so it is NOT flagged.)"
+    },
+    {
+     "ref": "A68",
+     "value": "• This check classifies the VENUE, not the paper's content/quality."
+    },
+    {
+     "ref": "A69",
+     "value": "• The base check uses NO LLM (0 tokens). Every result is deterministic and auditable from the 'Match' column. The optional LLM pass only ADDS recommendations for the 'review' papers (the 'LLM review' column); it never changes a deterministic verdict."
+    },
+    {
+     "ref": "A70",
+     "value": "• no_venue is mostly arXiv/preprints, which have no journal publisher and so cannot be on Beall's List."
+    }
+   ]
+  }
+ ],
+ "n_flagged": 10,
+ "statuses": [
+  "on_list",
+  "on_list",
+  "on_list",
+  "on_list",
+  "review",
+  "review",
+  "review",
+  "review",
+  "review",
+  "review",
+  "clean",
+  "no_venue",
+  "no_venue",
+  "error"
+ ],
+ "list_sources": [
+  "publishers",
+  "publishers",
+  "standalone_journal",
+  "standalone_journal",
+  "standalone_journal",
+  "hijacked",
+  "vanity_press",
+  "misleading_metric",
+  "standalone_journal",
+  "hijacked; publishers",
+  "",
+  "",
+  "",
+  ""
+ ],
+ "matched_on": [
+  "domain",
+  "domain_subdomain",
+  "issn",
+  "name_exact",
+  "name_exact",
+  "name_exact",
+  "domain",
+  "domain",
+  "name_fuzzy",
+  "domain_alternate_url",
+  "",
+  "",
+  "",
+  "TypeError: 'int' object is not iterable"
+ ]
+}
