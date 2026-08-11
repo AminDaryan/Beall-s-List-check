@@ -27,6 +27,7 @@ from openpyxl.cell.text import InlineFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from config import RESULTS_DIR, RESULTS_FILENAME, STATUS_FILL_COLORS
+from normalize import split_list_sources
 from descriptions import (
     _on_list_why, _list_plain, _signal_plain, _NONMATCH_NOTES,
     _LEGEND_SECTIONS, _LEGEND_TITLE,
@@ -160,9 +161,18 @@ def _match_subrows(r):
         if listed_url:
             # A blacklisted venue is on no list but the reader's own, so the
             # sentence that names the destination must not call it Beall-listed.
+            #
+            # Read the FIRST list, not the whole field: a row matched through
+            # several alternate URLs names every list it hit, joined with "; ",
+            # and comparing that joined value whole matched nothing — so a
+            # counterfeit site was described as "this Beall-listed venue's own
+            # website".  The link is the first hit's URL and the joined string is
+            # built from the same ordered hits, so the first name is always the
+            # list of the entry this sentence is about.
+            primary = (split_list_sources(r.get("list_source")) or [""])[0]
             where = ("this hijacked (counterfeit) journal's own website"
-                     if r.get("list_source") == "hijacked"
-                     else "this venue's own website" if r.get("list_source") == "blacklist"
+                     if primary == "hijacked"
+                     else "this venue's own website" if primary == "blacklist"
                      else "this Beall-listed venue's own website")
             # Style ONLY the entry name as the link; the "Listed as: " label and
             # the explanation stay plain text (same rich-text approach as the
@@ -436,8 +446,17 @@ def _write_summary_sheet(ws, results, snapshot_meta, corpus_files,
     for r in results:
         status_counts[r["status"]] = status_counts.get(r["status"], 0) + 1
         if r["status"] in ("on_list", "review"):
-            if r["list_source"]:
-                list_counts[r["list_source"]] = list_counts.get(r["list_source"], 0) + 1
+            # Count each list the paper matched, not the field as one string.  A
+            # row matched through several alternate URLs names them joined with
+            # "; ", and keying on that produced a bucket of its own — a Summary
+            # line reading "predatory publisher; standalone predatory journal"
+            # beside the single-list lines, whose number belonged to neither.
+            # The renderer below already splits the key it is handed
+            # (descriptions._list_plain), so only the counter was out of step.
+            # A paper on two lists now counts once under each, which means these
+            # figures can sum to more than the flagged total.
+            for src in split_list_sources(r["list_source"]):
+                list_counts[src] = list_counts.get(src, 0) + 1
             mo = r.get("matched_on") or "—"
             signal_counts[mo] = signal_counts.get(mo, 0) + 1
 

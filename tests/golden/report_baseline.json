@@ -812,7 +812,7 @@
     },
     {
      "ref": "F39",
-     "value": "Listed as: Cloned Medical Review; Dodgy Publishing Group  (the link opens this Beall-listed venue's own website, not the paper)",
+     "value": "Listed as: Cloned Medical Review; Dodgy Publishing Group  (the link opens this hijacked (counterfeit) journal's own website, not the paper)",
      "fill": "00F2F4F8",
      "link": "http://clone.test/"
     },
@@ -1609,7 +1609,7 @@
     },
     {
      "ref": "F23",
-     "value": "Listed as: Cloned Medical Review; Dodgy Publishing Group  (the link opens this Beall-listed venue's own website, not the paper)",
+     "value": "Listed as: Cloned Medical Review; Dodgy Publishing Group  (the link opens this hijacked (counterfeit) journal's own website, not the paper)",
      "fill": "00F2F4F8",
      "link": "http://clone.test/"
     },
@@ -2059,7 +2059,7 @@
     },
     {
      "ref": "F3",
-     "value": "Listed as: Cloned Medical Review; Dodgy Publishing Group  (the link opens this Beall-listed venue's own website, not the paper)",
+     "value": "Listed as: Cloned Medical Review; Dodgy Publishing Group  (the link opens this hijacked (counterfeit) journal's own website, not the paper)",
      "link": "http://clone.test/"
     },
     {
@@ -2184,7 +2184,7 @@
   },
   {
    "title": "Summary",
-   "max_row": 36,
+   "max_row": 35,
    "max_column": 2,
    "freeze_panes": null,
    "merged_ranges": [],
@@ -2372,7 +2372,7 @@
     },
     {
      "ref": "B21",
-     "value": 2
+     "value": 3
     },
     {
      "ref": "A22",
@@ -2381,11 +2381,11 @@
     },
     {
      "ref": "B22",
-     "value": 1
+     "value": 2
     },
     {
      "ref": "A23",
-     "value": "  hijacked / cloned journal; predatory publisher",
+     "value": "  fake-metrics company",
      "bold": true
     },
     {
@@ -2394,7 +2394,7 @@
     },
     {
      "ref": "A24",
-     "value": "  fake-metrics company",
+     "value": "  vanity press (book publisher)",
      "bold": true
     },
     {
@@ -2402,82 +2402,73 @@
      "value": 1
     },
     {
-     "ref": "A25",
-     "value": "  vanity press (book publisher)",
-     "bold": true
-    },
-    {
-     "ref": "B25",
-     "value": 1
-    },
-    {
-     "ref": "A27",
+     "ref": "A26",
      "value": "Run metadata",
      "fill": "002F5496",
      "bold": true
     },
     {
-     "ref": "A28",
+     "ref": "A27",
      "value": "Snapshot scraped (UTC)",
      "bold": true
     },
     {
-     "ref": "B28",
+     "ref": "B27",
      "value": "2026-01-01T00:00:00+00:00"
     },
     {
-     "ref": "A29",
+     "ref": "A28",
      "value": "Snapshot entries",
      "bold": true
     },
     {
-     "ref": "B29",
+     "ref": "B28",
      "value": 8
     },
     {
-     "ref": "A30",
+     "ref": "A29",
      "value": "Snapshot source",
      "bold": true
     },
     {
-     "ref": "B30",
+     "ref": "B29",
      "value": "https://example.test/fixture"
     },
     {
-     "ref": "A31",
+     "ref": "A30",
      "value": "Corpus files",
      "bold": true
     },
     {
-     "ref": "B31",
+     "ref": "B30",
      "value": "fixture.json"
     },
     {
-     "ref": "A32",
+     "ref": "A31",
      "value": "Check run (local)",
      "bold": true
     },
     {
-     "ref": "B32",
+     "ref": "B31",
      "value": "<TIMESTAMP>"
     },
     {
-     "ref": "A34",
+     "ref": "A33",
      "value": "Caveat",
      "fill": "002F5496",
      "bold": true
     },
     {
-     "ref": "A35",
+     "ref": "A34",
      "value": "Interpretation",
      "bold": true
     },
     {
-     "ref": "B35",
+     "ref": "B34",
      "value": "Synthetic fixture snapshot — not real data."
     },
     {
-     "ref": "A36",
+     "ref": "A35",
      "value": "'on_list' = exact domain/ISSN/name match. 'review' = fuzzy or soft match — verify by hand before trusting."
     }
    ]

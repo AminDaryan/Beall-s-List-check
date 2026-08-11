@@ -32,7 +32,7 @@ for _p in [_ROOT, *(d for d in _ROOT.iterdir() if d.is_dir() and (d / f"{d.name}
         sys.path.insert(0, str(_p))
 from normalize import (
     normalize_name, normalize_host, normalize_issn,
-    extract_issns, significant_tokens, similarity,
+    extract_issns, significant_tokens, similarity, split_list_sources,
 )
 from config import (
     FUZZY_CUTOFF, MIN_NAME_LEN, FUZZY_LIST_SOURCES, WEAK_LIST_SOURCES,
@@ -333,6 +333,15 @@ def _review_reason(r: dict) -> str:
     if r["status"] != "review":
         return ""
     mo = r["matched_on"]
+    # A 'review' can name several lists at once (the alternate-URL tier joins
+    # them), so read the field through the shared splitter rather than comparing
+    # it whole.  The two questions asked below are deliberately different:
+    # *primary* is the list of the entry this row's link points at — the one the
+    # hijacked wording describes — while the weak-list test further down asks
+    # whether ANY matched list is a weak one, because that is a property of the
+    # match as a whole.
+    sources = split_list_sources(r["list_source"])
+    primary = sources[0] if sources else ""
     if mo == "name_exact_issn_differs":
         listed = r.get("matched_name") or "the entry you listed"
         return (f"You put '{listed}' on the blacklist for this run, and this venue's "
@@ -367,7 +376,7 @@ def _review_reason(r: dict) -> str:
                 "A PDF can be re-hosted by someone other than the publisher, so this "
                 "is flagged for a check rather than treated as proof — confirm where "
                 "the paper was actually published.")
-    if r["list_source"] == "hijacked" and mo.startswith("name"):
+    if primary == "hijacked" and mo.startswith("name"):
         # Name BOTH sides of the match explicitly — the paper's venue name and the
         # listed hijacked entry — and point to that entry's link (carried by the
         # 'Listed as' row above), so the reader sees exactly which matched which.
@@ -414,7 +423,7 @@ def _review_reason(r: dict) -> str:
                 f"similar) to the listed '{r.get('matched_name')}' — for example a "
                 "typo or spelling variant. Because it is not an exact match, it is "
                 "flagged for a check rather than treated as confirmed.")
-    if any(s in WEAK_LIST_SOURCES for s in r["list_source"].split("; ")):
+    if any(s in WEAK_LIST_SOURCES for s in sources):
         return (f"This matched '{r.get('matched_name')}' on one of Beall's WEAK "
                 "lists — a vanity/book publisher or a company selling fake metrics, "
                 "not a predatory journal as such. A match here is surfaced for a "

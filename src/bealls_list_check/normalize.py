@@ -120,6 +120,31 @@ def extract_issns(text) -> list:
 
 
 # ---------------------------------------------------------------------------
+# list_source normalization
+# ---------------------------------------------------------------------------
+
+
+def split_list_sources(list_source) -> list:
+    """Split a result's ``list_source`` into the individual lists it names.
+
+    A result usually names one list, but the alternate-URL tier in ``match.py``
+    matches every listed entry among a venue's alternate URLs at once and joins
+    their lists with ``"; "``.  Both shapes therefore reach every consumer, and
+    they used to be handled inconsistently — two sites split the value while the
+    rest compared it whole, so a joined value silently failed every
+    ``== "hijacked"``-style test.  Splitting in one place is what keeps those
+    consumers in agreement.
+
+    **Order is significant and is preserved.**  The first name is the list of the
+    entry that ``matched_url`` points at: ``match.py`` builds the joined string
+    and that URL from the same ordered list of hits, so ``sources[0]`` and the
+    link always describe the same entry.  A caller that has to say what the link
+    opens should therefore read the first element, not test membership.
+    """
+    return [part.strip() for part in str(list_source or "").split(";") if part.strip()]
+
+
+# ---------------------------------------------------------------------------
 # Fuzzy matching (dependency-free, token-blocked)
 # ---------------------------------------------------------------------------
 
