@@ -40,11 +40,17 @@ ones, because the weak-list downgrade and the fuzzy tier are keyed on them.
 
 | Kscien list | slug | category | entries kept |
 |---|---|---|---|
-| Standalone Journals | `standalone-journals` | `standalone_journal` | 1,467 |
-| Non-Recommended Publishers | `publishers` | `publishers` | 1,266 |
-| Non-Recommended Conferences | `predatory-conferences` | `predatory_conference` | 454 |
-| Hijacked Journals | `hijacked-journals` | `hijacked` | 233 |
+| Standalone Journals | `standalone-journals` | `standalone_journal` | 1,476 |
+| Non-Recommended Publishers | `publishers` | `publishers` | 1,271 |
+| Non-Recommended Conferences | `predatory-conferences` | `predatory_conference` | 498 |
+| Hijacked Journals | `hijacked-journals` | `hijacked` | 234 |
 | Misleading Metrics | `misleading-metrics` | `misleading_metric` | 53 |
+| *(assigned to no list by Kscien)* | — | `unclassified` | 7 |
+| **Total** | | | **3,539** |
+
+Those counts are Kscien's own, and the snapshot is expected to reproduce them
+exactly: a reader checking *"the tool says 498 conferences, the site says 498"*
+must get agreement. `tests/test_providers.py` asserts the reconciliation.
 
 **`predatory_conference` is Kscien's alone** — Beall's has no conference list — and
 it is a *weak* category: a match is surfaced for a human, never asserted as a
@@ -117,9 +123,19 @@ Three cases still force a full pull, because an incremental fetch cannot see the
   derived from the cleaned string, keeping
   `normalize_name(name) == normalized_name`. A later stage relies on that when it
   has only the display name to work from.
-- **7 unassigned entries** belong to no list at all and are skipped and counted,
-  not guessed at. Six of them are among the most recent additions.
-- **Duplicates.** Deduplicated on `(list_source, normalized_name, domain)` — the
-  same key the Beall's scraper uses — so two different venues that merely share a
-  name are both kept. ~59 collapse.
+- **7 unassigned entries** belong to none of Kscien's own lists. They are kept
+  under `unclassified`, which is a *weak* category: Kscien has published the venue
+  but not said what it is alleging, so a match is surfaced for a human and never
+  asserted. They are not dropped — six of the seven are among Kscien's most recent
+  additions, so dropping them would discard precisely the newest material — and
+  their list is not guessed from the name, which would state a claim the source
+  did not make.
+- **Duplicates are reported, not removed.** ~59 entries share an index key with an
+  earlier one. Collapsing them at fetch time broke reconciliation with Kscien's own
+  counts (conferences lost 44 of 498) and bought nothing: `BeallIndex` stores a
+  *list* of entries per key and `_best` chooses among them, so a repeated venue
+  costs a slightly larger index and changes no verdict. The count is recorded in
+  the snapshot's metadata as `internal_duplicates`. (The Beall's scraper *does*
+  deduplicate, because it parses HTML where the same anchor can appear twice as
+  page furniture; this API returns records with distinct ids.)
 - **11 entries have no website** and are kept: they can still match by name.

@@ -264,6 +264,76 @@ class TestIssnTier(unittest.TestCase):
         self.assertEqual(by_name["status"], "review")    # name needs the site to agree
 
 
+class TestKscienSnapshotIsFaithful(unittest.TestCase):
+    """A fetched snapshot must account for every record the source publishes.
+
+    Skipped when no local copy exists — Kscien's data is not redistributed with
+    this repository (they state "All Rights Reserved" and publish no licence), so
+    a fresh clone legitimately has none.
+
+    The property under test is *reconciliation*, not a fixed number: a reader
+    checking "the tool says 498 conferences, the site says 498" must get
+    agreement. An earlier build deduplicated at fetch time and silently lost 59
+    entries, 44 of them conferences, while its output looked healthy.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        path = config.PROVIDERS["kscien"]["snapshot"]
+        if not path.exists():
+            raise unittest.SkipTest(
+                "no local Kscien snapshot; fetch one with "
+                "python src/bealls_list_check/fetch_kscien/fetch_kscien.py")
+        cls.snap = json.loads(path.read_text(encoding="utf-8"))
+
+    def test_every_published_record_is_present(self):
+        meta = self.snap["meta"]
+        self.assertEqual(len(self.snap["entries"]), meta["live_total"],
+                         "the snapshot must hold one entry per record the source "
+                         "publishes — no silent dropping, no fetch-time dedupe")
+
+    def test_category_counts_sum_to_the_total(self):
+        meta = self.snap["meta"]
+        self.assertEqual(sum(meta["counts"].values()), meta["live_total"])
+
+    def test_every_category_is_one_the_matcher_governs(self):
+        for category in self.snap["meta"]["counts"]:
+            self.assertIn(category, config.KNOWN_LIST_SOURCES)
+
+    def test_entries_carry_no_issns(self):
+        """Kscien publishes none. If this ever fails, the ISSN tier — which
+        asserts on_list with no corroboration — has just gained thousands of new
+        entries and needs review before the list is trusted."""
+        with_issn = [e for e in self.snap["entries"] if e.get("issns")]
+        self.assertEqual(with_issn, [])
+
+    def test_cleaned_names_stay_consistent_with_their_match_keys(self):
+        """`normalize_name(name)` must equal the stored `normalized_name`.
+
+        Kscien's titles carry replacement characters and non-breaking spaces, so
+        this is the property the cleaning step exists to preserve — and the one a
+        later stage relies on when it has only the display name to work from.
+        """
+        from normalize import normalize_name
+        bad = [e["name"] for e in self.snap["entries"]
+               if normalize_name(e["name"]) != e["normalized_name"]]
+        self.assertEqual(bad[:5], [], f"{len(bad)} entries have drifting keys")
+
+
+class TestUnclassifiedIsNeverAsserted(unittest.TestCase):
+
+    def test_unclassified_is_a_weak_category(self):
+        """A catalogue that lists a venue but assigns it to none of its own lists
+        has not said what it alleges, so a match must be surfaced, not asserted."""
+        self.assertIn("unclassified", config.WEAK_LIST_SOURCES)
+        self.assertIn("unclassified", config.KNOWN_LIST_SOURCES)
+        idx = BeallIndex([_entry("Verduci Editore", "verduci.test", "unclassified",
+                                 provider="kscien")])
+        r = match_paper(idx, _paper("p1", "Verduci Editore",
+                                    url="http://verduci.test/j"), "f.json")
+        self.assertEqual(r["status"], "review")
+
+
 class TestNoVenueIsExplained(unittest.TestCase):
     """A paper outside the legitimate set must say WHY, and the two 'no_venue'
     causes are different answers: a preprint has a venue no list can cover, while

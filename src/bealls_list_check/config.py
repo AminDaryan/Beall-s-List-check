@@ -82,6 +82,7 @@ KNOWN_LIST_SOURCES = {
     "publishers", "standalone_journal", "hijacked",
     "vanity_press", "misleading_metric",
     "predatory_conference",            # Kscien only; Beall's has no equivalent
+    "unclassified",                    # listed by a catalogue, but under no list
     "whitelist", "blacklist",          # the user's own two lists
 }
 
@@ -129,7 +130,12 @@ FUZZY_LIST_SOURCES = {"publishers", "standalone_journal", "hijacked", "blacklist
 #                        on ..."), so a hit is surfaced for a human rather than
 #                        asserted.  This is also the only category no Beall list
 #                        has an equivalent for.
-WEAK_LIST_SOURCES = {"vanity_press", "misleading_metric", "predatory_conference"}
+#   * unclassified     — a catalogue published the venue but assigned it to none
+#                        of its own lists, so it has not said what it is alleging.
+#                        Surfaced for a human; asserting it would state a claim
+#                        the source did not make.
+WEAK_LIST_SOURCES = {"vanity_press", "misleading_metric", "predatory_conference",
+                     "unclassified"}
 
 # Generic hosting / platform domains that some Beall entries live on (e.g. a
 # predatory journal whose only web presence is a Google Site).  These are too

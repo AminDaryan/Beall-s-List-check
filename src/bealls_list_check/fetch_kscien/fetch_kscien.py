@@ -163,7 +163,15 @@ def make_entry(item, term_to_category):
     terms = item.get("publishing-taxonomy") or []
     category = next((term_to_category[t] for t in terms if t in term_to_category), None)
     if category is None:
-        return None                       # unassigned or unmapped -> counted, not guessed
+        # Kscien assigns a handful of entries to no list at all — 7 of 3,539, and
+        # six of those are among its most recent additions, so dropping them
+        # would discard precisely the newest material. They are kept under a
+        # category of their own, which is weak: Kscien has published the venue
+        # but not said which list it belongs to, so a match is surfaced for a
+        # human and never asserted. Guessing the list from the name (several
+        # read like publishers) would be inventing a claim the source did not
+        # make.
+        category = "unclassified"
 
     return {
         "name": name or domain,
@@ -293,26 +301,33 @@ def load_local():
         return None
 
 
-def _dedupe(entries):
-    """Collapse entries that would index identically.
+def _count_duplicates(entries):
+    """How many entries share an index key with an earlier one.
 
-    Kscien repeats names: 116 normalised names cover 245 entries.  Keyed on
-    ``(list_source, normalized_name, domain)`` — the same key the Beall's
-    scraper uses — so two genuinely different venues that merely share a name
-    are both kept.
+    Reported rather than removed.  The snapshot is a record of what Kscien
+    publishes, and its counts have to reconcile with Kscien's own — a reader
+    checking "the tool says 498 conferences, the site says 498" must get
+    agreement.  Collapsing duplicates here broke that: it silently removed 59
+    entries, 44 of them conferences.
+
+    Removing them also buys nothing.  ``BeallIndex`` stores a LIST of entries per
+    domain/name/ISSN key and ``_best`` chooses among them, so a repeated venue
+    costs a slightly larger index and changes no verdict.  (The Beall's scraper
+    does deduplicate, but it parses HTML, where the same anchor can genuinely
+    appear twice as page furniture.  This API returns records with distinct ids;
+    there is no artefact to clean up.)
     """
-    out, seen = [], set()
+    seen, dupes = set(), 0
     for e in entries:
         key = (e["list_source"], e["normalized_name"], e["domain"])
         if key in seen:
-            continue
+            dupes += 1
         seen.add(key)
-        out.append(e)
-    return out
+    return dupes
 
 
 def write_snapshot(entries, total, newest, note_extra=""):
-    entries = _dedupe(entries)
+    duplicates = _count_duplicates(entries)
     counts = {}
     for e in entries:
         counts[e["list_source"]] = counts.get(e["list_source"], 0) + 1
@@ -323,6 +338,9 @@ def write_snapshot(entries, total, newest, note_extra=""):
             "scraped_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "total_entries": len(entries),
             "counts": counts,
+            # Reported, not removed — see _count_duplicates.  Kept in the
+            # metadata so the snapshot's own quirks are on the record.
+            "internal_duplicates": duplicates,
             # The values the next run's incremental sync compares against.
             "live_total": total,
             "newest_modified": newest,
