@@ -75,6 +75,7 @@ script.)
 | `data_quality.py` | Structural and consistency checks on each Semantic Scholar record, and the cached Crossref client through which all network lookups pass. |
 | `descriptions.py` | All human-readable text presented in the workbook: signal explanations, Beall-list names, and the Legend sheet content. Contains no I/O and no layout code. |
 | `report.py` | Renders the Excel workbook with openpyxl (sheets, per-paper blocks, merges, fonts, colours). Contains no classification logic; its text is sourced from `descriptions.py`. |
+| `progress.py` | The live `[i/N] ...` ticker both long passes report through — the corpus classification and the workbook writer. Emits on a timer so a slow run stays visibly alive without flooding a fast one; the bracketed counter is what the user interface parses to drive its progress bar. |
 | `normalize.py` | Canonicalisation of names, hosts, and ISSNs so that comparisons are consistent. |
 | `config.py` | File paths and matching parameters (fuzzy threshold, preprint domains, status colours, and similar constants). |
 | `user_lists/user_lists.py` ([`README`](src/bealls_list_check/user_lists/README.md)) | Handling of the optional `--whitelist` (scope filter) and `--blacklist` (additional predatory venues). |

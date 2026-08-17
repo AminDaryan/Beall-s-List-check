@@ -227,11 +227,16 @@ def run_llm_pass(results, index, *, client, deployment, token_usage, limit=None)
             "issn": rep.get("issn") or "",
             "det_status": rep.get("status"),
         }
-        print(f"  [{n}/{len(keys)}] {venue_info['name'][:60]!r} ...", end=" ", flush=True)
+        # Its own line, finished BEFORE the call it announces.  Printed with
+        # ``end=" "`` this sat in the pipe with no newline until the verdict was
+        # appended, so the reader watching it — the UI reads stdout line by line —
+        # learned which venue was in progress only once it was already done, and
+        # the bar stepped one venue behind the work for the whole pass.
+        print(f"  [{n}/{len(keys)}] {venue_info['name'][:60]!r} ...", flush=True)
         candidates = gather_candidates(index, venue_info["name"], venue_info["domain"])
         verdict = assess_venue(venue_info, candidates, client=client,
                                deployment=deployment, token_usage=token_usage)
-        print(verdict["on_bealls_list"])
+        print(f"      -> {verdict['on_bealls_list']}", flush=True)
         counts[verdict["on_bealls_list"]] = counts.get(verdict["on_bealls_list"], 0) + 1
 
         for r in rows:

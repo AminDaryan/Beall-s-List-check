@@ -28,6 +28,7 @@ from openpyxl.cell.text import InlineFont
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from config import RESULTS_DIR, RESULTS_FILENAME, STATUS_FILL_COLORS
 from normalize import split_list_sources
+from progress import Progress
 from descriptions import (
     _on_list_why, _list_plain, _signal_plain, _NONMATCH_NOTES,
     _LEGEND_SECTIONS, _LEGEND_TITLE,
@@ -301,7 +302,8 @@ def _write_results_header(ws, columns, border):
     ws.freeze_panes = "A3"
 
 
-def _write_results_sheet(ws, results, extra_columns=None, status_key="status"):
+def _write_results_sheet(ws, results, extra_columns=None, status_key="status",
+                         progress=None):
     """Write the Results sheet: one multi-row block per paper.
 
     Each paper's block is the taller of ROWS_PER_PAPER and its number of
@@ -319,6 +321,10 @@ def _write_results_sheet(ws, results, extra_columns=None, status_key="status"):
     column to the Flagged-only sheet, and the Data-quality sheet uses it to add a
     'Data-quality issue' column — without duplicating this writer.
     status_key: which result field drives the Status cell + row color.
+    progress: optional :class:`Progress` ticked once per paper.  Laying out a
+        block of rows per paper is the slow half of writing the workbook, and on
+        a big corpus it ran silent for a minute or more after the corpus pass had
+        already reported itself finished — which reads as a hang at 100%.
     """
     extra_columns = extra_columns or []
     columns = list(COLUMNS) + [(h, w) for (h, w, _fn) in extra_columns]
@@ -407,6 +413,8 @@ def _write_results_sheet(ws, results, extra_columns=None, status_key="status"):
             ws.row_dimensions[top + sub].height = heights[sub]
 
         row = bottom + 1
+        if progress is not None:
+            progress.tick()
 
 
 def _write_summary_sheet(ws, results, snapshot_meta, corpus_files,
@@ -533,13 +541,15 @@ def _write_summary_sheet(ws, results, snapshot_meta, corpus_files,
         name="Arial", size=9, italic=True)
 
 
-def _write_flagged_sheet(ws, results, extra_columns=None):
+def _write_flagged_sheet(ws, results, extra_columns=None, progress=None):
     """Write only the on_list + review rows (the actionable subset)."""
     flagged = [r for r in results if r["status"] in ("on_list", "review")]
     # Sort: on_list first, then by list source, then title.
     order = {"on_list": 0, "review": 1}
     flagged.sort(key=lambda r: (order.get(r["status"], 9), r["list_source"], r["title"]))
-    _write_results_sheet(ws, flagged, extra_columns=extra_columns)
+    if progress is not None:
+        progress.add_total(len(flagged))
+    _write_results_sheet(ws, flagged, extra_columns=extra_columns, progress=progress)
     return len(flagged)
 
 
@@ -600,22 +610,41 @@ def save_workbook(results, snapshot_meta, corpus_files, *,
     the verdict sits with the papers a human actually reviews); *token_usage* /
     *llm_stats* feed the Summary's 'LLM review' section; *results_filename*
     writes to a different file than the default.
+
+    Each sheet announces itself, and the two big ones tick per paper: writing the
+    workbook for a large corpus takes minutes, and it used to happen in complete
+    silence AFTER the corpus pass had reported "100%", so the run looked finished
+    and hung at the same time.
     """
     wb = openpyxl.Workbook()
     ws_results = wb.active
     ws_results.title = "Results"
-    _write_results_sheet(ws_results, results)
+    print(f"Writing workbook: Results sheet ({len(results)} papers) ...", flush=True)
+    sheet_progress = Progress("papers")
+    sheet_progress.add_total(len(results))
+    _write_results_sheet(ws_results, results, progress=sheet_progress)
+    sheet_progress.close()
 
     ws_flagged = wb.create_sheet("Flagged only")
-    n_flagged = _write_flagged_sheet(ws_flagged, results, extra_columns=flagged_extra_columns)
+    print("  Flagged only sheet ...", flush=True)
+    flagged_progress = Progress("papers")      # its own total, counted inside the writer
+    n_flagged = _write_flagged_sheet(ws_flagged, results,
+                                     extra_columns=flagged_extra_columns,
+                                     progress=flagged_progress)
+    flagged_progress.close()
 
     # Its own sheet (not a column): only the papers whose Semantic Scholar record
     # has a data-quality issue, each shown with the specific issue(s).
     dq_flagged = [r for r in results if r.get("data_quality")]
     if dq_flagged:
         ws_dq = wb.create_sheet("Data quality")
+        print(f"  Data quality sheet ({len(dq_flagged)} papers) ...", flush=True)
+        dq_progress = Progress("papers")
+        dq_progress.add_total(len(dq_flagged))
         _write_results_sheet(ws_dq, dq_flagged,
-                             extra_columns=[("Data-quality issue", 60, _data_quality_subrows)])
+                             extra_columns=[("Data-quality issue", 60, _data_quality_subrows)],
+                             progress=dq_progress)
+        dq_progress.close()
 
     ws_summary = wb.create_sheet("Summary")
     _write_summary_sheet(ws_summary, results, snapshot_meta, corpus_files,
@@ -628,6 +657,10 @@ def save_workbook(results, snapshot_meta, corpus_files, *,
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     filename = results_filename or RESULTS_FILENAME
     out_path = RESULTS_DIR / filename
+    # openpyxl serialises the whole workbook in one call we cannot tick inside,
+    # so the wait is announced before it starts rather than explained after it.
+    print(f"  Summary + Legend done; saving {filename} "
+          f"(a large corpus can take a minute) ...", flush=True)
     try:
         wb.save(out_path)
     except PermissionError:

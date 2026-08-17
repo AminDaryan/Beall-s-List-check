@@ -886,14 +886,20 @@ def _step_run(checker, items, llm, options):
     if run and items is not None:
         progress = st.progress(0.0, text="Starting…")
         log_line = st.empty()
-        step = re.compile(r"\[\s*(\d+)\s*/\s*(\d+)\s*\]")   # the LLM pass prints "[i/N]"
+        # Every check prints "[i/N] detail" as it works: the corpus pass counts
+        # papers, the LLM pass counts venues.  The counter drives the bar and the
+        # detail becomes its label, so the bar says what THIS check is counting
+        # (and how long is left) rather than a noun hardcoded here for one of them.
+        step = re.compile(r"\[\s*(\d+)\s*/\s*(\d+)\s*\]\s*(.*)")
         pulse = {"v": 0.0}
 
         def on_line(line):
             m = step.search(line)
             if m and int(m.group(2)):
+                detail = m.group(3).strip()
+                label = f"{m.group(1)}/{m.group(2)}"
                 progress.progress(min(int(m.group(1)) / int(m.group(2)), 1.0),
-                                  text=f"{m.group(1)}/{m.group(2)} venues…")
+                                  text=f"{label} · {detail}" if detail else label)
             else:                                    # no per-item counter — keep the bar alive
                 pulse["v"] = (pulse["v"] + 0.05) % 0.9
                 progress.progress(pulse["v"], text="Working…")

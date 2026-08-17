@@ -307,6 +307,17 @@ def _crossref_lookup(doi, *, timeout=10):
     return message
 
 
+def lookups_made():
+    """How many distinct DOIs have been looked up so far this run.
+
+    The cache holds one entry per DOI asked about (including the ones Crossref
+    had no record of), so its size is the number of network round-trips made —
+    which is what a progress line wants to report, because on a big corpus it is
+    the thing the run is actually spending its time on.
+    """
+    return len(_crossref_cache)
+
+
 def crossref_reachable(timeout=5):
     """Best-effort check that Crossref's API answers, used to decide up front
     whether a run resolves DOIs (online) or falls back to fully offline (no

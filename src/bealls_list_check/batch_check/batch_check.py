@@ -41,6 +41,7 @@ sys.path.insert(0, str(_ROOT.parent))          # src/ -> common
 
 import bealls_list_check as det                # build_index + resolve_crossref_mode
 from match import match_paper
+from progress import Progress, crossref_note   # the live "[i/N] ..." ticker
 from resolve import resolve_review
 from user_lists import WhitelistMatcher, load_user_entries
 
@@ -152,6 +153,11 @@ def main(argv=None):
 
     started = time.time()
     counts = {}
+    # Same ticker the workbook checks use: with Crossref on, this loop spends its
+    # time on network round-trips and would otherwise print nothing at all
+    # between the "Loaded N record(s)" line above and the summary below.
+    progress = Progress("papers", note=crossref_note(crossref))
+    progress.add_total(len(records))
     with open(out_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(CSV_COLUMNS)
@@ -162,6 +168,7 @@ def main(argv=None):
             # it came from has to say why somewhere.
             if whitelist is not None and whitelist.active and not whitelist.in_scope(paper):
                 n_excluded += 1
+                progress.tick()          # read, though it earns no row
                 continue
             # match_paper never raises — a bad record yields an 'error' row.
             r = match_paper(index, paper, in_path.name)
@@ -169,6 +176,8 @@ def main(argv=None):
                 resolve_review(r, paper, index)
             writer.writerow([r["paperId"], r["doi"], r["status"]])
             counts[r["status"]] = counts.get(r["status"], 0) + 1
+            progress.tick()
+    progress.close()
 
     print(f"Checked {sum(counts.values())} paper(s) in {time.time() - started:.1f}s")
     if n_excluded:

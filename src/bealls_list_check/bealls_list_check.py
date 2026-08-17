@@ -11,6 +11,8 @@ this file stays short:
     data_quality.py                    input sanity checks + the Crossref client.
     descriptions.py                    all the plain-English text ("what we say").
     report.py                          render the Excel workbook ("how we draw it").
+    progress.py                        the live "[i/N] ..." ticker both long
+                                       passes report through.
 
 The workbook has five sheets:
 
@@ -51,6 +53,7 @@ from user_lists import load_user_entries, WhitelistMatcher
 import data_quality                        # shared Crossref client (for the reachability probe)
 from common import input_quality          # the one shared input data-quality validator
 from resolve import resolve_review        # DOI-based resolution of 'review' verdicts
+from progress import Progress, crossref_note   # the live "[i/N] ..." ticker
 from report import save_workbook          # Excel workbook writer; re-exported here so
 #                                           bealls_llm_check.py can keep calling
 #                                           bealls_list_check.save_workbook(...) unchanged.
@@ -120,13 +123,19 @@ def classify_corpus(index, whitelist=None, crossref="off"):
     unreachable — see :func:`resolve_crossref_mode`; this parameter itself defaults
     to ``"off"`` so a direct caller opts in explicitly.)
 
+    Ticks a :class:`Progress` line as it goes (see that class for why), so a run
+    whose Crossref pass takes tens of minutes reports where it is rather than
+    going silent between "Loading corpus ..." and the summary.
+
     Returns ``(results, sorted_corpus_files, n_excluded)``.
     """
     results, corpus_files, n_excluded = [], set(), 0
-    for source_file, paper in load_corpus():
+    progress = Progress("papers", note=crossref_note(crossref))
+    for source_file, paper in load_corpus(progress):
         corpus_files.add(source_file)
         if whitelist is not None and whitelist.active and not whitelist.in_scope(paper):
             n_excluded += 1
+            progress.tick()              # counted: it was read, even though it is not reported on
             continue                     # outside the whitelist: not in this run at all
         # match_paper never raises — a bad record returns an 'error' result.
         r = match_paper(index, paper, source_file)
@@ -140,31 +149,47 @@ def classify_corpus(index, whitelist=None, crossref="off"):
         if use_cr:
             resolve_review(r, paper, index)
         results.append(r)
+        progress.tick()
+    progress.close()
     return results, sorted(corpus_files), n_excluded
 
 
-def load_corpus():
+def load_corpus(progress=None):
     """Yield (source_file, paper) for every record across all corpus files.
 
     Deduplicates by ``paperId`` across files (the corpus files are disjoint in
     practice, but this guards against accidental overlap).
+
+    Each file's size is announced as soon as it is parsed and, when a *progress*
+    ticker is given, added to its denominator.  Both have to happen here rather
+    than in the caller because this is a generator: it is consumed lazily, one
+    paper at a time, so anything printed after its loops only reaches the reader
+    once the whole corpus has been classified — which on a big run is tens of
+    minutes too late to be progress at all.  (This message used to be printed
+    there, and reported the post-dedupe count; the raw record count is what can
+    honestly be known up front, and duplicates are reported separately below.)
     """
     files = sorted(CORPUS_DIR.glob(CORPUS_GLOB))
     if not files:
         sys.exit(f"No corpus files matching {CORPUS_GLOB} in {CORPUS_DIR}")
-    seen = set()
+    seen, duplicates = set(), 0
     for fp in files:
         with open(fp, encoding="utf-8") as f:
             records = json.load(f)
-        kept = 0
+        print(f"  read {len(records):>6} record(s) from {fp.name}", flush=True)
+        if progress is not None:
+            progress.add_total(len(records))
         for paper in records:
             pid = paper.get("paperId") or paper.get("title")
             if pid in seen:
+                duplicates += 1
+                if progress is not None:
+                    progress.add_total(-1)      # never yielded: keep the denominator reachable
                 continue
             seen.add(pid)
-            kept += 1
             yield fp.name, paper
-        print(f"  loaded {kept:>6} papers from {fp.name}")
+    if duplicates:
+        print(f"  ({duplicates} duplicate record(s) skipped)", flush=True)
 
 
 # =============================================================================
