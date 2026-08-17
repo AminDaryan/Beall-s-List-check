@@ -9,8 +9,10 @@ layout code.  Nothing in this module does I/O; the functions take a result dict
                     verdict it leads to, and a thorough plain-language
                     explanation.  The single source of truth, reused by both the
                     Match column and the Legend so the two never drift.
-  * LIST_INFO     — plain name + weight for each list a match can come from:
-                    Beall's five, and the blacklist supplied for the run.
+  * LIST_INFO     — plain name + weight for each CATEGORY a match can come from,
+                    shared across catalogues, plus the blacklist supplied for the
+                    run.  Which catalogue a match came from is a separate field
+                    (``provider``); see ``_listed_on``.
   * _on_list_why  — the one-line "Why flagged" sentence for an on_list match.
   * _LEGEND_SECTIONS — the entire Legend sheet's content, as data.
 
@@ -33,7 +35,7 @@ SIGNAL_INFO = {
     "domain": (
         "the journal's own website is on the list",
         "on_list",
-        "The journal's website address is itself on Beall's List. Example: a "
+        "The journal's website address is itself on one of the lists. Example: a "
         "paper in a journal hosted at www.scirp.org is matched because "
         "scirp.org (Scientific Research Publishing) is a publisher on the list "
         "— the journal's own home is a listed site. This is the most reliable "
@@ -51,8 +53,8 @@ SIGNAL_INFO = {
         "the journal's ISSN is on the list",
         "on_list",
         "An ISSN is the unique ID number every journal has. Here the journal's "
-        "ISSN equals the ISSN of a journal on the list. (Rarely used, because "
-        "Beall's List mostly records names and websites, not ISSNs.)",
+        "ISSN equals the ISSN of a journal on the list. (Rare with Beall's List, "
+        "which records names and websites rather than ISSNs; other lists differ.)",
     ),
     "name_exact": (
         "the journal/publisher name exactly matches the list",
@@ -158,7 +160,7 @@ LIST_INFO = {
     "misleading_metric":  ("fake-metrics company", "weak — review only"),
     "predatory_conference": ("predatory conference", "weak — review only"),
     "unclassified":       ("listed, but under no named list", "weak — review only"),
-    "blacklist":          ("your own blacklist (not Beall's List)",
+    "blacklist":          ("your own blacklist (not a published list)",
                            "supplied for this run"),
 }
 
@@ -167,6 +169,17 @@ def _signal_plain(matched_on):
     """Short plain-language phrase for a match signal (falls back to the code)."""
     info = SIGNAL_INFO.get(matched_on)
     return info[0] if info else (matched_on or "—")
+
+
+def _providers_plain(r, provider_labels=None):
+    """Just the catalogue name(s) for a row, e.g. "Kscien's list".
+
+    Used where a sentence already carries the category and only needs to say
+    which catalogue it came from.
+    """
+    labels = provider_labels or {}
+    names = [labels.get(p, p) for p in split_list_sources(r.get("provider"))]
+    return "; ".join(dict.fromkeys(names))
 
 
 def _listed_on(r, provider_labels=None):
@@ -207,7 +220,7 @@ def _list_plain(list_source):
 # distinction matters when the question is "why is this paper not in the
 # legitimate set?".
 _NONMATCH_NOTES = {
-    "clean":        "The venue was identified and is not on Beall's List.",
+    "clean":        "The venue was identified and is on none of the lists checked.",
     "no_venue":     "No journal venue to classify — this is a preprint, or the "
                     "record has no venue information.",
 }
@@ -277,11 +290,16 @@ def _on_list_why(r, provider_labels=None):
                             f"inside its name, '{r.get('venue') or '—'}'"),
         }.get(mo, f"it matches '{listed}', which you listed")
         return (f"you put this venue on the blacklist for this run, and {how}. "
-                "This is your own entry, not a Beall's List finding — the run "
-                "treats it as predatory because you said to.")
+                "This is your own entry, not a finding from any published "
+                "list — the run treats it as predatory because you said to.")
     if mo == "domain":
+        # The catalogue alone, not "<catalogue> — <category>": the category is
+        # already on the 'Listed on' row directly above, and repeating it here
+        # made the sentence read "is listed on Beall's List — predatory publisher
+        # as 'X'".
+        where = _providers_plain(r, provider_labels) or "a reference list"
         return (f"the venue's own website ({r.get('venue_domain') or '—'}) is on "
-                f"Beall's List as '{listed}' — the most reliable signal.")
+                f"{where} as '{listed}' — the most reliable signal.")
     if mo == "domain_subdomain":
         return (f"the venue's website ({r.get('venue_domain') or '—'}) sits under "
                 f"the listed site of '{listed}' — a high-confidence match.")
@@ -318,15 +336,16 @@ def _on_list_why(r, provider_labels=None):
 # full-width bullet lines (the caveats); swatch=True tints column A by status
 # to match the Results sheet colors.  Add/edit documentation here only — the
 # renderer in report.py is generic.
-_LEGEND_TITLE = "Beall's List Check — Legend / Data Dictionary"
+_LEGEND_TITLE = "Predatory-venue check — Legend / Data Dictionary"
 _LEGEND_SECTIONS = [
     {
         "title": "What this report is — input → output",
         "headers": None,
         "rows": [
             ("WHAT IT DOES: each paper's publication venue (its journal/publisher) "
-             "is compared against Beall's List of allegedly predatory venues, and "
-             "given a STATUS (see the next section).",),
+             "is compared against one or more published lists of allegedly predatory "
+             "venues, and given a STATUS (see the next section). The Summary sheet "
+             "names which lists this run used, and when each was last updated.",),
             ("INPUT: one Semantic Scholar (\"S2\") record per paper, giving the "
              "venue's name, website, ISSN and DOI. The check classifies each "
              "paper from this metadata as it is; when a record's metadata looks "
@@ -334,14 +353,16 @@ _LEGEND_SECTIONS = [
              "'Data quality' sheet so you know to double-check it before trusting "
              "its result.",),
             ("OUTPUT (the sheets in this file): Results = every paper; Flagged only "
-             "= just the on_list + review papers to act on; Data quality = papers "
+             "= just the on_list + review papers to act on; Legitimate only = the "
+             "papers on none of the lists used, i.e. what a screen would keep; "
+             "Data quality = papers "
              "whose Semantic Scholar metadata looks suspect, plus those whose DOI "
              "was cross-checked against Crossref; Summary = counts + run details; "
              "Legend = this page. The thorough check adds an 'LLM review' column "
              "on Flagged only.",),
-            ("NOT proof: Beall's List is an unofficial, archived (~2021), CONTESTED "
-             "list, so read 'on_list' as \"appears on the list\", not \"is "
-             "predatory\". See the Caveats at the bottom.",),
+            ("NOT proof: these lists are compiled by third parties, are contested, "
+             "and disagree with each other. Read 'on_list' as \"appears on a list "
+             "this run used\", not \"is predatory\". See the Caveats at the bottom.",),
         ],
     },
     {
@@ -351,8 +372,10 @@ _LEGEND_SECTIONS = [
             ("Semantic Scholar (\"S2\") — the scholarly search engine "
              "(semanticscholar.org) whose per-paper metadata is the INPUT to this "
              "check.",),
-            ("Beall's List — an unofficial, archived, contested catalogue of "
-             "alleged predatory publishers and journals (five lists; see below).",),
+            ("Beall's List — an unofficial, archived (~2021), contested catalogue "
+             "of alleged predatory publishers and journals (five lists; see below).",),
+            ("Reference list — any published catalogue of alleged predatory venues "
+             "this run was told to screen against. The Summary names them.",),
             ("Venue — the journal or conference a paper was published in; this is "
              "what the check classifies (not the paper's content).",),
             ("DOI — a paper's permanent identifier / link (e.g. 10.1002/rev3.3433).",),
@@ -369,18 +392,22 @@ _LEGEND_SECTIONS = [
         "headers": ("Status", "Confidence", "Meaning"),
         "swatch": True,
         "rows": [
-            ("on_list", "high", "Venue matched a CORE Beall list (predatory "
-             "publishers, standalone journals, or hijacked journals) by a "
-             "high-confidence signal: exact domain, subdomain of a listed "
-             "domain, exact ISSN, or exact name. Read as \"appears on Beall's "
-             "List.\""),
+            ("on_list", "high", "Venue matched a CORE list (predatory publishers, "
+             "standalone journals, or hijacked journals) by a high-confidence "
+             "signal: exact domain, subdomain of a listed domain, exact ISSN, or "
+             "exact name. Read as \"appears on one of the lists used\" — the "
+             "Match column names which."),
             ("review", "verify", "A softer or contested match: fuzzy name, "
              "open-access PDF host, an alternate venue URL, or a WEAK list "
              "(vanity-press / misleading-metrics). Check by hand."),
-            ("clean", "—", "The venue was identified and did NOT match any "
-             "Beall entry."),
-            ("no_venue", "—", "Preprint server (e.g. arXiv) or no venue "
-             "metadata — there is no journal/publisher to classify."),
+            ("clean", "—", "The venue was identified and did NOT match any entry "
+             "on any list this run used. These are the Legitimate-only sheet."),
+            ("no_venue", "—", "Nothing to compare against a list, for one of two "
+             "reasons the Match column distinguishes: a PREPRINT (e.g. arXiv), which "
+             "has no journal or publisher and so cannot be listed; or NO VENUE "
+             "METADATA at all, meaning the record could not be checked. Neither is a "
+             "finding about the paper, and neither counts as legitimate — they are "
+             "not on the Legitimate-only sheet."),
             ("error", "—", "The record could not be processed; the Python "
              "error is shown in the first row of the 'Match' column."),
         ],
@@ -401,11 +428,20 @@ _LEGEND_SECTIONS = [
         ],
     },
     {
-        "title": "'Beall list' — which list the matched entry came from",
-        "headers": ("Beall list (shown in the 'Match' column)", "Weight", "Meaning"),
+        "title": "'Listed on' — which catalogue, and which of its lists",
+        "headers": ("Listed on (shown in the 'Match' column)", "Weight", "Meaning"),
         "rows": [
             ("predatory publisher", "core list",
-             "A predatory publisher — Beall's main list."),
+             "A publisher the list alleges is predatory."),
+            ("predatory conference", "weak — review only",
+             "A conference series a list alleges is predatory. No Beall list covers "
+             "conferences; this comes from another catalogue. A paper is published in "
+             "a journal rather than a conference series, and conference names are "
+             "short and generic, so a match here is surfaced, never asserted."),
+            ("listed, but under no named list", "weak — review only",
+             "A catalogue published this venue but assigned it to none of its own "
+             "lists, so it has not said what it is alleging. Surfaced for a human; "
+             "asserting it would state a claim the source did not make."),
             ("standalone predatory journal", "core list",
              "A single predatory journal that is not part of a larger publisher."),
             ("hijacked / cloned journal", "core list",
@@ -423,13 +459,13 @@ _LEGEND_SECTIONS = [
             ("fake-metrics company", "weak — review only",
              "A company selling fake impact-factor metrics — not a venue at all, "
              "so a match is downgraded to review."),
-            ("your own blacklist (not Beall's List)", "supplied for this run",
-             "Not one of Beall's lists: a venue named in the blacklist given to "
+            ("your own blacklist (not a published list)", "supplied for this run",
+             "Not from any published catalogue: a venue named in the blacklist given to "
              "this run, which the check treats as predatory because it was told "
              "to. Matched on the site, the ISSN or the exact name — whichever the "
              "entry carried — and asked before anything else, so it applies even "
              "to a venue the check would otherwise not classify at all, such as a "
-             "preprint server. Nothing here reflects Beall's List; remove the "
+             "preprint server. Nothing here reflects any published list; remove the "
              "entry and the row goes with it."),
         ],
     },
@@ -472,12 +508,12 @@ _LEGEND_SECTIONS = [
              "site it points at, each disambiguated by its host. This is the one "
              "column whose block grows to fit them all (6 linked venues -> a "
              "6-row block; the other columns keep their fields, merged to fit)."),
-            ("Match", "Listed as / Beall list / Why flagged",
-             "Why the paper was flagged, one field per row. 'Listed as' is the "
-             "Beall's List entry that matched — its link opens THAT entry's own "
-             "website (the listed/predatory venue), NOT this paper's venue; "
-             "'Beall list' is which list it came from (see the 'Beall list' "
-             "section); 'Why flagged' is a single plain-English line naming HOW "
+            ("Match", "Listed as / Listed on / Why flagged",
+             "Why the paper was flagged, one field per row. 'Listed as' is the entry "
+             "that matched — its link opens THAT entry's own website (the "
+             "listed/predatory venue), NOT this paper's venue; 'Listed on' is which "
+             "catalogue and which of its lists (see the 'Listed on' section); "
+             "'Why flagged' is a single plain-English line naming HOW "
              "it matched (see the 'How the venue matched' section) and the "
              "concrete listed entry. For clean / no_venue / error rows the first "
              "row shows a short note and the rest are blank."),
@@ -515,13 +551,18 @@ _LEGEND_SECTIONS = [
         "title": "Caveats — read before interpreting results",
         "headers": None,
         "rows": [
-            ("Beall's List is an unofficial, archived, frozen (~2021), CONTESTED "
-             "list. A match is an allegation as of the snapshot date, not proof "
-             "a venue is predatory.",),
-            ("Being on the list is contested. Frontiers, for example, is on the "
-             "list but widely considered legitimate, so 'on_list' = \"appears "
-             "on the list,\" not \"is predatory.\" (MDPI is in the site's "
-             "'Excluded — decide after reading' section, so it is NOT flagged.)",),
+            ("Every list here is compiled by a third party, is contested, and is a "
+             "snapshot taken on a date the Summary records. A match is an allegation "
+             "as of that date, not proof a venue is predatory. Beall's List in "
+             "particular is unofficial and frozen (~2021).",),
+            ("The lists disagree with each other, and none publishes its evidence per "
+             "entry. 'Listed on' therefore names which catalogue and which of its "
+             "lists an entry came from, and how it matched — never why that "
+             "catalogue listed it.",),
+            ("Being listed is contested. Frontiers, for example, is on Beall's List "
+             "but widely considered legitimate, so 'on_list' = \"appears on a "
+             "list,\" not \"is predatory.\" (MDPI is in that site's 'Excluded — "
+             "decide after reading' section, so it is NOT flagged.)",),
             ("This check classifies the VENUE, not the paper's content/quality.",),
             ("The base check uses NO LLM (0 tokens). Every result is "
              "deterministic and auditable from the 'Match' column. The optional "

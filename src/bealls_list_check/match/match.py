@@ -433,10 +433,22 @@ def _review_reason(r: dict) -> str:
                 "typo or spelling variant. Because it is not an exact match, it is "
                 "flagged for a check rather than treated as confirmed.")
     if any(s in WEAK_LIST_SOURCES for s in sources):
-        return (f"This matched '{r.get('matched_name')}' on one of Beall's WEAK "
-                "lists — a vanity/book publisher or a company selling fake metrics, "
-                "not a predatory journal as such. A match here is surfaced for a "
-                "human to weigh; it is not a predatory-journal finding on its own.")
+        # Names the category rather than the catalogue, and never says "Beall's":
+        # the weak categories now include a conference list and an unclassified
+        # one that no Beall list has, so a Kscien conference match was being
+        # reported as a finding on "one of Beall's WEAK lists".
+        weak = [s for s in sources if s in WEAK_LIST_SOURCES]
+        what = {
+            "vanity_press": "a book/monograph publisher rather than a journal one",
+            "misleading_metric": "a company selling fake metrics, not a venue at all",
+            "predatory_conference": "a conference series rather than a journal",
+            "unclassified": ("a venue the list published without saying which of its "
+                             "own lists it belongs to"),
+        }.get(weak[0], "not a predatory-journal signal on its own")
+        return (f"This matched '{r.get('matched_name')}' on a WEAK list — {what}. "
+                "A paper is published in a journal, so a match here is surfaced for "
+                "a human to weigh rather than treated as a predatory-journal "
+                "finding on its own.")
     return "This is a soft, lower-confidence match — verify it by hand before acting."
 
 

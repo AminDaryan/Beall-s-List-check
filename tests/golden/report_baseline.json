@@ -645,7 +645,7 @@
     },
     {
      "ref": "F29",
-     "value": "Why flagged: This matched 'Vanity Books Ltd' on one of Beall's WEAK lists — a vanity/book publisher or a company selling fake metrics, not a predatory journal as such. A match here is surfaced for a human to weigh; it is not a predatory-journal finding on its own."
+     "value": "Why flagged: This matched 'Vanity Books Ltd' on a WEAK list — a book/monograph publisher rather than a journal one. A paper is published in a journal, so a match here is surfaced for a human to weigh rather than treated as a predatory-journal finding on its own."
     },
     {
      "ref": "C30",
@@ -717,7 +717,7 @@
     },
     {
      "ref": "F33",
-     "value": "Why flagged: This matched 'Global Impact Factor Co' on one of Beall's WEAK lists — a vanity/book publisher or a company selling fake metrics, not a predatory journal as such. A match here is surfaced for a human to weigh; it is not a predatory-journal finding on its own.",
+     "value": "Why flagged: This matched 'Global Impact Factor Co' on a WEAK list — a company selling fake metrics, not a venue at all. A paper is published in a journal, so a match here is surfaced for a human to weigh rather than treated as a predatory-journal finding on its own.",
      "fill": "00F2F4F8"
     },
     {
@@ -929,7 +929,7 @@
     },
     {
      "ref": "F45",
-     "value": "Why flagged: This matched 'World Congress on Everything' on one of Beall's WEAK lists — a vanity/book publisher or a company selling fake metrics, not a predatory journal as such. A match here is surfaced for a human to weigh; it is not a predatory-journal finding on its own."
+     "value": "Why flagged: This matched 'World Congress on Everything' on a WEAK list — a conference series rather than a journal. A paper is published in a journal, so a match here is surfaced for a human to weigh rather than treated as a predatory-journal finding on its own."
     },
     {
      "ref": "C46",
@@ -1796,7 +1796,7 @@
     },
     {
      "ref": "F29",
-     "value": "Why flagged: This matched 'Global Impact Factor Co' on one of Beall's WEAK lists — a vanity/book publisher or a company selling fake metrics, not a predatory journal as such. A match here is surfaced for a human to weigh; it is not a predatory-journal finding on its own."
+     "value": "Why flagged: This matched 'Global Impact Factor Co' on a WEAK list — a company selling fake metrics, not a venue at all. A paper is published in a journal, so a match here is surfaced for a human to weigh rather than treated as a predatory-journal finding on its own."
     },
     {
      "ref": "C30",
@@ -1868,7 +1868,7 @@
     },
     {
      "ref": "F33",
-     "value": "Why flagged: This matched 'World Congress on Everything' on one of Beall's WEAK lists — a vanity/book publisher or a company selling fake metrics, not a predatory journal as such. A match here is surfaced for a human to weigh; it is not a predatory-journal finding on its own.",
+     "value": "Why flagged: This matched 'World Congress on Everything' on a WEAK list — a conference series rather than a journal. A paper is published in a journal, so a match here is surfaced for a human to weigh rather than treated as a predatory-journal finding on its own.",
      "fill": "00F2F4F8"
     },
     {
@@ -2068,7 +2068,7 @@
     },
     {
      "ref": "F45",
-     "value": "Why flagged: This matched 'Vanity Books Ltd' on one of Beall's WEAK lists — a vanity/book publisher or a company selling fake metrics, not a predatory journal as such. A match here is surfaced for a human to weigh; it is not a predatory-journal finding on its own."
+     "value": "Why flagged: This matched 'Vanity Books Ltd' on a WEAK list — a book/monograph publisher rather than a journal one. A paper is published in a journal, so a match here is surfaced for a human to weigh rather than treated as a predatory-journal finding on its own."
     },
     {
      "ref": "C46",
@@ -2783,7 +2783,7 @@
   },
   {
    "title": "Legend",
-   "max_row": 70,
+   "max_row": 74,
    "max_column": 3,
    "freeze_panes": null,
    "merged_ranges": [
@@ -2794,14 +2794,16 @@
     "A14:C14",
     "A15:C15",
     "A16:C16",
+    "A17:C17",
     "A4:C4",
     "A5:C5",
-    "A66:C66",
-    "A67:C67",
-    "A68:C68",
     "A69:C69",
     "A6:C6",
     "A70:C70",
+    "A71:C71",
+    "A72:C72",
+    "A73:C73",
+    "A74:C74",
     "A7:C7"
    ],
    "column_widths": {
@@ -2813,7 +2815,7 @@
    "cells": [
     {
      "ref": "A1",
-     "value": "Beall's List Check — Legend / Data Dictionary",
+     "value": "Predatory-venue check — Legend / Data Dictionary",
      "bold": true
     },
     {
@@ -2823,7 +2825,7 @@
     },
     {
      "ref": "A4",
-     "value": "• WHAT IT DOES: each paper's publication venue (its journal/publisher) is compared against Beall's List of allegedly predatory venues, and given a STATUS (see the next section)."
+     "value": "• WHAT IT DOES: each paper's publication venue (its journal/publisher) is compared against one or more published lists of allegedly predatory venues, and given a STATUS (see the next section). The Summary sheet names which lists this run used, and when each was last updated."
     },
     {
      "ref": "A5",
@@ -2831,11 +2833,11 @@
     },
     {
      "ref": "A6",
-     "value": "• OUTPUT (the sheets in this file): Results = every paper; Flagged only = just the on_list + review papers to act on; Data quality = papers whose Semantic Scholar metadata looks suspect, plus those whose DOI was cross-checked against Crossref; Summary = counts + run details; Legend = this page. The thorough check adds an 'LLM review' column on Flagged only."
+     "value": "• OUTPUT (the sheets in this file): Results = every paper; Flagged only = just the on_list + review papers to act on; Legitimate only = the papers on none of the lists used, i.e. what a screen would keep; Data quality = papers whose Semantic Scholar metadata looks suspect, plus those whose DOI was cross-checked against Crossref; Summary = counts + run details; Legend = this page. The thorough check adds an 'LLM review' column on Flagged only."
     },
     {
      "ref": "A7",
-     "value": "• NOT proof: Beall's List is an unofficial, archived (~2021), CONTESTED list, so read 'on_list' as \"appears on the list\", not \"is predatory\". See the Caveats at the bottom."
+     "value": "• NOT proof: these lists are compiled by third parties, are contested, and disagree with each other. Read 'on_list' as \"appears on a list this run used\", not \"is predatory\". See the Caveats at the bottom."
     },
     {
      "ref": "A9",
@@ -2848,97 +2850,87 @@
     },
     {
      "ref": "A11",
-     "value": "• Beall's List — an unofficial, archived, contested catalogue of alleged predatory publishers and journals (five lists; see below)."
+     "value": "• Beall's List — an unofficial, archived (~2021), contested catalogue of alleged predatory publishers and journals (five lists; see below)."
     },
     {
      "ref": "A12",
-     "value": "• Venue — the journal or conference a paper was published in; this is what the check classifies (not the paper's content)."
+     "value": "• Reference list — any published catalogue of alleged predatory venues this run was told to screen against. The Summary names them."
     },
     {
      "ref": "A13",
-     "value": "• DOI — a paper's permanent identifier / link (e.g. 10.1002/rev3.3433)."
+     "value": "• Venue — the journal or conference a paper was published in; this is what the check classifies (not the paper's content)."
     },
     {
      "ref": "A14",
-     "value": "• ISSN — the 8-digit number unique to a journal (e.g. 0079-2047)."
+     "value": "• DOI — a paper's permanent identifier / link (e.g. 10.1002/rev3.3433)."
     },
     {
      "ref": "A15",
-     "value": "• Domain — the venue's website host (e.g. mdpi.com); the most reliable match signal."
+     "value": "• ISSN — the 8-digit number unique to a journal (e.g. 0079-2047)."
     },
     {
      "ref": "A16",
+     "value": "• Domain — the venue's website host (e.g. mdpi.com); the most reliable match signal."
+    },
+    {
+     "ref": "A17",
      "value": "• Crossref — the publisher-deposited registry used by default (disable with --crossref off) to double-check Semantic Scholar's venue/ISSN and to settle uncertain 'review' verdicts."
     },
     {
-     "ref": "A18",
+     "ref": "A19",
      "value": "STATUS values (and the row color used in Results)",
      "bold": true
     },
     {
-     "ref": "A19",
+     "ref": "A20",
      "value": "Status",
      "fill": "002F5496",
      "bold": true
     },
     {
-     "ref": "B19",
+     "ref": "B20",
      "value": "Confidence",
      "fill": "002F5496",
      "bold": true
     },
     {
-     "ref": "C19",
+     "ref": "C20",
      "value": "Meaning",
      "fill": "002F5496",
      "bold": true
     },
     {
-     "ref": "A20",
+     "ref": "A21",
      "value": "on_list",
      "fill": "00FFC7CE",
      "bold": true
     },
     {
-     "ref": "B20",
+     "ref": "B21",
      "value": "high"
     },
     {
-     "ref": "C20",
-     "value": "Venue matched a CORE Beall list (predatory publishers, standalone journals, or hijacked journals) by a high-confidence signal: exact domain, subdomain of a listed domain, exact ISSN, or exact name. Read as \"appears on Beall's List.\""
+     "ref": "C21",
+     "value": "Venue matched a CORE list (predatory publishers, standalone journals, or hijacked journals) by a high-confidence signal: exact domain, subdomain of a listed domain, exact ISSN, or exact name. Read as \"appears on one of the lists used\" — the Match column names which."
     },
     {
-     "ref": "A21",
+     "ref": "A22",
      "value": "review",
      "fill": "00FFD79A",
      "bold": true
     },
     {
-     "ref": "B21",
+     "ref": "B22",
      "value": "verify"
     },
     {
-     "ref": "C21",
+     "ref": "C22",
      "value": "A softer or contested match: fuzzy name, open-access PDF host, an alternate venue URL, or a WEAK list (vanity-press / misleading-metrics). Check by hand."
     },
     {
-     "ref": "A22",
+     "ref": "A23",
      "value": "clean",
      "fill": "00C6EFCE",
-     "bold": true
-    },
-    {
-     "ref": "B22",
-     "value": "—"
-    },
-    {
-     "ref": "C22",
-     "value": "The venue was identified and did NOT match any Beall entry."
-    },
-    {
-     "ref": "A23",
-     "value": "no_venue",
-     "fill": "00D9D9D9",
      "bold": true
     },
     {
@@ -2947,12 +2939,12 @@
     },
     {
      "ref": "C23",
-     "value": "Preprint server (e.g. arXiv) or no venue metadata — there is no journal/publisher to classify."
+     "value": "The venue was identified and did NOT match any entry on any list this run used. These are the Legitimate-only sheet."
     },
     {
      "ref": "A24",
-     "value": "error",
-     "fill": "00C00000",
+     "value": "no_venue",
+     "fill": "00D9D9D9",
      "bold": true
     },
     {
@@ -2961,47 +2953,48 @@
     },
     {
      "ref": "C24",
+     "value": "Nothing to compare against a list, for one of two reasons the Match column distinguishes: a PREPRINT (e.g. arXiv), which has no journal or publisher and so cannot be listed; or NO VENUE METADATA at all, meaning the record could not be checked. Neither is a finding about the paper, and neither counts as legitimate — they are not on the Legitimate-only sheet."
+    },
+    {
+     "ref": "A25",
+     "value": "error",
+     "fill": "00C00000",
+     "bold": true
+    },
+    {
+     "ref": "B25",
+     "value": "—"
+    },
+    {
+     "ref": "C25",
      "value": "The record could not be processed; the Python error is shown in the first row of the 'Match' column."
     },
     {
-     "ref": "A26",
+     "ref": "A27",
      "value": "How the venue matched (shown inside the 'Why flagged' line)",
      "bold": true
     },
     {
-     "ref": "A27",
+     "ref": "A28",
      "value": "How it matched (part of the 'Why flagged' text)",
      "fill": "002F5496",
      "bold": true
     },
     {
-     "ref": "B27",
+     "ref": "B28",
      "value": "Result",
      "fill": "002F5496",
      "bold": true
     },
     {
-     "ref": "C27",
+     "ref": "C28",
      "value": "What it means — with a fixed real example",
      "fill": "002F5496",
      "bold": true
     },
     {
-     "ref": "A28",
-     "value": "the journal's own website is on the list",
-     "bold": true
-    },
-    {
-     "ref": "B28",
-     "value": "on_list"
-    },
-    {
-     "ref": "C28",
-     "value": "The journal's website address is itself on Beall's List. Example: a paper in a journal hosted at www.scirp.org is matched because scirp.org (Scientific Research Publishing) is a publisher on the list — the journal's own home is a listed site. This is the most reliable signal."
-    },
-    {
      "ref": "A29",
-     "value": "the journal's website is part of a listed site",
+     "value": "the journal's own website is on the list",
      "bold": true
     },
     {
@@ -3010,11 +3003,11 @@
     },
     {
      "ref": "C29",
-     "value": "The journal's website is a section of a bigger website that is on the list. Example: a journal at ojs.bilpublishing.com is matched because it sits under bilpublishing.com (Bilingual Publishing Co.), a listed publisher."
+     "value": "The journal's website address is itself on one of the lists. Example: a paper in a journal hosted at www.scirp.org is matched because scirp.org (Scientific Research Publishing) is a publisher on the list — the journal's own home is a listed site. This is the most reliable signal."
     },
     {
      "ref": "A30",
-     "value": "the journal's ISSN is on the list",
+     "value": "the journal's website is part of a listed site",
      "bold": true
     },
     {
@@ -3023,11 +3016,11 @@
     },
     {
      "ref": "C30",
-     "value": "An ISSN is the unique ID number every journal has. Here the journal's ISSN equals the ISSN of a journal on the list. (Rarely used, because Beall's List mostly records names and websites, not ISSNs.)"
+     "value": "The journal's website is a section of a bigger website that is on the list. Example: a journal at ojs.bilpublishing.com is matched because it sits under bilpublishing.com (Bilingual Publishing Co.), a listed publisher."
     },
     {
      "ref": "A31",
-     "value": "the journal/publisher name exactly matches the list",
+     "value": "the journal's ISSN is on the list",
      "bold": true
     },
     {
@@ -3036,11 +3029,11 @@
     },
     {
      "ref": "C31",
-     "value": "The journal or publisher name is exactly the same as a name on the list (capitalisation, accents and punctuation are ignored). Example: a venue named 'OMICS Publishing Group' matches the listed 'OMICS Publishing Group'. Asserted as on_list only when the paper's OWN venue website is the listed site too; if the name matches but the website is different (many journals share a name), it is downgraded to review."
+     "value": "An ISSN is the unique ID number every journal has. Here the journal's ISSN equals the ISSN of a journal on the list. (Rare with Beall's List, which records names and websites rather than ISSNs; other lists differ.)"
     },
     {
      "ref": "A32",
-     "value": "the name matched and the DOI confirms the journal",
+     "value": "the journal/publisher name exactly matches the list",
      "bold": true
     },
     {
@@ -3049,24 +3042,24 @@
     },
     {
      "ref": "C32",
-     "value": "The venue name matched a listed journal, and the paper's DOI (checked against Crossref, the publisher registry) shows — by publisher website or ISSN, not the shared name — that the paper really is in that listed journal. This resolves the 'many journals share a name' doubt, so it is asserted as on_list. Example: a venue named like a listed journal whose DOI registers it to that journal's own ISSN."
+     "value": "The journal or publisher name is exactly the same as a name on the list (capitalisation, accents and punctuation are ignored). Example: a venue named 'OMICS Publishing Group' matches the listed 'OMICS Publishing Group'. Asserted as on_list only when the paper's OWN venue website is the listed site too; if the name matches but the website is different (many journals share a name), it is downgraded to review."
     },
     {
      "ref": "A33",
-     "value": "the journal name is very similar to a listed name",
+     "value": "the name matched and the DOI confirms the journal",
      "bold": true
     },
     {
      "ref": "B33",
-     "value": "review"
+     "value": "on_list"
     },
     {
      "ref": "C33",
-     "value": "The name is almost — but not exactly — the same as a listed name (at least 93% similar): a spelling variant or typo, e.g. 'Internatonal Journal of Science' vs the listed 'International Journal of Science'. Because it is not exact it is only ever flagged for review, never as a definite hit."
+     "value": "The venue name matched a listed journal, and the paper's DOI (checked against Crossref, the publisher registry) shows — by publisher website or ISSN, not the shared name — that the paper really is in that listed journal. This resolves the 'many journals share a name' doubt, so it is asserted as on_list. Example: a venue named like a listed journal whose DOI registers it to that journal's own ISSN."
     },
     {
      "ref": "A34",
-     "value": "an alternate web link points to a listed site",
+     "value": "the journal name is very similar to a listed name",
      "bold": true
     },
     {
@@ -3075,86 +3068,86 @@
     },
     {
      "ref": "C34",
-     "value": "The venue's main website looks fine, but one of the OTHER web links Semantic Scholar lists for it points to a listed site (e.g. a scirp.org link). Semantic Scholar sometimes merges two journals that share a name, so that link may belong to a different journal — a human should check."
+     "value": "The name is almost — but not exactly — the same as a listed name (at least 93% similar): a spelling variant or typo, e.g. 'Internatonal Journal of Science' vs the listed 'International Journal of Science'. Because it is not exact it is only ever flagged for review, never as a definite hit."
     },
     {
      "ref": "A35",
-     "value": "an alternate link matched and the DOI confirms it",
+     "value": "an alternate web link points to a listed site",
      "bold": true
     },
     {
      "ref": "B35",
-     "value": "on_list"
+     "value": "review"
     },
     {
      "ref": "C35",
-     "value": "An alternate web link for the venue pointed to a listed site, and the paper's DOI (checked against Crossref, the publisher registry) shows it was actually published there. The DOI resolves the 'merged journals' doubt that would otherwise keep this as review, so it is asserted as on_list. Example: a venue whose main site is fine but whose alternate link is scirp.org, where the DOI registers the paper to SCIRP."
+     "value": "The venue's main website looks fine, but one of the OTHER web links Semantic Scholar lists for it points to a listed site (e.g. a scirp.org link). Semantic Scholar sometimes merges two journals that share a name, so that link may belong to a different journal — a human should check."
     },
     {
      "ref": "A36",
-     "value": "the PDF is hosted on a listed site",
+     "value": "an alternate link matched and the DOI confirms it",
      "bold": true
     },
     {
      "ref": "B36",
-     "value": "review"
+     "value": "on_list"
     },
     {
      "ref": "C36",
-     "value": "The journal itself could not be identified, but the free PDF of the paper is hosted on a listed site (e.g. scirp.org). Suggestive but not conclusive, so it is flagged for review."
+     "value": "An alternate web link for the venue pointed to a listed site, and the paper's DOI (checked against Crossref, the publisher registry) shows it was actually published there. The DOI resolves the 'merged journals' doubt that would otherwise keep this as review, so it is asserted as on_list. Example: a venue whose main site is fine but whose alternate link is scirp.org, where the DOI registers the paper to SCIRP."
     },
     {
      "ref": "A37",
-     "value": "the PDF is on a listed site and the DOI confirms it",
+     "value": "the PDF is hosted on a listed site",
      "bold": true
     },
     {
      "ref": "B37",
-     "value": "on_list"
+     "value": "review"
     },
     {
      "ref": "C37",
-     "value": "The paper's free PDF sits on a listed site, and the paper's DOI (checked against Crossref, the publisher registry) shows it was actually published there — not merely re-hosted. The DOI resolves the re-hosting doubt, so this is asserted as on_list. Example: a paper whose only listed signal is a frontiersin.org PDF, where the DOI registers the paper to Frontiers."
+     "value": "The journal itself could not be identified, but the free PDF of the paper is hosted on a listed site (e.g. scirp.org). Suggestive but not conclusive, so it is flagged for review."
     },
     {
-     "ref": "A39",
-     "value": "'Beall list' — which list the matched entry came from",
+     "ref": "A38",
+     "value": "the PDF is on a listed site and the DOI confirms it",
      "bold": true
     },
     {
+     "ref": "B38",
+     "value": "on_list"
+    },
+    {
+     "ref": "C38",
+     "value": "The paper's free PDF sits on a listed site, and the paper's DOI (checked against Crossref, the publisher registry) shows it was actually published there — not merely re-hosted. The DOI resolves the re-hosting doubt, so this is asserted as on_list. Example: a paper whose only listed signal is a frontiersin.org PDF, where the DOI registers the paper to Frontiers."
+    },
+    {
      "ref": "A40",
-     "value": "Beall list (shown in the 'Match' column)",
+     "value": "'Listed on' — which catalogue, and which of its lists",
+     "bold": true
+    },
+    {
+     "ref": "A41",
+     "value": "Listed on (shown in the 'Match' column)",
      "fill": "002F5496",
      "bold": true
     },
     {
-     "ref": "B40",
+     "ref": "B41",
      "value": "Weight",
      "fill": "002F5496",
      "bold": true
     },
     {
-     "ref": "C40",
+     "ref": "C41",
      "value": "Meaning",
      "fill": "002F5496",
      "bold": true
     },
     {
-     "ref": "A41",
-     "value": "predatory publisher",
-     "bold": true
-    },
-    {
-     "ref": "B41",
-     "value": "core list"
-    },
-    {
-     "ref": "C41",
-     "value": "A predatory publisher — Beall's main list."
-    },
-    {
      "ref": "A42",
-     "value": "standalone predatory journal",
+     "value": "predatory publisher",
      "bold": true
     },
     {
@@ -3163,24 +3156,24 @@
     },
     {
      "ref": "C42",
-     "value": "A single predatory journal that is not part of a larger publisher."
+     "value": "A publisher the list alleges is predatory."
     },
     {
      "ref": "A43",
-     "value": "hijacked / cloned journal",
+     "value": "predatory conference",
      "bold": true
     },
     {
      "ref": "B43",
-     "value": "core list"
+     "value": "weak — review only"
     },
     {
      "ref": "C43",
-     "value": "A fake journal impersonating a legitimate one by reusing its name and look (only the fake side is listed). A name-only match is downgraded to review, since the clone reuses the real journal's name; only a website match is asserted as on_list. Such a review is cleared to clean when the paper is proven not to be the counterfeit — its venue is the authentic journal's own site, or its DOI resolves (Crossref) to a real publisher that is neither the counterfeit nor on the list — with the reason kept on the Data-quality sheet."
+     "value": "A conference series a list alleges is predatory. No Beall list covers conferences; this comes from another catalogue. A paper is published in a journal rather than a conference series, and conference names are short and generic, so a match here is surfaced, never asserted."
     },
     {
      "ref": "A44",
-     "value": "vanity press (book publisher)",
+     "value": "listed, but under no named list",
      "bold": true
     },
     {
@@ -3189,246 +3182,289 @@
     },
     {
      "ref": "C44",
-     "value": "A book/monograph publisher (e.g. IGI Global). Not a journal-quality signal, so a match here is downgraded to review."
+     "value": "A catalogue published this venue but assigned it to none of its own lists, so it has not said what it is alleging. Surfaced for a human; asserting it would state a claim the source did not make."
     },
     {
      "ref": "A45",
-     "value": "fake-metrics company",
+     "value": "standalone predatory journal",
      "bold": true
     },
     {
      "ref": "B45",
-     "value": "weak — review only"
+     "value": "core list"
     },
     {
      "ref": "C45",
-     "value": "A company selling fake impact-factor metrics — not a venue at all, so a match is downgraded to review."
+     "value": "A single predatory journal that is not part of a larger publisher."
     },
     {
      "ref": "A46",
-     "value": "your own blacklist (not Beall's List)",
+     "value": "hijacked / cloned journal",
      "bold": true
     },
     {
      "ref": "B46",
-     "value": "supplied for this run"
+     "value": "core list"
     },
     {
      "ref": "C46",
-     "value": "Not one of Beall's lists: a venue named in the blacklist given to this run, which the check treats as predatory because it was told to. Matched on the site, the ISSN or the exact name — whichever the entry carried — and asked before anything else, so it applies even to a venue the check would otherwise not classify at all, such as a preprint server. Nothing here reflects Beall's List; remove the entry and the row goes with it."
+     "value": "A fake journal impersonating a legitimate one by reusing its name and look (only the fake side is listed). A name-only match is downgraded to review, since the clone reuses the real journal's name; only a website match is asserted as on_list. Such a review is cleared to clean when the paper is proven not to be the counterfeit — its venue is the authentic journal's own site, or its DOI resolves (Crossref) to a real publisher that is neither the counterfeit nor on the list — with the reason kept on the Data-quality sheet."
     },
     {
-     "ref": "A48",
-     "value": "Layout of the Results / Flagged-only sheets",
+     "ref": "A47",
+     "value": "vanity press (book publisher)",
      "bold": true
     },
     {
+     "ref": "B47",
+     "value": "weak — review only"
+    },
+    {
+     "ref": "C47",
+     "value": "A book/monograph publisher (e.g. IGI Global). Not a journal-quality signal, so a match here is downgraded to review."
+    },
+    {
+     "ref": "A48",
+     "value": "fake-metrics company",
+     "bold": true
+    },
+    {
+     "ref": "B48",
+     "value": "weak — review only"
+    },
+    {
+     "ref": "C48",
+     "value": "A company selling fake impact-factor metrics — not a venue at all, so a match is downgraded to review."
+    },
+    {
      "ref": "A49",
-     "value": "Column",
-     "fill": "002F5496",
+     "value": "your own blacklist (not a published list)",
      "bold": true
     },
     {
      "ref": "B49",
-     "value": "Rows (top -> bottom)",
-     "fill": "002F5496",
-     "bold": true
+     "value": "supplied for this run"
     },
     {
      "ref": "C49",
-     "value": "Meaning",
-     "fill": "002F5496",
-     "bold": true
-    },
-    {
-     "ref": "A50",
-     "value": "(blocks)",
-     "bold": true
-    },
-    {
-     "ref": "B50",
-     "value": "4 rows per paper"
-    },
-    {
-     "ref": "C50",
-     "value": "Each paper occupies a block that is 4 rows tall for every column EXCEPT 'Mentioned in', which grows to fit all its linked venues (so a paper with 10 linked venues is 10 rows tall). Within a block each column's values are merged to fill it — a column with one value is a single cell spanning the whole block, never blank padding rows. Alternating blocks are lightly shaded so they are easy to tell apart."
+     "value": "Not from any published catalogue: a venue named in the blacklist given to this run, which the check treats as predatory because it was told to. Matched on the site, the ISSN or the exact name — whichever the entry carried — and asked before anything else, so it applies even to a venue the check would otherwise not classify at all, such as a preprint server. Nothing here reflects any published list; remove the entry and the row goes with it."
     },
     {
      "ref": "A51",
-     "value": "#",
+     "value": "Layout of the Results / Flagged-only sheets",
      "bold": true
-    },
-    {
-     "ref": "B51",
-     "value": "(merged)"
-    },
-    {
-     "ref": "C51",
-     "value": "Sequential paper number; the cell spans the paper's whole block."
     },
     {
      "ref": "A52",
-     "value": "Status",
-     "bold": true
-    },
-    {
-     "ref": "B52",
-     "value": "(merged)"
-    },
-    {
-     "ref": "C52",
-     "value": "Classification of the paper (see the Status section); spans the block and is colored by status."
-    },
-    {
-     "ref": "A53",
-     "value": "Paper specifications",
-     "bold": true
-    },
-    {
-     "ref": "B53",
-     "value": "(header band)"
-    },
-    {
-     "ref": "C53",
-     "value": "A grouping header over the next three columns (Paper, Semantic Scholar venue, Mentioned in) — everything describing the paper itself, as opposed to why it was flagged ('Match')."
-    },
-    {
-     "ref": "A54",
-     "value": "Paper",
-     "bold": true
-    },
-    {
-     "ref": "B54",
-     "value": "Title / Year / Source / DOI"
-    },
-    {
-     "ref": "C54",
-     "value": "Paper identity, one field per row. 'Source' is which corpus JSON the paper came from. The DOI row is a link to the article at its publisher."
-    },
-    {
-     "ref": "A55",
-     "value": "Semantic Scholar venue",
-     "bold": true
-    },
-    {
-     "ref": "B55",
-     "value": "Venue / Type / Domain / ISSN"
-    },
-    {
-     "ref": "C55",
-     "value": "The publication venue exactly as Semantic Scholar reports it, one field per row. 'Type' is journal/conference (conferences are out of scope); 'Domain' is the venue website host — the main match key — and links to the venue's site. (Named 'Semantic Scholar venue' to distinguish it from the 'Mentioned in' names beside it.)"
-    },
-    {
-     "ref": "A56",
-     "value": "Mentioned in",
-     "bold": true
-    },
-    {
-     "ref": "B56",
-     "value": "one row per linked venue"
-    },
-    {
-     "ref": "C56",
-     "value": "Each journal / publisher / venue tied to the paper THAT HAS A WEB LINK, showing the venue name and linking to the venue's own site. (The venue type — journal/conference — is not repeated here; it is in the 'Type' field of the Semantic Scholar venue column.) Venues with no link are omitted, and there is one entry per distinct venue URL (canonical + alternates), so a merged-venue record shows every site it points at, each disambiguated by its host. This is the one column whose block grows to fit them all (6 linked venues -> a 6-row block; the other columns keep their fields, merged to fit)."
-    },
-    {
-     "ref": "A57",
-     "value": "Match",
-     "bold": true
-    },
-    {
-     "ref": "B57",
-     "value": "Listed as / Beall list / Why flagged"
-    },
-    {
-     "ref": "C57",
-     "value": "Why the paper was flagged, one field per row. 'Listed as' is the Beall's List entry that matched — its link opens THAT entry's own website (the listed/predatory venue), NOT this paper's venue; 'Beall list' is which list it came from (see the 'Beall list' section); 'Why flagged' is a single plain-English line naming HOW it matched (see the 'How the venue matched' section) and the concrete listed entry. For clean / no_venue / error rows the first row shows a short note and the rest are blank."
-    },
-    {
-     "ref": "A58",
-     "value": "LLM review",
-     "bold": true
-    },
-    {
-     "ref": "B58",
-     "value": "(Flagged-only, LLM workbook)"
-    },
-    {
-     "ref": "C58",
-     "value": "Present only on the Flagged-only sheet of bealls_llm_results.xlsx, and only for 'review' papers: the LLM's recommendation — Predatory (exclude) / Legitimate (keep) / Uncertain (check) — plus the entity it matched and a one-line reason, to help you resolve each review paper. The LLM never sets 'on_list' on its own."
-    },
-    {
-     "ref": "A60",
-     "value": "The 'Data quality' sheet",
-     "bold": true
-    },
-    {
-     "ref": "A61",
      "value": "Column",
      "fill": "002F5496",
      "bold": true
     },
     {
-     "ref": "B61",
+     "ref": "B52",
      "value": "Rows (top -> bottom)",
      "fill": "002F5496",
      "bold": true
     },
     {
-     "ref": "C61",
+     "ref": "C52",
      "value": "Meaning",
      "fill": "002F5496",
      "bold": true
     },
     {
-     "ref": "A62",
+     "ref": "A53",
+     "value": "(blocks)",
+     "bold": true
+    },
+    {
+     "ref": "B53",
+     "value": "4 rows per paper"
+    },
+    {
+     "ref": "C53",
+     "value": "Each paper occupies a block that is 4 rows tall for every column EXCEPT 'Mentioned in', which grows to fit all its linked venues (so a paper with 10 linked venues is 10 rows tall). Within a block each column's values are merged to fill it — a column with one value is a single cell spanning the whole block, never blank padding rows. Alternating blocks are lightly shaded so they are easy to tell apart."
+    },
+    {
+     "ref": "A54",
+     "value": "#",
+     "bold": true
+    },
+    {
+     "ref": "B54",
+     "value": "(merged)"
+    },
+    {
+     "ref": "C54",
+     "value": "Sequential paper number; the cell spans the paper's whole block."
+    },
+    {
+     "ref": "A55",
+     "value": "Status",
+     "bold": true
+    },
+    {
+     "ref": "B55",
+     "value": "(merged)"
+    },
+    {
+     "ref": "C55",
+     "value": "Classification of the paper (see the Status section); spans the block and is colored by status."
+    },
+    {
+     "ref": "A56",
+     "value": "Paper specifications",
+     "bold": true
+    },
+    {
+     "ref": "B56",
+     "value": "(header band)"
+    },
+    {
+     "ref": "C56",
+     "value": "A grouping header over the next three columns (Paper, Semantic Scholar venue, Mentioned in) — everything describing the paper itself, as opposed to why it was flagged ('Match')."
+    },
+    {
+     "ref": "A57",
+     "value": "Paper",
+     "bold": true
+    },
+    {
+     "ref": "B57",
+     "value": "Title / Year / Source / DOI"
+    },
+    {
+     "ref": "C57",
+     "value": "Paper identity, one field per row. 'Source' is which corpus JSON the paper came from. The DOI row is a link to the article at its publisher."
+    },
+    {
+     "ref": "A58",
+     "value": "Semantic Scholar venue",
+     "bold": true
+    },
+    {
+     "ref": "B58",
+     "value": "Venue / Type / Domain / ISSN"
+    },
+    {
+     "ref": "C58",
+     "value": "The publication venue exactly as Semantic Scholar reports it, one field per row. 'Type' is journal/conference (conferences are out of scope); 'Domain' is the venue website host — the main match key — and links to the venue's site. (Named 'Semantic Scholar venue' to distinguish it from the 'Mentioned in' names beside it.)"
+    },
+    {
+     "ref": "A59",
+     "value": "Mentioned in",
+     "bold": true
+    },
+    {
+     "ref": "B59",
+     "value": "one row per linked venue"
+    },
+    {
+     "ref": "C59",
+     "value": "Each journal / publisher / venue tied to the paper THAT HAS A WEB LINK, showing the venue name and linking to the venue's own site. (The venue type — journal/conference — is not repeated here; it is in the 'Type' field of the Semantic Scholar venue column.) Venues with no link are omitted, and there is one entry per distinct venue URL (canonical + alternates), so a merged-venue record shows every site it points at, each disambiguated by its host. This is the one column whose block grows to fit them all (6 linked venues -> a 6-row block; the other columns keep their fields, merged to fit)."
+    },
+    {
+     "ref": "A60",
+     "value": "Match",
+     "bold": true
+    },
+    {
+     "ref": "B60",
+     "value": "Listed as / Listed on / Why flagged"
+    },
+    {
+     "ref": "C60",
+     "value": "Why the paper was flagged, one field per row. 'Listed as' is the entry that matched — its link opens THAT entry's own website (the listed/predatory venue), NOT this paper's venue; 'Listed on' is which catalogue and which of its lists (see the 'Listed on' section); 'Why flagged' is a single plain-English line naming HOW it matched (see the 'How the venue matched' section) and the concrete listed entry. For clean / no_venue / error rows the first row shows a short note and the rest are blank."
+    },
+    {
+     "ref": "A61",
+     "value": "LLM review",
+     "bold": true
+    },
+    {
+     "ref": "B61",
+     "value": "(Flagged-only, LLM workbook)"
+    },
+    {
+     "ref": "C61",
+     "value": "Present only on the Flagged-only sheet of bealls_llm_results.xlsx, and only for 'review' papers: the LLM's recommendation — Predatory (exclude) / Legitimate (keep) / Uncertain (check) — plus the entity it matched and a one-line reason, to help you resolve each review paper. The LLM never sets 'on_list' on its own."
+    },
+    {
+     "ref": "A63",
+     "value": "The 'Data quality' sheet",
+     "bold": true
+    },
+    {
+     "ref": "A64",
+     "value": "Column",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "B64",
+     "value": "Rows (top -> bottom)",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "C64",
+     "value": "Meaning",
+     "fill": "002F5496",
+     "bold": true
+    },
+    {
+     "ref": "A65",
      "value": "(which papers)",
      "bold": true
     },
     {
-     "ref": "B62",
+     "ref": "B65",
      "value": "one block per paper"
     },
     {
-     "ref": "C62",
+     "ref": "C65",
      "value": "Lists the papers whose Semantic Scholar record looks suspect — so a verdict above isn't trusted blindly — PLUS any paper whose DOI was checked against Crossref, showing what that check found. A row here is therefore not automatically a problem: it may simply be the record of a venue that Crossref confirmed or cleared. This sheet is omitted entirely when there is nothing at all to report."
     },
     {
-     "ref": "A63",
+     "ref": "A66",
      "value": "Data-quality issue",
      "bold": true
     },
     {
-     "ref": "B63",
+     "ref": "B66",
      "value": "one row per issue"
     },
     {
-     "ref": "C63",
+     "ref": "C66",
      "value": "The specific problem(s) found: no venue info, a malformed DOI/ISSN, leftover HTML codes in the name, a 'merged venue' (one record pointing at several publishers' sites), and — when the Crossref cross-check is enabled — a venue/ISSN that disagrees with the publisher-deposited record. For a 'merged venue' the check also looks up the paper's DOI in Crossref and names the journal it was actually published in, so you don't have to. Appearing here is a 'check this by hand' flag, not proof the verdict is wrong."
     },
     {
-     "ref": "A65",
+     "ref": "A68",
      "value": "Caveats — read before interpreting results",
      "bold": true
     },
     {
-     "ref": "A66",
-     "value": "• Beall's List is an unofficial, archived, frozen (~2021), CONTESTED list. A match is an allegation as of the snapshot date, not proof a venue is predatory."
-    },
-    {
-     "ref": "A67",
-     "value": "• Being on the list is contested. Frontiers, for example, is on the list but widely considered legitimate, so 'on_list' = \"appears on the list,\" not \"is predatory.\" (MDPI is in the site's 'Excluded — decide after reading' section, so it is NOT flagged.)"
-    },
-    {
-     "ref": "A68",
-     "value": "• This check classifies the VENUE, not the paper's content/quality."
-    },
-    {
      "ref": "A69",
-     "value": "• The base check uses NO LLM (0 tokens). Every result is deterministic and auditable from the 'Match' column. The optional LLM pass only ADDS recommendations for the 'review' papers (the 'LLM review' column); it never changes a deterministic verdict."
+     "value": "• Every list here is compiled by a third party, is contested, and is a snapshot taken on a date the Summary records. A match is an allegation as of that date, not proof a venue is predatory. Beall's List in particular is unofficial and frozen (~2021)."
     },
     {
      "ref": "A70",
+     "value": "• The lists disagree with each other, and none publishes its evidence per entry. 'Listed on' therefore names which catalogue and which of its lists an entry came from, and how it matched — never why that catalogue listed it."
+    },
+    {
+     "ref": "A71",
+     "value": "• Being listed is contested. Frontiers, for example, is on Beall's List but widely considered legitimate, so 'on_list' = \"appears on a list,\" not \"is predatory.\" (MDPI is in that site's 'Excluded — decide after reading' section, so it is NOT flagged.)"
+    },
+    {
+     "ref": "A72",
+     "value": "• This check classifies the VENUE, not the paper's content/quality."
+    },
+    {
+     "ref": "A73",
+     "value": "• The base check uses NO LLM (0 tokens). Every result is deterministic and auditable from the 'Match' column. The optional LLM pass only ADDS recommendations for the 'review' papers (the 'LLM review' column); it never changes a deterministic verdict."
+    },
+    {
+     "ref": "A74",
      "value": "• no_venue is mostly arXiv/preprints, which have no journal publisher and so cannot be on Beall's List."
     }
    ]
