@@ -659,6 +659,10 @@ def _classify(r: dict, index: BeallIndex, paper: dict) -> dict:
         r["status"] = "review"
         r["matched_on"] = "domain_alternate_url"
         r["list_source"] = "; ".join(dict.fromkeys(e["list_source"] for e in alt_hits))
+        # Joined in the same order, so the first name here and the first list
+        # above both describe the entry `matched_url` points at.
+        r["provider"] = "; ".join(dict.fromkeys(e.get("provider", "") for e in alt_hits
+                                                if e.get("provider")))
         r["matched_name"] = "; ".join(e["name"] for e in alt_hits)
         r["matched_url"] = alt_hits[0]["url"]
         r["alt_source_urls"] = alt_urls

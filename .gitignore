@@ -28,3 +28,9 @@ docs/
 # and this rule did not follow it, which put a 3.6 MB DOAJ list into a commit.
 ui/.cache/
 ui/venues/.cache/
+
+# Third-party reference-list snapshots fetched by the user, NOT redistributed.
+# Kscien states "Copyright (c) 2026 Kscien - All Rights Reserved" and publishes
+# no licence, so their data must not be committed. Each user fetches their own
+# copy with fetch_kscien/fetch_kscien.py. (The Beall's snapshot above IS tracked.)
+src/bealls_list_check/data/kscien_snapshot.json

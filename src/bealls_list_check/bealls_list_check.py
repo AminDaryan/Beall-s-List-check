@@ -75,9 +75,19 @@ def load_snapshot(provider="beall"):
                  f"Known: {', '.join(sorted(PROVIDERS))}.")
     path = spec["snapshot"]
     if not path.exists():
-        hint = ("Run scrape_bealls_list/scrape_bealls_list.py first to vendor the "
-                "Beall's List." if provider == "beall" else
-                f"No local copy of {spec['label']} yet — download it first.")
+        # A list the repository does not ship has to say how to get it: silently
+        # checking against nothing would report every paper as clean.
+        fetch_with = spec.get("fetch_with")
+        if provider == "beall":
+            hint = ("Run scrape_bealls_list/scrape_bealls_list.py first to vendor "
+                    "the Beall's List.")
+        elif fetch_with:
+            hint = (f"{spec['label']} is not shipped with this tool, so it has to be "
+                    f"fetched once before it can be used:\n"
+                    f"    python src/bealls_list_check/{fetch_with}\n"
+                    f"Source: {spec.get('home', '')}")
+        else:
+            hint = f"No local copy of {spec['label']} yet."
         sys.exit(f"Snapshot not found: {path}\n{hint}")
     with open(path, encoding="utf-8") as f:
         return json.load(f)

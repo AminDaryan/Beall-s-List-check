@@ -51,6 +51,18 @@ PROVIDERS = {
         # Shipped with the repo, so a clone can run offline with no download.
         "vendored": True,
     },
+    "kscien": {
+        "label": "Kscien's list",
+        "snapshot": _HERE / "data" / "kscien_snapshot.json",
+        "home": "https://kscien.org/non-recommended-journals-lists/",
+        # NOT shipped: Kscien states "All Rights Reserved" and publishes no
+        # licence, so the repository does not redistribute their data.  Each user
+        # fetches their own copy with fetch_kscien/fetch_kscien.py, and the file
+        # is git-ignored.  A run that enables this list without a local copy is
+        # told to fetch one rather than silently checking against nothing.
+        "vendored": False,
+        "fetch_with": "fetch_kscien/fetch_kscien.py",
+    },
 }
 
 # Which providers a run uses when it is not told otherwise.  A bare invocation
@@ -69,6 +81,7 @@ PROVIDER_RANK = {"user": -1, **{pid: i for i, pid in enumerate(PROVIDERS)}}
 KNOWN_LIST_SOURCES = {
     "publishers", "standalone_journal", "hijacked",
     "vanity_press", "misleading_metric",
+    "predatory_conference",            # Kscien only; Beall's has no equivalent
     "whitelist", "blacklist",          # the user's own two lists
 }
 
@@ -110,7 +123,13 @@ FUZZY_LIST_SOURCES = {"publishers", "standalone_journal", "hijacked", "blacklist
 #   * misleading_metric— companies selling fake impact-factor metrics; not
 #                        venues at all, so a paper can't be published "in" one.
 # A match on these is downgraded from on_list -> review (surfaced, not asserted).
-WEAK_LIST_SOURCES = {"vanity_press", "misleading_metric"}
+#   * predatory_conference — Kscien's conference list.  A paper is published in
+#                        a journal, not in a conference series, and conference
+#                        names are short and generic ("ICAST", "World Congress
+#                        on ..."), so a hit is surfaced for a human rather than
+#                        asserted.  This is also the only category no Beall list
+#                        has an equivalent for.
+WEAK_LIST_SOURCES = {"vanity_press", "misleading_metric", "predatory_conference"}
 
 # Generic hosting / platform domains that some Beall entries live on (e.g. a
 # predatory journal whose only web presence is a Google Site).  These are too

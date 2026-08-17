@@ -126,13 +126,39 @@ class TestLoadTimeValidation(unittest.TestCase):
         """The dangerous failure this prevents: an unknown category would miss
         WEAK_LIST_SOURCES and so be ASSERTED as a confident hit rather than
         downgraded to review — invisibly, on every paper."""
-        bad = [_entry("Some Conference Series", "conf.test", "predatory_conference")]
+        # Deliberately a category no build maps.  (This test first used
+        # "predatory_conference", which stopped being unknown the moment Kscien's
+        # conference list was added — so it now uses a value that cannot become
+        # legitimate by accident.)
+        self.assertNotIn("totally_made_up_category", config.KNOWN_LIST_SOURCES)
+        bad = [_entry("Some Venue", "bad.test", "totally_made_up_category")]
         with _TempProvider("badprov", "Bad Provider", bad):
             with self.assertRaises(SystemExit) as ctx:
                 det.build_index(providers=["badprov"])
         msg = str(ctx.exception)
-        self.assertIn("predatory_conference", msg)
+        self.assertIn("totally_made_up_category", msg)
         self.assertIn("Bad Provider", msg)
+
+    def test_every_configured_category_rule_names_a_known_category(self):
+        """The three category sets in config.py must not drift apart: a value in
+        the fuzzy or weak set that is not a known category would be a rule
+        governing something the validator rejects."""
+        self.assertTrue(config.FUZZY_LIST_SOURCES <= config.KNOWN_LIST_SOURCES)
+        self.assertTrue(config.WEAK_LIST_SOURCES <= config.KNOWN_LIST_SOURCES)
+
+    def test_kscien_conferences_are_review_only(self):
+        """Beall's has no conference list, so this category is Kscien's alone and
+        must never assert a confident hit — conference names are short and
+        generic, and a paper is published in a journal, not a conference series."""
+        self.assertIn("predatory_conference", config.WEAK_LIST_SOURCES)
+        self.assertNotIn("predatory_conference", config.FUZZY_LIST_SOURCES)
+        idx = BeallIndex([_entry("World Congress on Everything", "wce.test",
+                                 "predatory_conference", provider="kscien")])
+        r = match_paper(idx, _paper("p1", "World Congress on Everything",
+                                    url="http://wce.test/2026"), "f.json")
+        self.assertEqual(r["status"], "review",
+                         "a conference match must be surfaced, never asserted")
+        self.assertEqual(r["provider"], "kscien")
 
     def test_unknown_provider_id_fails_at_load(self):
         with self.assertRaises(SystemExit) as ctx:
