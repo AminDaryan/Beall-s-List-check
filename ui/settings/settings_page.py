@@ -41,6 +41,7 @@ import crossref
 import doaj
 import styles
 import venue_lists
+import reference_lists
 import venue_lookup
 from notices import flush_notices, notify_next_run
 
@@ -190,6 +191,88 @@ def _fetch_directory(module, title):
         st.rerun()
 
 
+def _reference_lists_block():
+    """The published lists a run can screen against, and whether this computer
+    holds them.
+
+    Separate from the two directories above, and the difference is worth stating:
+    a directory only helps you *name* a venue, while these decide what counts as
+    predatory. A directory can be searched over the internet; a reference list has
+    to be on this computer, because a run compares every paper against the whole
+    list and asking a website once per paper would be thousands of requests.
+
+    Built from the registry, so a list added later appears here with no change to
+    this page.
+    """
+    st.subheader("Reference lists")
+    st.caption(
+        "The published lists Step 3 can screen your papers against. **Beall's List "
+        "ships with the tool**; anything else has to be downloaded once, because its "
+        "publisher grants no licence to redistribute it. A downloaded list is a dated "
+        "snapshot, so a run can be repeated and get the same answer — the workbook's "
+        "Summary records which lists and which dates produced it.")
+
+    for pid in reference_lists.ids():
+        state = reference_lists.status(pid)
+        label = reference_lists.label(pid)
+        st.markdown(f"<div class='bl-dir-name'>{label}</div>"
+                    f"<div class='bl-dir-about'>{reference_lists.home(pid)}</div>",
+                    unsafe_allow_html=True)
+
+        if reference_lists.is_vendored(pid):
+            st.markdown(
+                f"<div class='bl-dir-state ok'>Ships with the tool — "
+                f"{state['entries']} entries, nothing to download.</div>",
+                unsafe_allow_html=True)
+            continue
+
+        if state["error"]:
+            tone, line = "warn", f"⚠️ {state['error']}"
+        elif not state["held"]:
+            tone, line = "warn", "Not on this computer. Step 3 offers it greyed out until it is."
+        else:
+            age = state["age_days"]
+            when = "today" if age == 0 else f"{age} day(s) ago"
+            size = _bytes_human(state["bytes"])
+            parts = ", ".join(f"{n} {k.replace('_', ' ')}"
+                              for k, n in sorted(state["counts"].items(),
+                                                 key=lambda kv: -kv[1]))
+            tone = "ok"
+            line = (f"{state['entries']} entries · {size} · downloaded {when}"
+                    + (f"<br><span class='bl-dir-sub'>{parts}</span>" if parts else ""))
+        st.markdown(f"<div class='bl-dir-state {tone}'>{line}</div>",
+                    unsafe_allow_html=True)
+
+        col_a, col_b = st.columns([1, 3])
+        with col_a:
+            label_btn = "Update" if state["held"] else "Download"
+            clicked = st.button(f"{label_btn} {label}", key=f"fetch_{pid}")
+        with col_b:
+            st.caption(
+                "Checks for changes in a single request and fetches only what "
+                "changed; the first download is larger."
+                if state["held"] else
+                "One download, then kept on this computer.")
+
+        if clicked:
+            bar = st.progress(0.0, text=f"Fetching {label}…")
+            log = st.empty()
+            seen = []
+
+            def on_line(line, _log=log, _seen=seen):
+                _seen.append(line)
+                _log.caption(line[:140])
+
+            ok, output = reference_lists.fetch(pid, on_line=on_line)
+            bar.progress(1.0, text=f"{label}: done" if ok else f"{label}: failed")
+            if ok:
+                notify_next_run(f"{label} is ready to use in Step 3.", icon="✅")
+                st.rerun()
+            else:
+                st.error(f"Could not fetch {label}. The list is unchanged.")
+                st.code(output[-1500:] or "(no output)")
+
+
 def page_settings():
     """Two choices: where each of Step 3's two venue directories is searched.
 
@@ -249,6 +332,9 @@ def page_settings():
             "request to wait for and so no such floor.\n\n"
             "Going back to the internet keeps the downloaded file, so choosing the "
             "copy again is instant rather than another download."))
+
+    st.divider()
+    _reference_lists_block()
 
     st.divider()
 

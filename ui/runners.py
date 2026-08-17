@@ -280,6 +280,7 @@ def _parse_status_csv(csv_bytes: bytes) -> list:
 
 
 def run_batch_csv(items: list, *, crossref: bool = True, aux_lists: Optional[dict] = None,
+                  extra_args: Optional[list] = None,
                   on_line=None, timeout: Optional[int] = None) -> BatchCsvResult:
     """Run the batch check over *items* and return the SS-ID/DOI/Status CSV.
 
@@ -291,7 +292,10 @@ def run_batch_csv(items: list, *, crossref: bool = True, aux_lists: Optional[dic
     *aux_lists* is the same mapping :func:`run_checker` takes, and is passed on for
     the same reason: this CSV is offered as an add-on to a run that may have had a
     whitelist or a blacklist, and one that ignored them would disagree with the
-    workbook beside it about the same papers.
+    workbook beside it about the same papers.  *extra_args* carries the reference-list
+    selection for exactly the same reason — this function builds its command by hand,
+    so without it a CSV would silently be screened against a different set of lists
+    than the workbook it sits beside.
     """
     with tempfile.TemporaryDirectory(prefix="bealls_csv_") as tmp:
         tmp = Path(tmp)
@@ -306,6 +310,7 @@ def run_batch_csv(items: list, *, crossref: bool = True, aux_lists: Optional[dic
             aux_file = tmp / (flag.lstrip("-") + ".json")
             aux_file.write_text(json.dumps(entries, ensure_ascii=False), encoding="utf-8")
             cmd += [flag, str(aux_file)]
+        cmd += list(extra_args or [])
         env = os.environ.copy()
         if on_line is None:
             proc = subprocess.run(cmd, env=env, cwd=str(REPO_ROOT),

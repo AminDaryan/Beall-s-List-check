@@ -43,6 +43,7 @@ for _p in [_UI, *(d for d in _UI.iterdir() if d.is_dir() and any(d.glob("*.py"))
 import notices
 import results
 import runners
+import reference_lists
 import settings_page
 import styles
 import tutorial_page
@@ -428,6 +429,12 @@ def _options_state(checker):
     if checker.needs_llm:
         model = selected_model()
         bits.append(f"{selected_provider()} / {model}" if model else selected_provider())
+    chosen = [p for p in reference_lists.ids()
+              if st.session_state.get(f"list_{p}", p in reference_lists.default_ids())]
+    # Named, not counted: which catalogues a run screened against is the thing a
+    # reader has to be able to state, and there are few enough to name.
+    bits.append(", ".join(reference_lists.label(p) for p in chosen) if chosen
+                else "⚠️ no list selected")
     bits.append("Crossref on" if st.session_state.get("cr", True) else "Crossref off")
     # All three checks take both lists now, so the pill reports them for all
     # three.  Batch CSV was the exception only because its script had never been
@@ -505,6 +512,7 @@ class _Options(NamedTuple):
     """Everything Step 3 decides, as Step 4 needs it."""
 
     crossref: bool
+    lists: list
     whitelist: object
     blacklist: object
     aux_lists: dict
@@ -716,6 +724,62 @@ def _venue_list_section():
     return wl, bl
 
 
+def _reference_lists_section():
+    """Step 3's reference lists. Returns the selected list ids.
+
+    Built from the registry rather than named here, so adding a catalogue is a
+    registry entry plus its fetcher — nothing on this page mentions a particular
+    list. Checkboxes rather than a radio, because the lists are cumulative: the
+    question is "which catalogues does this run screen against", and answering it
+    with several is the normal case, not an edge one. It is also what a methods
+    section has to state — "we screened against X and Y" — which a single choice
+    cannot express.
+
+    Beall's List ships with the tool and is on by default; anything else has to
+    be downloaded once in Settings, and is offered disabled until it is, with the
+    reason on the control rather than as a failure at run time.
+    """
+    with _options_section("📚", "Reference lists", "what counts as predatory"):
+        st.caption("Which published lists this run screens your papers against. "
+                   "A venue on **any** of them is flagged, and the report names "
+                   "which one — so a paper can show that two lists agree.")
+        chosen = []
+        cols = st.columns(max(2, len(reference_lists.ids())))
+        for col, pid in zip(cols, reference_lists.ids()):
+            with col:
+                usable = reference_lists.usable(pid)
+                state = reference_lists.status(pid)
+                if usable:
+                    n = state["entries"] or "—"
+                    age = state["age_days"]
+                    when = ("shipped with the tool" if reference_lists.is_vendored(pid)
+                            else f"downloaded {age} day(s) ago" if age is not None
+                            else "downloaded")
+                    help_text = f"{n} entries, {when}. {reference_lists.home(pid)}"
+                else:
+                    help_text = ("Not on this computer yet. Its publisher grants no "
+                                 "licence to redistribute it, so it is not shipped "
+                                 "with the tool — download it once on the Settings "
+                                 "page.")
+                on = st.checkbox(
+                    reference_lists.label(pid),
+                    value=pid in reference_lists.default_ids() and usable,
+                    key=f"list_{pid}", disabled=not usable, help=help_text)
+                if usable:
+                    st.caption(f"{state['entries']} entries")
+                else:
+                    st.caption("⚠️ not downloaded")
+                if on and usable:
+                    chosen.append(pid)
+        if not chosen:
+            # An empty selection would match nothing and report every paper as
+            # clean, which is the one failure this page must not let through
+            # silently. Step 4's button is disabled while this holds.
+            st.warning("Choose at least one list — with none selected there is "
+                       "nothing to check the papers against.")
+    return chosen
+
+
 def _step_options(checker, llm):
     """Step 3 — everything about *this* run. Returns an :class:`_Options`."""
     llm_models = llm.models
@@ -778,6 +842,8 @@ def _step_options(checker, llm):
                      "on, add it to `.env` and restart — `.env` is read once, at startup.")
             model = (model or "").strip()
 
+    lists = _reference_lists_section()
+
     with _options_section("🔗", "Crossref", "recommended"):
         # One explanation, on the control.  It used to be said twice — a tooltip
         # and a caption below saying the same thing in the same words — which is
@@ -799,8 +865,12 @@ def _step_options(checker, llm):
     # that disagreed about the same papers.  The script takes both now.
     wl, bl = _venue_list_section()
     aux_lists = {"--whitelist": wl, "--blacklist": bl}
-    extra_args = None if crossref else ["--crossref", "off"]
-    return _Options(crossref, wl, bl, aux_lists, extra_args,
+    # Both ride on extra_args, the same mechanism --crossref already uses, so
+    # runners.py needs no new plumbing. cli_args() returns nothing when the
+    # selection is the default, keeping an untouched Step 3 producing exactly the
+    # command line it produced before this control existed.
+    extra_args = ([] if crossref else ["--crossref", "off"]) + reference_lists.cli_args(lists)
+    return _Options(crossref, lists, wl, bl, aux_lists, extra_args or None,
                     provider if checker.needs_llm else "",
                     model if checker.needs_llm else "")
 
@@ -808,6 +878,7 @@ def _step_options(checker, llm):
 def _step_run(checker, items, llm, options):
     """Step 4 — restate what is about to happen, run it, show what came back."""
     crossref, wl, bl = options.crossref, options.whitelist, options.blacklist
+    lists = options.lists
     aux_lists, extra_args = options.aux_lists, options.extra_args
     provider, model = options.provider, options.model
     llm_ok, llm_msg = llm.ok, llm.message
@@ -835,6 +906,11 @@ def _step_run(checker, items, llm, options):
          "" if items else "bl-sum-todo",
          "The bundled example corpus, not your data — replace it in Step 2."
          if _is_example_corpus() else ""),
+        ("Reference lists",
+         ", ".join(reference_lists.label(p) for p in lists) if lists else "none chosen",
+         "" if lists else "bl-sum-off",
+         "Which published lists this run screens against. A venue on any of them is "
+         "flagged, and the report names which one."),
         ("Crossref", "On" if crossref else "Off", "" if crossref else "bl-sum-off", ""),
         ("Whitelist", f"{len(wl)} venue(s)" if wl else "—",
          "" if wl else "bl-sum-off", wl_why),
@@ -879,7 +955,7 @@ def _step_run(checker, items, llm, options):
                     + "".join(_cell(*row) for row in summary)
                     + "</div>", unsafe_allow_html=True)
     run = st.button("▶ Run check", type="primary", key="run",
-                    disabled=items is None,
+                    disabled=items is None or not lists,
                     help=None if items is not None else "Add papers in Step 2 first.")
     if not items:
         st.caption("Add papers above to enable the button.")
@@ -915,8 +991,9 @@ def _step_run(checker, items, llm, options):
                     if checker.needs_llm else "large corpora can take a while")
             with st.spinner(f"{checker.title} running… {slow}."):
                 if checker.kind == "csv":
-                    res = runners.run_batch_csv(items, crossref=crossref,
-                                                aux_lists=aux_lists, on_line=on_line)
+                    res = runners.run_batch_csv(
+                        items, crossref=crossref, aux_lists=aux_lists,
+                        extra_args=reference_lists.cli_args(lists), on_line=on_line)
                 else:
                     # The choices reach the check the way the check already looks
                     # for them: openai_client reads LLM_PROVIDER and
@@ -975,10 +1052,12 @@ def _step_run(checker, items, llm, options):
                        "lookups, runs a second time — the CSV cannot be built from the "
                        "workbook, because the workbook has already merged the repeats this "
                        "file is for.")
-            if st.button("📄 Also produce the batch CSV", key="addon", disabled=items is None):
+            if st.button("📄 Also produce the batch CSV", key="addon",
+                         disabled=items is None or not lists):
                 with st.spinner("Batch check running…"):
                     st.session_state["csv_addon"] = runners.run_batch_csv(
-                        items, crossref=crossref, aux_lists=aux_lists)
+                        items, crossref=crossref, aux_lists=aux_lists,
+                        extra_args=reference_lists.cli_args(lists))
             addon = st.session_state.get("csv_addon")
             if addon is not None:
                 results.render_csv_result(addon)
