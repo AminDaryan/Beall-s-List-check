@@ -597,11 +597,18 @@ def _classify(r: dict, index: BeallIndex, paper: dict) -> dict:
     is_preprint = any(d in PREPRINT_DOMAINS for d in all_domains) or (
         not all_domains and any(n in PREPRINT_NAMES for n in norm_names)
     )
+    # Both outcomes are 'no_venue' — there is no journal to compare against a
+    # list — but they are not the same finding, and the report has to say which.
+    # A preprint HAS a venue and it is one no list can cover; a record with no
+    # venue fields at all could not be checked. Recorded in ``matched_on``, which
+    # is where a non-match already carries its explanation (see the 'error' row).
     if is_preprint:
         r["status"] = "no_venue"
+        r["matched_on"] = "preprint"
         return r
     if not all_domains and not norm_names and not issns:
         r["status"] = "no_venue"
+        r["matched_on"] = "no_venue_metadata"
         return r
 
     # ── high-confidence signals (asserted as on_list) ────────────────────

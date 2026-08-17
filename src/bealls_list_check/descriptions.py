@@ -170,11 +170,47 @@ def _list_plain(list_source):
 
 
 # Short note shown on the first Match row for statuses that matched nothing.
+#
+# 'no_venue' covers two different findings and used to state them as one
+# undecided sentence ("this is a preprint, OR the record has no venue
+# information"), which left the reader to work out which had happened. They are
+# split by ``matched_on`` below: a preprint is a venue no list can cover, while a
+# record with no venue fields is one the check could not examine at all. The
+# distinction matters when the question is "why is this paper not in the
+# legitimate set?".
 _NONMATCH_NOTES = {
     "clean":        "The venue was identified and is not on Beall's List.",
     "no_venue":     "No journal venue to classify — this is a preprint, or the "
                     "record has no venue information.",
 }
+
+_NO_VENUE_NOTES = {
+    "preprint": (
+        "Not reviewed against any list: this is a preprint (e.g. arXiv), which "
+        "has no journal or publisher, so it cannot appear on a predatory-venue "
+        "list. Nothing here says the paper is either sound or unsound."
+    ),
+    "no_venue_metadata": (
+        "Could not be reviewed: the record carries no venue information at all — "
+        "no journal name, no website and no ISSN — so there was nothing to "
+        "compare against any list. This is a gap in the metadata, not a finding "
+        "about the paper. Supply the venue (or the DOI) to have it checked."
+    ),
+}
+
+
+def _nonmatch_note(r):
+    """The Match-column note for a status that matched nothing.
+
+    Split out of ``_NONMATCH_NOTES`` so that ``no_venue`` can say which of its
+    two causes applied, without giving either one its own status — the batch
+    CSV's documented five status values are a published contract.
+    """
+    status = r.get("status")
+    if status == "no_venue":
+        return _NO_VENUE_NOTES.get(r.get("matched_on") or "",
+                                   _NONMATCH_NOTES["no_venue"])
+    return _NONMATCH_NOTES.get(status, "")
 
 
 def _on_list_why(r):

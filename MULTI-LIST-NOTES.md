@@ -238,3 +238,46 @@ Two previously untested paths are now pinned:
   Kscien in step 2, together with the weak-list rule that keeps it review-only.
 - `matched_entry` holds a reference to the snapshot entry. Nothing serialises the
   result dict, so this is safe, but a future writer must not render it.
+
+---
+
+## Phase 3, step 2 — say why a paper is not in the legitimate set
+
+### Changed
+
+`match/match.py` records which of the two `no_venue` causes applied, in
+`matched_on`: `"preprint"` or `"no_venue_metadata"`. `descriptions.py` gains
+`_NO_VENUE_NOTES` and `_nonmatch_note(r)`; `report.py` calls the latter.
+
+### Why
+
+`no_venue` covers two different findings and stated them as one undecided
+sentence — *"this is a preprint, **or** the record has no venue information"* —
+leaving the reader to work out which had happened. Once the workbook reports a
+legitimate set, every paper outside it has to say why it is outside, and these
+are different answers: a preprint has a venue that no predatory-venue list can
+cover, while a record with no venue fields could not be examined at all. The
+second is a metadata gap the user can fix by supplying the venue or the DOI.
+
+Both keep the `no_venue` **status**. The batch CSV's five documented status
+values are a published integration contract, so a sixth status would be a
+breaking change for something that is a difference of explanation, not of verdict.
+
+### Compatibility
+
+Statuses, `list_source` values, flagged count, merge ranges, column widths and
+`max_row` are all unchanged. **3 cells** change — the two new notes, one of which
+appears on the Data-quality sheet as well — plus the row heights of 8 rows, because
+the new text is longer and wraps taller.
+
+### Tests
+
+3 new tests; 22 total. They pin that the two causes are distinguished, that each
+renders its own note, that neither note reads as a judgement on the paper, and
+that a future `no_venue` branch which forgets to set `matched_on` still renders
+something rather than an empty cell.
+
+### Known risks
+
+The Legend's status table still describes `no_venue` as one combined case. That
+is wording, and belongs with the rest of the wording pass.

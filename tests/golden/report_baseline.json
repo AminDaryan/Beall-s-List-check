@@ -126,10 +126,10 @@
     "48": 16.0,
     "49": 16.0,
     "50": 16.0,
-    "51": 16.0,
-    "52": 16.0,
-    "53": 16.0,
-    "54": 16.0,
+    "51": 18.75,
+    "52": 18.75,
+    "53": 18.75,
+    "54": 18.75,
     "55": 16.0,
     "56": 16.0,
     "57": 16.0,
@@ -952,7 +952,7 @@
     },
     {
      "ref": "F47",
-     "value": "No journal venue to classify — this is a preprint, or the record has no venue information.",
+     "value": "Not reviewed against any list: this is a preprint (e.g. arXiv), which has no journal or publisher, so it cannot appear on a predatory-venue list. Nothing here says the paper is either sound or unsound.",
      "fill": "00F2F4F8"
     },
     {
@@ -1011,7 +1011,7 @@
     },
     {
      "ref": "F51",
-     "value": "No journal venue to classify — this is a preprint, or the record has no venue information."
+     "value": "Could not be reviewed: the record carries no venue information at all — no journal name, no website and no ISSN — so there was nothing to compare against any list. This is a gap in the metadata, not a finding about the paper. Supply the venue (or the DOI) to have it checked."
     },
     {
      "ref": "C52",
@@ -1980,10 +1980,10 @@
     "4": 16.0,
     "5": 60.0,
     "6": 60.0,
-    "7": 16.0,
-    "8": 16.0,
-    "9": 16.0,
-    "10": 16.0
+    "7": 18.75,
+    "8": 18.75,
+    "9": 18.75,
+    "10": 18.75
    },
    "cells": [
     {
@@ -2142,7 +2142,7 @@
     },
     {
      "ref": "F7",
-     "value": "No journal venue to classify — this is a preprint, or the record has no venue information.",
+     "value": "Could not be reviewed: the record carries no venue information at all — no journal name, no website and no ISSN — so there was nothing to compare against any list. This is a gap in the metadata, not a finding about the paper. Supply the venue (or the DOI) to have it checked.",
      "fill": "00F2F4F8"
     },
     {
@@ -3171,8 +3171,8 @@
   "name_fuzzy",
   "domain_alternate_url",
   "",
-  "",
-  "",
+  "preprint",
+  "no_venue_metadata",
   "TypeError: 'int' object is not iterable"
  ]
 }

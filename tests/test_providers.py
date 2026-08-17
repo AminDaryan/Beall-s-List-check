@@ -238,6 +238,48 @@ class TestIssnTier(unittest.TestCase):
         self.assertEqual(by_name["status"], "review")    # name needs the site to agree
 
 
+class TestNoVenueIsExplained(unittest.TestCase):
+    """A paper outside the legitimate set must say WHY, and the two 'no_venue'
+    causes are different answers: a preprint has a venue no list can cover, while
+    a record with no venue fields could not be examined at all.
+
+    Both keep the ``no_venue`` status — the batch CSV's five documented status
+    values are a published contract — so the distinction lives in ``matched_on``
+    and in the note the Match column renders.
+    """
+
+    def test_preprint_and_missing_metadata_are_distinguished(self):
+        idx = BeallIndex([_entry("Listed", "listed.test", "publishers", provider="beall")])
+
+        preprint = match_paper(idx, _paper("p1", "arXiv", url="https://arxiv.org/abs/1"),
+                               "f.json")
+        empty = match_paper(idx, {"paperId": "p2", "title": "t", "externalIds": {},
+                                  "venue": "", "publicationVenue": {}}, "f.json")
+
+        self.assertEqual(preprint["status"], "no_venue")
+        self.assertEqual(empty["status"], "no_venue")
+        self.assertEqual(preprint["matched_on"], "preprint")
+        self.assertEqual(empty["matched_on"], "no_venue_metadata")
+
+    def test_each_cause_renders_its_own_note(self):
+        from descriptions import _nonmatch_note
+        preprint_note = _nonmatch_note({"status": "no_venue", "matched_on": "preprint"})
+        empty_note = _nonmatch_note({"status": "no_venue",
+                                     "matched_on": "no_venue_metadata"})
+        self.assertNotEqual(preprint_note, empty_note)
+        self.assertIn("preprint", preprint_note)
+        self.assertIn("no venue information", empty_note)
+        # Neither may read as a judgement on the paper itself.
+        for note in (preprint_note, empty_note):
+            self.assertNotIn("predatory journal", note.lower().replace("predatory-venue", ""))
+
+    def test_an_unrecognised_cause_still_renders_something(self):
+        """Defensive: a future no_venue branch that forgets to set matched_on must
+        not produce an empty cell."""
+        from descriptions import _nonmatch_note
+        self.assertTrue(_nonmatch_note({"status": "no_venue", "matched_on": ""}))
+
+
 class TestNameExactConfirmationUsesTheMatchedEntry(unittest.TestCase):
     """The DOI confirmation must check the entry that actually matched.
 

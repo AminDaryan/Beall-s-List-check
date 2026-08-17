@@ -30,7 +30,7 @@ from config import RESULTS_DIR, RESULTS_FILENAME, STATUS_FILL_COLORS
 from normalize import split_list_sources
 from progress import Progress
 from descriptions import (
-    _on_list_why, _list_plain, _signal_plain, _NONMATCH_NOTES,
+    _on_list_why, _list_plain, _signal_plain, _NONMATCH_NOTES, _nonmatch_note,
     _LEGEND_SECTIONS, _LEGEND_TITLE,
 )
 
@@ -151,7 +151,8 @@ def _match_subrows(r):
     if r.get("cleared_reason"):                 # a hijacked-by-name flag cleared to clean
         note = r["cleared_reason"]
     elif status in _NONMATCH_NOTES:
-        note = _NONMATCH_NOTES[status]
+        # 'no_venue' resolves to whichever of its two causes applied.
+        note = _nonmatch_note(r)
     elif status == "error":
         note = f"Error: {r.get('matched_on') or 'could not process record'}"
     else:
