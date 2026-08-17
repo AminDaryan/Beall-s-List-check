@@ -66,37 +66,51 @@ _TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
 SNAPSHOT_META = {
     "source": "https://example.test/fixture",
     "scraped_utc": "2026-01-01T00:00:00+00:00",
-    "total_entries": 8,
+    "total_entries": 9,
     "note": "Synthetic fixture snapshot — not real data.",
+    # Two catalogues, so the fixture exercises the provider-aware wording and the
+    # per-catalogue Summary breakdown rather than the no-provider fallback.
+    "providers": [
+        {"provider": "beall", "label": "Beall's List",
+         "scraped_utc": "2026-01-01T00:00:00+00:00", "total_entries": 8,
+         "source": "https://example.test/fixture"},
+        {"provider": "kscien", "label": "Kscien's list",
+         "scraped_utc": "2026-02-02T00:00:00+00:00", "total_entries": 1,
+         "source": "https://example.test/kscien"},
+    ],
 }
 
 ENTRIES = [
     {"name": "Dodgy Publishing Group", "url": "http://dodgypub.test/",
      "domain": "dodgypub.test", "normalized_name": "dodgy publishing group",
-     "issns": [], "list_source": "publishers"},
+     "issns": [], "list_source": "publishers", "provider": "beall"},
     {"name": "Subhost Press", "url": "http://subhost.test/",
      "domain": "subhost.test", "normalized_name": "subhost press",
-     "issns": [], "list_source": "publishers"},
+     "issns": [], "list_source": "publishers", "provider": "beall"},
     {"name": "Journal of Dubious Results", "url": "http://dubious.test/",
      "domain": "dubious.test", "normalized_name": "journal of dubious results",
-     "issns": ["1111-2222"], "list_source": "standalone_journal"},
+     "issns": ["1111-2222"], "list_source": "standalone_journal", "provider": "beall"},
     {"name": "Journal of Shared Titles", "url": "http://sharedtitle.test/",
      "domain": "sharedtitle.test", "normalized_name": "journal of shared titles",
-     "issns": [], "list_source": "standalone_journal"},
+     "issns": [], "list_source": "standalone_journal", "provider": "beall"},
     # No website at all -> an exact name match is asserted (match.py:611).
     {"name": "Bulletin of Unlisted Sites", "url": "",
      "domain": "", "normalized_name": "bulletin of unlisted sites",
-     "issns": [], "list_source": "standalone_journal"},
+     "issns": [], "list_source": "standalone_journal", "provider": "beall"},
     {"name": "Cloned Medical Review", "url": "http://clone.test/",
      "domain": "clone.test", "normalized_name": "cloned medical review",
-     "issns": [], "list_source": "hijacked",
+     "issns": [], "list_source": "hijacked", "provider": "beall",
      "authentic_url": "http://authentic.test/", "authentic_domain": "authentic.test"},
+    # From a SECOND catalogue, in a category only that catalogue has.
+    {"name": "World Congress on Everything", "url": "http://wcongress.test/",
+     "domain": "wcongress.test", "normalized_name": "world congress on everything",
+     "issns": [], "list_source": "predatory_conference", "provider": "kscien"},
     {"name": "Vanity Books Ltd", "url": "http://vanitybooks.test/",
      "domain": "vanitybooks.test", "normalized_name": "vanity books ltd",
-     "issns": [], "list_source": "vanity_press"},
+     "issns": [], "list_source": "vanity_press", "provider": "beall"},
     {"name": "Global Impact Factor Co", "url": "http://fakemetric.test/",
      "domain": "fakemetric.test", "normalized_name": "global impact factor co",
-     "issns": [], "list_source": "misleading_metric"},
+     "issns": [], "list_source": "misleading_metric", "provider": "beall"},
 ]
 
 # (case label, expected status, paper record).  The label is echoed into the
@@ -156,6 +170,11 @@ PAPERS = [
                              "url": "http://innocent.test/j",
                              "alternate_urls": ["http://clone.test/a",
                                                 "http://dodgypub.test/b"]}}),
+    ("second catalogue, conference -> review", "review", {
+        "paperId": "p15", "year": 2025, "externalIds": {"DOI": "10.1000/o"},
+        "venue": "World Congress on Everything",
+        "publicationVenue": {"name": "World Congress on Everything", "type": "conference",
+                             "url": "http://wcongress.test/2025"}}),
     ("clean", "clean", {
         "paperId": "p11", "year": 2023, "externalIds": {"DOI": "10.1000/k"},
         "venue": "Respectable Journal",
@@ -306,14 +325,24 @@ class TestMatcherVerdicts(unittest.TestCase):
                 self.assertEqual(r["status"], expected,
                                  f"{label}: expected {expected}, got {r['status']}")
 
-    def test_all_five_list_categories_are_exercised(self):
+    def test_every_beall_category_plus_a_second_catalogue_is_exercised(self):
         seen = set()
         for r in build_results():
             for part in (r["list_source"] or "").split(";"):
                 if part.strip():
                     seen.add(part.strip())
         self.assertEqual(seen, {"publishers", "standalone_journal", "hijacked",
-                                "vanity_press", "misleading_metric"})
+                                "vanity_press", "misleading_metric",
+                                # only a second catalogue has this one
+                                "predatory_conference"})
+
+    def test_two_catalogues_are_represented(self):
+        """The fixture must keep exercising the multi-catalogue wording; with one
+        provider the 'Listed on' row and the Summary breakdown look identical to
+        the single-list case and would stop being tested."""
+        providers = {p for r in build_results()
+                     for p in (r.get("provider") or "").split("; ") if p}
+        self.assertEqual(providers, {"beall", "kscien"})
 
     def test_joined_list_source_case_is_present(self):
         """The multi-source row must stay in the fixture — several bugs this

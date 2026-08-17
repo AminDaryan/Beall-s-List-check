@@ -18,6 +18,12 @@ To change wording shown to users, edit here.  To change how it is laid out in
 Excel, edit report.py.
 """
 
+# The one import: a result's ``list_source``/``provider`` can name several
+# catalogues joined with "; ", and the rule for splitting that lives in exactly
+# one place.  ``normalize`` is a leaf module with no dependencies of its own, so
+# this does not give the wording layer a dependency on anything that matters.
+from normalize import split_list_sources
+
 # Plain-language description of each match signal, used both in the Match column
 # and to build the Legend so the two never drift.  Tuple = (short label shown in
 # the cell, which verdict it leads to, thorough explanation with a FIXED real
@@ -150,6 +156,8 @@ LIST_INFO = {
     "hijacked":           ("hijacked / cloned journal", "core list"),
     "vanity_press":       ("vanity press (book publisher)", "weak — review only"),
     "misleading_metric":  ("fake-metrics company", "weak — review only"),
+    "predatory_conference": ("predatory conference", "weak — review only"),
+    "unclassified":       ("listed, but under no named list", "weak — review only"),
     "blacklist":          ("your own blacklist (not Beall's List)",
                            "supplied for this run"),
 }
@@ -159,6 +167,26 @@ def _signal_plain(matched_on):
     """Short plain-language phrase for a match signal (falls back to the code)."""
     info = SIGNAL_INFO.get(matched_on)
     return info[0] if info else (matched_on or "—")
+
+
+def _listed_on(r, provider_labels=None):
+    """"<Catalogue> — <category>" for the row's match, e.g. "Kscien's list —
+    predatory conference".
+
+    Replaces a row that used to be labelled "Beall list", which named the
+    catalogue in the LABEL and so could only ever be right for one of them.
+    *provider_labels* maps a provider id to its display name and is built from
+    the run's own metadata, so the catalogue names come from one place.
+
+    Both halves can be ``"; "``-joined when a row matched through several
+    alternate URLs; they are joined in the same order, so the two read together.
+    """
+    labels = provider_labels or {}
+    providers = [labels.get(p, p) for p in split_list_sources(r.get("provider"))]
+    category = _list_plain(r.get("list_source"))
+    if not providers:
+        return category
+    return f"{'; '.join(dict.fromkeys(providers))} — {category}"
 
 
 def _list_plain(list_source):
@@ -199,21 +227,31 @@ _NO_VENUE_NOTES = {
 }
 
 
-def _nonmatch_note(r):
+def _nonmatch_note(r, lists_label=""):
     """The Match-column note for a status that matched nothing.
 
     Split out of ``_NONMATCH_NOTES`` so that ``no_venue`` can say which of its
     two causes applied, without giving either one its own status — the batch
     CSV's documented five status values are a published contract.
+
+    *lists_label* names the catalogues the run actually screened against, so a
+    clean row can claim exactly what was checked and no more.  "not on Beall's
+    List" was a true sentence when there was one catalogue and becomes a false
+    one the moment a second is enabled.
     """
     status = r.get("status")
     if status == "no_venue":
         return _NO_VENUE_NOTES.get(r.get("matched_on") or "",
                                    _NONMATCH_NOTES["no_venue"])
+    if status == "clean":
+        where = lists_label or "the lists checked"
+        return (f"The venue was identified and is on none of the lists checked "
+                f"({where}). That is not a statement that the venue is reputable "
+                f"— only that it does not appear on these lists.")
     return _NONMATCH_NOTES.get(status, "")
 
 
-def _on_list_why(r):
+def _on_list_why(r, provider_labels=None):
     """Detailed plain-English 'why' for a high-confidence (on_list) match.
 
     Names BOTH the paper's matching signal and the concrete listed entry it hit,
@@ -266,7 +304,12 @@ def _on_list_why(r):
         return (f"the venue name matches the listed '{listed}', and the paper's DOI "
                 f"confirms (via Crossref, by publisher website or ISSN — not the shared "
                 f"name) it really is that journal, not a different same-named one.")
-    return (f"{_signal_plain(mo)} ('{listed}') — so it appears on Beall's List "
+    # The catch-all.  It used to end "so it appears on Beall's List", which is a
+    # claim about a specific catalogue made by the one branch that does not know
+    # which catalogue matched — wrong for every future signal and for every list
+    # that is not Beall's.  It now names the row's own source.
+    where = _listed_on(r, provider_labels) or "a reference list"
+    return (f"{_signal_plain(mo)} ('{listed}') — so it appears on {where} "
             "(high-confidence match).")
 
 

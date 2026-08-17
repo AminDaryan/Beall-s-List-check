@@ -30,7 +30,7 @@ from config import RESULTS_DIR, RESULTS_FILENAME, STATUS_FILL_COLORS
 from normalize import split_list_sources
 from progress import Progress
 from descriptions import (
-    _on_list_why, _list_plain, _signal_plain, _NONMATCH_NOTES, _nonmatch_note,
+    _on_list_why, _list_plain, _listed_on, _signal_plain, _NONMATCH_NOTES, _nonmatch_note,
     _LEGEND_SECTIONS, _LEGEND_TITLE,
 )
 
@@ -133,14 +133,14 @@ def _venue_subrows(r):
     ]
 
 
-def _match_subrows(r):
+def _match_subrows(r, provider_labels=None, lists_label=""):
     """Three labelled rows for the Match column.
 
     For a flagged paper:
-      Listed as   — the Beall's List entry that matched; the link opens that
+      Listed as   — the listed entry that matched; the link opens that
                     entry's OWN website (the listed/predatory venue), NOT the
                     paper's venue
-      Beall list  — which Beall list it came from, in plain language
+      Listed on   — which catalogue and which of its lists, in plain language
       Why flagged — one plain-English line naming HOW it matched and the concrete
                     listed entry (high-confidence for on_list, or the
                     verify-by-hand reason for review).
@@ -152,11 +152,11 @@ def _match_subrows(r):
         note = r["cleared_reason"]
     elif status in _NONMATCH_NOTES:
         # 'no_venue' resolves to whichever of its two causes applied.
-        note = _nonmatch_note(r)
+        note = _nonmatch_note(r, lists_label)
     elif status == "error":
         note = f"Error: {r.get('matched_on') or 'could not process record'}"
     else:
-        why = _on_list_why(r) if status == "on_list" else (
+        why = _on_list_why(r, provider_labels) if status == "on_list" else (
             r.get("review_reason") or "Soft match — verify by hand.")
         listed = r.get("matched_name") or "(matched)"
         listed_url = r.get("matched_url") or None
@@ -175,7 +175,7 @@ def _match_subrows(r):
             where = ("this hijacked (counterfeit) journal's own website"
                      if primary == "hijacked"
                      else "this venue's own website" if primary == "blacklist"
-                     else "this Beall-listed venue's own website")
+                     else "this listed venue's own website")
             # Style ONLY the entry name as the link; the "Listed as: " label and
             # the explanation stay plain text (same rich-text approach as the
             # Domain cell).  Excel keeps the whole cell clickable, but the
@@ -189,7 +189,7 @@ def _match_subrows(r):
             listed_cell = f"Listed as: {listed}"
         return [
             (listed_cell, listed_url),
-            (f"Beall list: {_list_plain(r.get('list_source'))}", None),
+            (f"Listed on: {_listed_on(r, provider_labels)}", None),
             (f"Why flagged: {why}", None),
         ]
     return [(note, None)]
@@ -304,7 +304,7 @@ def _write_results_header(ws, columns, border):
 
 
 def _write_results_sheet(ws, results, extra_columns=None, status_key="status",
-                         progress=None):
+                         progress=None, provider_labels=None, lists_label=""):
     """Write the Results sheet: one multi-row block per paper.
 
     Each paper's block is the taller of ROWS_PER_PAPER and its number of
@@ -351,7 +351,7 @@ def _write_results_sheet(ws, results, extra_columns=None, status_key="status",
             (_PAPER_COL, _paper_subrows(r)),
             (_VENUE_COL, _venue_subrows(r)),
             (_MENTIONS_COL, _mentions_subrows(r)),
-            (_MATCH_COL, _match_subrows(r)),
+            (_MATCH_COL, _match_subrows(r, provider_labels, lists_label)),
         ]
         for k, (_h, _w, fn) in enumerate(extra_columns):
             raw_cols.append((n_core + 1 + k, fn(r)))
@@ -419,7 +419,8 @@ def _write_results_sheet(ws, results, extra_columns=None, status_key="status",
 
 
 def _write_summary_sheet(ws, results, snapshot_meta, corpus_files,
-                         token_usage=None, llm_stats=None, n_excluded=0):
+                         token_usage=None, llm_stats=None, n_excluded=0,
+                         provider_labels=None):
     """Write counts + run metadata so results are interpretable.
 
     token_usage / llm_stats are populated only when the optional LLM second
@@ -448,6 +449,8 @@ def _write_summary_sheet(ws, results, snapshot_meta, corpus_files,
         c.font = Font(name="Arial", size=10)
         c.alignment = _LEFT
 
+    provider_labels = provider_labels or {}
+    provider_meta_rows = (snapshot_meta or {}).get("providers") or []
     total = len(results)
     status_counts = {s: 0 for s in STATUS_FILL_COLORS}
     list_counts = {}
@@ -464,17 +467,22 @@ def _write_summary_sheet(ws, results, snapshot_meta, corpus_files,
             # (descriptions._list_plain), so only the counter was out of step.
             # A paper on two lists now counts once under each, which means these
             # figures can sum to more than the flagged total.
-            for src in split_list_sources(r["list_source"]):
-                list_counts[src] = list_counts.get(src, 0) + 1
+            provs = split_list_sources(r.get("provider")) or [""]
+            for i, src in enumerate(split_list_sources(r["list_source"])):
+                # Pair each list with the catalogue it came from; both fields are
+                # joined in the same order, so index i pairs them correctly.
+                prov = provs[i] if i < len(provs) else provs[-1]
+                list_counts[(prov, src)] = list_counts.get((prov, src), 0) + 1
             mo = r.get("matched_on") or "—"
             signal_counts[mo] = signal_counts.get(mo, 0) + 1
 
     row = 1
     header(row, "Metric", "Value"); row += 1
     kv(row, "Total papers checked", total); row += 1
-    kv(row, "On Beall's List (high confidence)", status_counts.get("on_list", 0)); row += 1
+    kv(row, "Flagged, high confidence (on_list)", status_counts.get("on_list", 0)); row += 1
     kv(row, "Needs review (soft match)", status_counts.get("review", 0)); row += 1
-    kv(row, "Clean (venue identified, not listed)", status_counts.get("clean", 0)); row += 1
+    kv(row, "Legitimate — on none of the lists used (clean)",
+       status_counts.get("clean", 0)); row += 1
     kv(row, "No venue (preprint / no info)", status_counts.get("no_venue", 0)); row += 1
     kv(row, "Errors", status_counts.get("error", 0)); row += 1
     # Below the verdicts, and worded as a count of papers rather than a verdict,
@@ -495,9 +503,16 @@ def _write_summary_sheet(ws, results, snapshot_meta, corpus_files,
     row += 1
 
     # Breakdown by which Beall list each flagged paper matched.
-    header(row, "Flagged papers by Beall list", "Count"); row += 1
-    for src in sorted(list_counts, key=lambda k: (-list_counts[k], k)):
-        kv(row, f"  {_list_plain(src)}", list_counts[src]); row += 1
+    # A paper on two lists is counted under each, so these can sum to more than
+    # the flagged total; the header says so rather than leaving it to be noticed.
+    header(row, "Flagged papers by list (a paper on two lists counts under each)",
+           "Count"); row += 1
+    for key in sorted(list_counts, key=lambda k: (-list_counts[k], k)):
+        prov, src = key
+        label = _list_plain(src)
+        if prov:
+            label = f"{provider_labels.get(prov, prov)} — {label}"
+        kv(row, f"  {label}", list_counts[key]); row += 1
     if not list_counts:
         kv(row, "  (none)", 0); row += 1
     row += 1
@@ -527,6 +542,16 @@ def _write_summary_sheet(ws, results, snapshot_meta, corpus_files,
             kv(row, "Total tokens", f"{token_usage.total_tokens:,}"); row += 1
         row += 1
 
+    header(row, "Reference lists used", "Entries / as of"); row += 1
+    if provider_meta_rows:
+        for p in provider_meta_rows:
+            kv(row, f"  {p['label']}",
+               f"{p['total_entries']} entries, as of {(p['scraped_utc'] or '?')[:10]}")
+            row += 1
+    else:
+        kv(row, "  (none recorded)", ""); row += 1
+    row += 1
+
     header(row, "Run metadata", ""); row += 1
     kv(row, "Snapshot scraped (UTC)", snapshot_meta.get("scraped_utc", "")); row += 1
     kv(row, "Snapshot entries", snapshot_meta.get("total_entries", "")); row += 1
@@ -542,7 +567,8 @@ def _write_summary_sheet(ws, results, snapshot_meta, corpus_files,
         name="Arial", size=9, italic=True)
 
 
-def _write_flagged_sheet(ws, results, extra_columns=None, progress=None):
+def _write_flagged_sheet(ws, results, extra_columns=None, progress=None,
+                         provider_labels=None, lists_label=""):
     """Write only the on_list + review rows (the actionable subset)."""
     flagged = [r for r in results if r["status"] in ("on_list", "review")]
     # Sort: on_list first, then by list source, then title.
@@ -550,8 +576,32 @@ def _write_flagged_sheet(ws, results, extra_columns=None, progress=None):
     flagged.sort(key=lambda r: (order.get(r["status"], 9), r["list_source"], r["title"]))
     if progress is not None:
         progress.add_total(len(flagged))
-    _write_results_sheet(ws, flagged, extra_columns=extra_columns, progress=progress)
+    _write_results_sheet(ws, flagged, extra_columns=extra_columns, progress=progress,
+                         provider_labels=provider_labels, lists_label=lists_label)
     return len(flagged)
+
+
+def _write_legitimate_sheet(ws, results, progress=None,
+                            provider_labels=None, lists_label=""):
+    """Write only the papers that cleared every list the run consulted.
+
+    The complement of 'Flagged only', and the sheet a reader can act on directly:
+    these are the papers a corpus screen would keep.
+
+    Deliberately ``clean`` alone.  A ``no_venue`` paper — a preprint, or a record
+    with no venue fields — was never compared against any list, so calling it
+    legitimate would claim a check that did not happen.  Those papers keep their
+    own row on the Results sheet, where the Match column now says which of the
+    two applied.  ``review`` is excluded for the obvious reason: it is the set
+    that still needs a human.
+    """
+    legit = [r for r in results if r["status"] == "clean"]
+    legit.sort(key=lambda r: (r.get("venue") or "", r.get("title") or ""))
+    if progress is not None:
+        progress.add_total(len(legit))
+    _write_results_sheet(ws, legit, progress=progress,
+                         provider_labels=provider_labels, lists_label=lists_label)
+    return len(legit)
 
 
 def _write_legend_sheet(ws):
@@ -617,13 +667,20 @@ def save_workbook(results, snapshot_meta, corpus_files, *,
     silence AFTER the corpus pass had reported "100%", so the run looked finished
     and hung at the same time.
     """
+    # Where the catalogue names come from: the run's own metadata, so the report
+    # cannot disagree with what was actually loaded.
+    provider_meta = (snapshot_meta or {}).get("providers") or []
+    provider_labels = {p["provider"]: p["label"] for p in provider_meta}
+    lists_label = ", ".join(p["label"] for p in provider_meta)
+
     wb = openpyxl.Workbook()
     ws_results = wb.active
     ws_results.title = "Results"
     print(f"Writing workbook: Results sheet ({len(results)} papers) ...", flush=True)
     sheet_progress = Progress("papers")
     sheet_progress.add_total(len(results))
-    _write_results_sheet(ws_results, results, progress=sheet_progress)
+    _write_results_sheet(ws_results, results, progress=sheet_progress,
+                         provider_labels=provider_labels, lists_label=lists_label)
     sheet_progress.close()
 
     ws_flagged = wb.create_sheet("Flagged only")
@@ -631,8 +688,19 @@ def save_workbook(results, snapshot_meta, corpus_files, *,
     flagged_progress = Progress("papers")      # its own total, counted inside the writer
     n_flagged = _write_flagged_sheet(ws_flagged, results,
                                      extra_columns=flagged_extra_columns,
-                                     progress=flagged_progress)
+                                     progress=flagged_progress,
+                                     provider_labels=provider_labels,
+                                     lists_label=lists_label)
     flagged_progress.close()
+
+    # The complement: the papers that cleared every list consulted.
+    ws_legit = wb.create_sheet("Legitimate only")
+    print("  Legitimate only sheet ...", flush=True)
+    legit_progress = Progress("papers")
+    n_legit = _write_legitimate_sheet(ws_legit, results, progress=legit_progress,
+                                      provider_labels=provider_labels,
+                                      lists_label=lists_label)
+    legit_progress.close()
 
     # Its own sheet (not a column): only the papers whose Semantic Scholar record
     # has a data-quality issue, each shown with the specific issue(s).
@@ -644,13 +712,14 @@ def save_workbook(results, snapshot_meta, corpus_files, *,
         dq_progress.add_total(len(dq_flagged))
         _write_results_sheet(ws_dq, dq_flagged,
                              extra_columns=[("Data-quality issue", 60, _data_quality_subrows)],
-                             progress=dq_progress)
+                             progress=dq_progress, provider_labels=provider_labels,
+                             lists_label=lists_label)
         dq_progress.close()
 
     ws_summary = wb.create_sheet("Summary")
     _write_summary_sheet(ws_summary, results, snapshot_meta, corpus_files,
                          token_usage=token_usage, llm_stats=llm_stats,
-                         n_excluded=n_excluded)
+                         n_excluded=n_excluded, provider_labels=provider_labels)
 
     ws_legend = wb.create_sheet("Legend")
     _write_legend_sheet(ws_legend)

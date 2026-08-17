@@ -289,6 +289,10 @@ def main(argv=None):
                         help="check only the first N distinct venues (cheap test run)")
     parser.add_argument("--whitelist", help="JSON list of venues; only papers in it are checked")
     parser.add_argument("--blacklist", help="JSON list of venues to add to Beall's List as predatory")
+    parser.add_argument("--list", action="append", dest="providers",
+                        choices=sorted(det.PROVIDERS),
+                        help="a reference list to check against; repeat for several "
+                             f"(default: {', '.join(det.DEFAULT_PROVIDERS)})")
     parser.add_argument("--crossref", choices=["off", "flagged", "all"], default="all",
                         help="resolve/cross-check DOIs against Crossref: all (default), flagged, "
                              "or off. Used automatically when online; falls back to offline "
@@ -303,7 +307,7 @@ def main(argv=None):
     # rather than crashing on the first LLM call ~minutes later.
     validate_provider_config()
 
-    index, snapshot, n_black = det.build_index(args.blacklist)
+    index, snapshot, n_black = det.build_index(args.blacklist, providers=args.providers)
     if n_black:
         print(f"Added {n_black} user blacklist entr(ies) as predatory.")
     whitelist = (WhitelistMatcher(load_user_entries(args.whitelist, "whitelist"))

@@ -311,6 +311,17 @@ def main(argv=None):
                                             "out of the run entirely")
     parser.add_argument("--blacklist", help="JSON list of venues to add to Beall's List "
                                             "as predatory before matching")
+    # Repeatable rather than comma-separated, so argparse validates each value
+    # against `choices` and `-h` enumerates what is legal — the same idiom
+    # --crossref already uses. A comma list would need a custom parser and its
+    # own error message, and `nargs="+"` would swallow batch_check.py's
+    # positional input argument.
+    parser.add_argument("--list", action="append", dest="providers",
+                        choices=sorted(PROVIDERS),
+                        help="a reference list to check against; repeat for several "
+                             f"(default: {', '.join(DEFAULT_PROVIDERS)}). A list that is "
+                             "not shipped with the tool must be fetched first — the run "
+                             "says how.")
     parser.add_argument("--crossref", choices=["off", "flagged", "all"], default="all",
                         help="resolve/cross-check DOIs against Crossref: all (the default; "
                              "every DOI), flagged (on_list/review only), or off (fully offline). "
@@ -322,7 +333,13 @@ def main(argv=None):
     print("Beall's List predatory-venue check")
     print("=" * 70)
 
-    index, snapshot, n_black = build_index(args.blacklist)
+    index, snapshot, n_black = build_index(args.blacklist, providers=args.providers)
+    # Name every list in force, with its own size and date, because "3045 entries"
+    # says nothing about which catalogues produced them once there can be more
+    # than one — and a report has to be able to state what it screened against.
+    for p in snapshot["meta"].get("providers", []):
+        print(f"  {p['label']}: {p['total_entries']} entries "
+              f"(as of {(p['scraped_utc'] or '?')[:10]})")
     print(f"Loaded snapshot: {len(snapshot['entries'])} entries "
           f"(scraped {snapshot['meta'].get('scraped_utc', '?')})")
     if n_black:

@@ -40,6 +40,7 @@ for _p in [_ROOT, *(d for d in _ROOT.iterdir() if d.is_dir() and (d / f"{d.name}
 sys.path.insert(0, str(_ROOT.parent))          # src/ -> common
 
 import bealls_list_check as det                # build_index + resolve_crossref_mode
+import config                                  # the reference-list registry
 from match import match_paper
 from progress import Progress, crossref_note   # the live "[i/N] ..." ticker
 from resolve import resolve_review
@@ -130,6 +131,14 @@ def main(argv=None):
                                             "venue is in it are checked and written")
     parser.add_argument("--blacklist", help="JSON list of venues to add to Beall's List "
                                             "as predatory before matching")
+    # Same flag as the main check, for the same reason --whitelist/--blacklist are
+    # here: the web app offers this CSV alongside a workbook from the same run, and
+    # a CSV screened against different lists would disagree with the workbook beside
+    # it about the same papers.
+    parser.add_argument("--list", action="append", dest="providers",
+                        choices=sorted(config.PROVIDERS),
+                        help="a reference list to check against; repeat for several "
+                             f"(default: {', '.join(config.DEFAULT_PROVIDERS)})")
     args = parser.parse_args(argv)
 
     in_path = Path(args.input)
@@ -138,7 +147,7 @@ def main(argv=None):
     out_path = Path(args.output) if args.output else in_path.with_suffix(".csv")
 
     records = load_records(in_path)
-    index, snapshot, n_black = det.build_index(args.blacklist)
+    index, snapshot, n_black = det.build_index(args.blacklist, providers=args.providers)
     print(f"Loaded {len(records)} record(s) from {in_path.name}; snapshot has "
           f"{len(snapshot['entries'])} entries "
           f"(scraped {snapshot['meta'].get('scraped_utc', '?')}).")
