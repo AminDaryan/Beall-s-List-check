@@ -47,7 +47,8 @@ for _p in [_HERE, *(d for d in _HERE.iterdir() if d.is_dir() and (d / f"{d.name}
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 sys.path.insert(0, str(_HERE.parent))          # src/ -> common
-from config import CORPUS_DIR, CORPUS_GLOB, SNAPSHOT_PATH, STATUS_FILL_COLORS
+from config import (CORPUS_DIR, CORPUS_GLOB, SNAPSHOT_PATH, STATUS_FILL_COLORS,
+                    PROVIDERS, DEFAULT_PROVIDERS, KNOWN_LIST_SOURCES)
 from match import BeallIndex, match_paper
 from user_lists import load_user_entries, WhitelistMatcher
 import data_quality                        # shared Crossref client (for the reachability probe)
@@ -63,31 +64,107 @@ from report import save_workbook          # Excel workbook writer; re-exported h
 # LOADING
 # =============================================================================
 
-def load_snapshot():
-    """Load the vendored Beall's List snapshot, or exit with guidance."""
-    if not SNAPSHOT_PATH.exists():
-        sys.exit(
-            f"Snapshot not found: {SNAPSHOT_PATH}\n"
-            "Run scrape_bealls_list/scrape_bealls_list.py first to vendor the Beall's List."
-        )
-    with open(SNAPSHOT_PATH, encoding="utf-8") as f:
+def load_snapshot(provider="beall"):
+    """Load one provider's vendored snapshot, or exit with guidance.
+
+    Defaults to Beall's List, so every existing caller keeps its behaviour.
+    """
+    spec = PROVIDERS.get(provider)
+    if spec is None:
+        sys.exit(f"Unknown reference list: {provider!r}. "
+                 f"Known: {', '.join(sorted(PROVIDERS))}.")
+    path = spec["snapshot"]
+    if not path.exists():
+        hint = ("Run scrape_bealls_list/scrape_bealls_list.py first to vendor the "
+                "Beall's List." if provider == "beall" else
+                f"No local copy of {spec['label']} yet — download it first.")
+        sys.exit(f"Snapshot not found: {path}\n{hint}")
+    with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
-def build_index(blacklist_path=None):
-    """Load the snapshot (plus an optional user blacklist) into a BeallIndex.
+def _validate_entries(entries, provider, label):
+    """Fail the run if a provider hands over entries the matcher cannot treat.
 
-    The blacklist entries are tagged ``list_source="blacklist"`` and matched
-    exactly like real Beall entries (asserting ``on_list``).  Returns
-    ``(index, snapshot, n_blacklist_added)``.
+    Checked at load, once, rather than per paper.  An unmapped ``list_source``
+    is the dangerous case: it would miss ``WEAK_LIST_SOURCES`` and so be
+    ASSERTED as a confident hit instead of downgraded to review, and it would
+    miss ``FUZZY_LIST_SOURCES`` and silently lose the fuzzy tier.  Neither
+    failure is visible in the output, which is exactly why it is caught here.
     """
-    snapshot = load_snapshot()
-    entries = list(snapshot["entries"])
+    unknown = sorted({e.get("list_source") or "(missing)" for e in entries
+                      if (e.get("list_source") or "") not in KNOWN_LIST_SOURCES})
+    if unknown:
+        sys.exit(
+            f"{label} supplied entries whose category the check does not know: "
+            f"{', '.join(unknown)}.\n"
+            f"Known categories: {', '.join(sorted(KNOWN_LIST_SOURCES))}.\n"
+            "A provider must map its own sub-lists onto these, because the "
+            "weak-list downgrade and the fuzzy tier are keyed on them."
+        )
+
+
+def _merged_meta(loaded):
+    """One metadata dict describing every provider a run used.
+
+    Deliberately still a dict answering the same four keys the Summary sheet
+    reads (``scraped_utc``, ``total_entries``, ``source``, ``note``), because
+    ``save_workbook`` takes it positionally and three call sites read those keys.
+    Turning it into a list would break all of them.
+
+    ``scraped_utc`` reports the OLDEST date across the providers used: a report
+    is only as current as the stalest list behind it.
+    """
+    metas = [m for _pid, _label, m in loaded]
+    dates = sorted(m.get("scraped_utc", "") for m in metas if m.get("scraped_utc"))
+    return {
+        "scraped_utc": dates[0] if dates else "",
+        "total_entries": sum(int(m.get("total_entries") or 0) for m in metas),
+        "source": "; ".join(m.get("source", "") for m in metas if m.get("source")),
+        "note": " ".join(m.get("note", "") for m in metas if m.get("note")),
+        # The per-provider record, for the Summary sheet and for reproducibility.
+        "providers": [
+            {"provider": pid, "label": label,
+             "scraped_utc": m.get("scraped_utc", ""),
+             "total_entries": m.get("total_entries", ""),
+             "source": m.get("source", "")}
+            for pid, label, m in loaded
+        ],
+    }
+
+
+def build_index(blacklist_path=None, *, providers=None):
+    """Load the enabled providers (plus an optional user blacklist) into a BeallIndex.
+
+    *providers* is an iterable of provider ids from ``config.PROVIDERS``; it
+    defaults to ``DEFAULT_PROVIDERS`` (Beall's List alone), so a caller that does
+    not pass it behaves exactly as before.  Keyword-only, and the return shape is
+    unchanged — ``(index, snapshot, n_blacklist_added)`` — because three call
+    sites unpack that tuple and read ``snapshot["entries"]`` / ``["meta"]``.
+
+    Every entry is stamped with the provider it came from.  The user's blacklist
+    is concatenated AFTER the provider entries, never filtered with them: a
+    filter that could drop the user's own list would silently disable
+    ``BeallIndex.user_index`` and with it the whole blacklist tier, while the run
+    still printed that the entries had been added.
+    """
+    provider_ids = tuple(providers) if providers else tuple(DEFAULT_PROVIDERS)
+    entries, loaded = [], []
+    for pid in provider_ids:
+        snap = load_snapshot(pid)
+        label = PROVIDERS[pid]["label"]
+        own = [{**e, "provider": pid} for e in snap["entries"]]
+        _validate_entries(own, pid, label)
+        entries += own
+        loaded.append((pid, label, snap.get("meta") or {}))
+
     n_black = 0
     if blacklist_path:
         added = load_user_entries(blacklist_path, "blacklist")
-        entries += added
+        entries += added                      # after the filter, never inside it
         n_black = len(added)
+
+    snapshot = {"entries": entries, "meta": _merged_meta(loaded)}
     return BeallIndex(entries), snapshot, n_black
 
 

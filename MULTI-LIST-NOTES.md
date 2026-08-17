@@ -154,3 +154,87 @@ phase — Phase 1's suite is what made these changes reviewable.
   phase was told not to make. The two implementations agree today; recorded as
   debt.
 - The Summary section header is now slightly understated (see above). Phase 5.
+
+---
+
+## Phase 3, step 1 — the provider seam
+
+Scaffolding only. **No second catalogue is added**, no CLI flag, no UI change.
+
+### Changed
+
+| File | Change |
+|---|---|
+| `config.py` | **New** `PROVIDERS` registry, `DEFAULT_PROVIDERS = ("beall",)`, `PROVIDER_RANK`, `KNOWN_LIST_SOURCES`. `SNAPSHOT_PATH` kept as an alias so existing imports are untouched. |
+| `bealls_list_check.py` | `load_snapshot(provider="beall")`; `build_index(blacklist_path=None, *, providers=None)`; new `_validate_entries` and `_merged_meta`. |
+| `user_lists.py` | User entries stamped `provider="user"`. |
+| `match/match.py` | `_best` gains an explicit provider tie-break; `provider` and `matched_entry` added to the result dict and set by `_hit`. |
+| `resolve/resolve.py` | `_resolve_name_exact` confirms against the entry that matched, falling back to the old lookup only if absent. |
+
+### Why
+
+**A separate `provider` field, never a namespaced `list_source`.** `list_source`
+is compared by exact value in five places. Namespacing it (`"kscien:hijacked"`)
+would silently break all five — including the one comparison that stops a
+vanity-press or fake-metrics match being asserted as a confident hit, and the
+gate that lets a hijacked review be cleared by its DOI. Three of those four
+failures are in the over-assertion direction, and none of them errors.
+
+**Filtering at index-build time, not match time.** `domain_match` returns on the
+first suffix that is a key, so filtering inside a bucket would abandon the
+longest-suffix walk early and call `_best([])` → `min()` on empty → an `error`
+row per paper. Nine call sites in `resolve.py` and `bealls_llm_check.py` hold the
+same index and get the right universe for free from a load-time filter.
+
+**The blacklist is concatenated after the provider entries**, so no selection can
+drop it. A predicate with an "except the user's own" clause is one refactor away
+from being forgotten, and forgetting it is silent: `user_index` becomes `None`,
+the whole blacklist tier stops running, and the run still prints that the entries
+were added.
+
+**`snapshot["meta"]` stays a dict.** Six sites call `.get()` on it and four of
+those run at the very end of a run. It now carries a `providers` list inside, and
+`scraped_utc` reports the *oldest* date across the catalogues used — a report is
+only as current as the stalest list behind it.
+
+### Compatibility
+
+Unchanged. `build_index()` with no arguments loads Beall's alone, exactly as
+before; the return tuple and meta shape are identical. The golden workbook is
+cell-for-cell unchanged, and the real example corpus is still
+`1 on_list, 3 review, 2 clean, 2 no_venue`.
+
+The two new result fields (`provider`, `matched_entry`) are written but not yet
+rendered, so no workbook cell moves.
+
+### Tests
+
+15 new tests in `tests/test_providers.py`; 19 total.
+
+```bash
+python -m unittest discover -s tests -t tests -v      # 19 tests, OK
+```
+
+Two previously untested paths are now pinned:
+
+- **The ISSN tier.** None of the 3,045 shipped Beall entries carries an ISSN, so
+  this tier has only ever fired for the user's own entries. A test asserts that
+  fact, so if it ever stops being true the blast radius is visible. Another test
+  documents the asymmetry deliberately: a *name* match against an entry with a
+  website is downgraded to `review` unless the paper's own site agrees, while an
+  *ISSN* match is asserted with no such check.
+- **The DOI confirmation of a name match.** Measured honestly: **0 of 3,045**
+  entries have a stored `normalized_name` differing from `normalize_name(name)`,
+  so the old re-derivation returned the same entry and this was latent, not a
+  live misreport. Demonstrated failure mode when two catalogues share a title:
+  the old code picked the other catalogue's entry, whose ISSN did not match, and
+  **missed the promotion** — `review` instead of `on_list`.
+
+### Known risks
+
+- No second catalogue exists yet, so the registry has one implementation and the
+  `providers=` argument has no caller. That is deliberate for this step.
+- `predatory_conference` is **not** yet in `KNOWN_LIST_SOURCES`; it is added with
+  Kscien in step 2, together with the weak-list rule that keeps it review-only.
+- `matched_entry` holds a reference to the snapshot entry. Nothing serialises the
+  result dict, so this is safe, but a future writer must not render it.

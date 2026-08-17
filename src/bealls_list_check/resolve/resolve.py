@@ -423,8 +423,19 @@ def _resolve_name_exact(r, paper, index):
     real_domain = _crossref_publisher_domain(msg)
 
     # (1) Confirm: the DOI's registered venue IS the listed journal (domain/ISSN only).
-    nm = normalize_name(r.get("matched_name") or "")
-    entry = _best(index.by_name[nm]) if nm in index.by_name else None
+    #
+    # Use the entry that actually matched, carried on the result by match._hit.
+    # This used to re-derive one with `_best(index.by_name[nm])`, which asks the
+    # shared name index for "the best entry with this title" — a different
+    # question.  With one catalogue and unique titles the two answers coincide;
+    # with several catalogues a shared title is ordinary, so the confirmation
+    # could _hit a DIFFERENT entry than the one under review and then report the
+    # wrong list, name and website as the confirmed match.  The lookup remains as
+    # a fallback for a result that reached here without an entry.
+    entry = r.get("matched_entry")
+    if entry is None:
+        nm = normalize_name(r.get("matched_name") or "")
+        entry = _best(index.by_name[nm]) if nm in index.by_name else None
     if entry:
         how = _crossref_matches(msg, entry, real_domain, allow_name=False)
         if how:

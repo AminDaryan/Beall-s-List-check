@@ -24,8 +24,56 @@ CORPUS_DIR = Path(os.environ.get("BEALLS_CORPUS_DIR", str(_DEFAULT_CORPUS_DIR)))
 # Glob for the corpus files inside CORPUS_DIR.
 CORPUS_GLOB = "*.json"
 
-# Vendored Beall's List snapshot produced by scrape_bealls_list/scrape_bealls_list.py.
-SNAPSHOT_PATH = _HERE / "data" / "bealls_snapshot.json"
+# ---------------------------------------------------------------------------
+# Reference lists ("providers")
+# ---------------------------------------------------------------------------
+# A *provider* is one published catalogue of allegedly predatory venues, held as
+# a dated snapshot on disk.  Beall's List is the only one shipped with the repo;
+# further providers register here.
+#
+# Two separate facts are kept in two separate fields, deliberately:
+#
+#   provider     — WHICH catalogue the entry came from ("beall", "user", ...)
+#   list_source  — WHAT KIND of listing it is (publishers / hijacked / ...)
+#
+# ``list_source`` is compared by exact value in several places (the weak-list
+# downgrade in match._hit, the hijacked gate in resolve.py, the labels in
+# descriptions.LIST_INFO), so a provider must MAP its own sub-lists onto the
+# known category values below rather than inventing new ones or namespacing
+# them.  Namespacing (e.g. "kscien:hijacked") would silently defeat every one of
+# those comparisons — including the one that stops a vanity-press match being
+# asserted as a confident hit.
+PROVIDERS = {
+    "beall": {
+        "label": "Beall's List",
+        "snapshot": _HERE / "data" / "bealls_snapshot.json",
+        "home": "https://beallslist.net",
+        # Shipped with the repo, so a clone can run offline with no download.
+        "vendored": True,
+    },
+}
+
+# Which providers a run uses when it is not told otherwise.  A bare invocation
+# must behave exactly as it did before providers existed.
+DEFAULT_PROVIDERS = ("beall",)
+
+# Tie-break rank when the same venue is listed by several providers: the user's
+# own entries win, then registry order.  Without this, ``match._best`` fell back
+# to ``min()``'s stability over concatenation order, making the winner depend on
+# the order snapshots happened to be loaded in.
+PROVIDER_RANK = {"user": -1, **{pid: i for i, pid in enumerate(PROVIDERS)}}
+
+# Every ``list_source`` value the check knows how to treat.  Validated once at
+# index-build time so a provider whose sub-list is not mapped fails loudly at
+# load, instead of quietly skipping the weak-list downgrade on every paper.
+KNOWN_LIST_SOURCES = {
+    "publishers", "standalone_journal", "hijacked",
+    "vanity_press", "misleading_metric",
+    "whitelist", "blacklist",          # the user's own two lists
+}
+
+# Kept as an alias so existing imports of SNAPSHOT_PATH keep working unchanged.
+SNAPSHOT_PATH = PROVIDERS["beall"]["snapshot"]
 
 # Where the combined results workbook is written.
 RESULTS_DIR = _HERE / "results"
@@ -49,6 +97,9 @@ MIN_NAME_LEN = 5
 # "blacklist" = venues the *user* added (see user_lists.py); treated as a core,
 # high-confidence list (asserts on_list, eligible for fuzzy near-name matching).
 FUZZY_LIST_SOURCES = {"publishers", "standalone_journal", "hijacked", "blacklist"}
+# Every value here and in WEAK_LIST_SOURCES below must be a member of
+# KNOWN_LIST_SOURCES above, or an entry could carry a category that no rule in
+# this file governs.  Asserted at import so the three sets cannot drift apart.
 
 # "Weak" lists that should never assert a high-confidence "on_list" verdict for
 # a journal article:

@@ -77,6 +77,10 @@ def load_user_entries(path, list_source):
             "normalized_name": normalized_name,
             "issns": issns,
             "list_source": list_source,
+            # Not one of the published catalogues: these entries came from the
+            # person running the check.  Kept as a provider of its own so the
+            # report can say so, and so a provider filter can never drop them.
+            "provider": "user",
         })
     return entries
 

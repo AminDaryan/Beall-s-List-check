@@ -37,7 +37,7 @@ from normalize import (
 from config import (
     FUZZY_CUTOFF, MIN_NAME_LEN, FUZZY_LIST_SOURCES, WEAK_LIST_SOURCES,
     PREPRINT_DOMAINS, PREPRINT_NAMES, GENERIC_HOSTS,
-    ARCHIVE_RESOLVER_DOMAINS, REPOSITORY_HOST_MARKERS,
+    ARCHIVE_RESOLVER_DOMAINS, REPOSITORY_HOST_MARKERS, PROVIDER_RANK,
 )
 
 # When several entries share a domain, prefer the more paper-relevant list.
@@ -50,8 +50,15 @@ _LIST_PRIORITY = {
 
 
 def _best(entries):
-    """Pick the most paper-relevant entry from a list of candidates."""
-    return min(entries, key=lambda e: _LIST_PRIORITY.get(e["list_source"], 9))
+    """Pick the most paper-relevant entry from a list of candidates.
+
+    Ranked by list category first, then by provider, so the winner does not
+    depend on the order the snapshots happened to be concatenated in — which is
+    what ``min()``'s stability alone gave, and which becomes visible as soon as
+    two catalogues list the same venue.
+    """
+    return min(entries, key=lambda e: (_LIST_PRIORITY.get(e["list_source"], 9),
+                                       PROVIDER_RANK.get(e.get("provider"), 9)))
 
 
 def _is_non_publisher_host(host):
@@ -312,6 +319,8 @@ def _blank_result(paper, source_file):
         "mentions": _collect_mentions(paper, pv),
         # filled in by matching:
         "status": "clean",
+        "provider": "",             # which catalogue the match came from ("beall", "user", ...)
+        "matched_entry": None,      # the entry object that decided the verdict (not rendered)
         "list_source": "",
         "matched_name": "",
         "matched_url": "",
@@ -685,6 +694,12 @@ def _hit(r, entry, status, matched_on):
             and matched_on.startswith("name")):
         status = "review"
     r["status"] = status
+    r["provider"] = entry.get("provider", "")
+    # Kept so a later stage can confirm against the entry that ACTUALLY matched
+    # rather than looking one up again by name.  resolve._resolve_name_exact used
+    # to re-derive it from the shared name index, which picks a different entry
+    # as soon as two catalogues list the same journal title.
+    r["matched_entry"] = entry
     r["list_source"] = entry["list_source"]
     r["matched_name"] = entry["name"]
     r["matched_url"] = entry["url"]
