@@ -71,17 +71,31 @@ Returns *inner_html* untouched when *text* is empty, so a caller need not branch
 **Use when** a visible phrase carries the meaning.
 **Not when** there is nothing to hover — use `help_icon`.
 
-### `help_icon(text) -> str`
+### `help_icon(text, *, label="") -> str`
 
-The `?` mark itself, for a heading or a column where no phrase can carry the
-note. Streamlit's own glyph at Streamlit's own 16px.
+The `?` mark itself, for a heading, a column, or a field label where no phrase
+can carry the note. Streamlit's own glyph at Streamlit's own 16px, so it is
+indistinguishable from the icon a widget's `help=` renders a few pixels away.
 
 ```python
 st.markdown(f"<div class='bl-dir-name'>DOAJ {components.help_icon(about)}</div>",
             unsafe_allow_html=True)
+
+mark = components.help_icon(about, label="Whitelist")   # spoken as "Whitelist: ..."
 ```
 
 **One per section.** Everything describing that section goes in this one string.
+
+**This is the only `?` in the app.** There were two — this one, and a boxed grey
+question mark on the venue-list labels — sitting within a few pixels of each
+other and of Streamlit's own, so one gesture had three appearances. If a new
+place needs a help mark, call this; do not draw another.
+
+Reachable without a mouse: `tabindex` puts it in the tab order, `role="note"`
+and `aria-label` give a screen reader something to announce, and `.bl-q` carries
+a focus ring. A bare `title` is a mouse-only fact, which matters most exactly
+where this mark holds the only explanation there is. Pass *label* when the text
+alone would be announced as a sentence with no subject.
 
 ### `progress_ring(fraction, label="") -> str`
 

@@ -710,7 +710,7 @@ def _venue_list_section():
     a pair — one narrows the run, the other widens it — so a row reads them as
     the opposites they are.
     """
-    with _options_section("🎯", "Venue lists", "optional"):
+    with _options_section("🎯", "Venue lists"):
         wl_col, bl_col = st.columns(2)
         # Named by the familiar term, with everything else on the ? beside it.
         # The heading carried the explanation itself once — first as a longhand
@@ -760,7 +760,7 @@ def _reference_lists_section():
     be downloaded once in Settings, and is offered disabled until it is, with the
     reason on the control rather than as a failure at run time.
     """
-    with _options_section("📚", "Reference lists", "what counts as predatory"):
+    with _options_section("📚", "Predatory lists"):
         chosen = []
         cols = st.columns(max(2, len(reference_lists.ids())))
         for col, pid in zip(cols, reference_lists.ids()):
@@ -863,7 +863,7 @@ def _step_options(checker, llm):
 
     lists = _reference_lists_section()
 
-    with _options_section("🔗", "Crossref", "recommended"):
+    with _options_section("🔗", "Crossref"):
         # One explanation, on the control.  It used to be said twice — a tooltip
         # and a caption below saying the same thing in the same words — which is
         # the most text this step could spend on its least contested setting.
@@ -925,7 +925,7 @@ def _step_run(checker, items, llm, options):
          "" if items else "bl-sum-todo",
          "The bundled example corpus, not your data — replace it in Step 2."
          if _is_example_corpus() else ""),
-        ("Reference lists",
+        ("Predatory lists",
          ", ".join(reference_lists.label(p) for p in lists) if lists else "none chosen",
          "" if lists else "bl-sum-off",
          "Which published lists this run screens against. A venue on any of them is "

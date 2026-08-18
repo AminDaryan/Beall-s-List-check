@@ -61,17 +61,26 @@ def hint(inner_html, text, *, cls=""):
             f"title='{html.escape(text, quote=True)}'>{inner_html}</span>")
 
 
-def help_icon(text):
-    """A "?" offering *text* on hover — the mark, where no phrase carries it.
+def help_icon(text, *, label=""):
+    """The "?" mark, offering *text* on hover — where no phrase can carry it.
 
-    For a heading or a column that needs a note: everything describing a thing
-    rather than changing it goes here, so the page can say what it is for
-    without a paragraph under every control.
+    For a heading, a column, or a field label: everything describing a thing
+    rather than changing it goes here, so a page can say what it is for without
+    a paragraph under every control.
 
-    ONE per section.  Two of these within a few pixels is two invitations to the
+    ONE per section.  Two of these within a few pixels are two invitations to the
     same explanation, and the reader has to try both to find out they are not.
+
+    Reachable without a mouse.  A bare ``title`` is a mouse-only fact: it never
+    appears for anyone tabbing through the page and is announced inconsistently,
+    which matters most exactly where this mark is the only explanation there is.
+    ``tabindex`` puts it in the tab order and ``aria-label`` gives a screen
+    reader something to read; *label* names what the text is about, so the
+    announcement is "Whitelist: ..." rather than a sentence with no subject.
     """
-    return (f"<span class='bl-help bl-q' "
+    spoken = f"{label}: {text}" if label else text
+    return (f"<span class='bl-help bl-q' tabindex='0' role='note' "
+            f"aria-label='{html.escape(spoken, quote=True)}' "
             f"title='{html.escape(text, quote=True)}'>{HELP_SVG}</span>")
 
 

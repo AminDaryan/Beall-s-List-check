@@ -41,6 +41,7 @@ for _p in [_UI, *(d for d in _UI.iterdir() if d.is_dir() and any(d.glob("*.py"))
 import crossref
 import doaj
 import styles
+import components
 import venue_lookup
 from notices import notify_next_run
 
@@ -1013,17 +1014,12 @@ def venue_list_editor(label: str, key: str, about: str, empty: str,
     # The heading is a band of its own, with a height that does not depend on
     # what it holds, so the two columns' add boxes share a row whatever either
     # list is called.
-    # Focusable, and carrying its text as a label as well as a tooltip.  A `title`
-    # alone is a mouse-only fact: it never appears for anyone tabbing through the
-    # page, and it is announced inconsistently — which matters more here than
-    # anywhere else on the page, because this mark now holds the *only*
-    # explanation of what the list does.  `tabindex` puts it in the tab order and
-    # `aria-label` gives a screen reader something to read out; a popover the
-    # keyboard could open is the fuller answer, and is not one line of markup.
-    mark = (f"<span class='bl-vl-q' tabindex='0' role='note' "
-            f"aria-label='{html.escape(label, quote=True)}: {html.escape(about, quote=True)}' "
-            f"title='{html.escape(about, quote=True)}'>?</span>"
-            if about else "")
+    # The app's one help mark (components.help_icon) rather than a second one
+    # drawn here. This used to be its own boxed "?", which sat a few pixels from
+    # Streamlit's circle-question on the checkboxes above and read as a different
+    # control. The keyboard reachability this version had — tab order, a spoken
+    # label — moved into the component rather than being lost with it.
+    mark = components.help_icon(about, label=label) if about else ""
     st.markdown(f"<div class='bl-vl-head'><div class='bl-vl-label'>{label}{mark}</div></div>",
                 unsafe_allow_html=True)
 

@@ -245,7 +245,7 @@ def _reference_lists_block():
     Built from the registry, so a list added later appears here with no change to
     this page.
     """
-    st.subheader("Reference lists")
+    st.subheader("Predatory lists")
     st.caption(
         "The published lists Step 3 can screen your papers against. **Beall's List "
         "ships with the tool**; anything else has to be downloaded once, because its "
@@ -384,7 +384,7 @@ def page_settings():
 
     st.divider()
 
-    # Its own heading, like Reference lists below. Two named things sat under the
+    # Its own heading, like Predatory lists below. Two named things sat under the
     # page title with nothing saying what they were, so the page read as one list
     # of settings rather than two sections answering different questions.
     st.subheader("Venue directories")

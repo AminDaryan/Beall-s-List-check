@@ -554,18 +554,6 @@ div[class*="st-key-blstep"] [data-testid="stMarkdownContainer"] {margin-bottom:0
            background:var(--bl-mute-bg); border-radius:999px; padding:.1rem .45rem;}
 
 .bl-vl-label {font-size:.95rem; font-weight:600; color:var(--bl-fg); margin-bottom:.1rem;}
-/* The ? beside a list's name, holding the sentence the name used to be paired
-   with.  Sized as a target rather than as a glyph, and kept quiet until it is
-   pointed at, for the same reasons .bl-info is: it answers a question asked
-   once, and it must not compete with the label it sits after. */
-.bl-vl-q {display:inline-flex; align-items:center; justify-content:center;
-          width:1.15rem; height:1.15rem; margin-left:.4rem; border-radius:50%;
-          vertical-align:text-bottom; cursor:help;
-          font-size:.72rem; font-weight:700; line-height:1;
-          background:var(--bl-mute-bg); color:var(--bl-fg-faint);
-          transition:background-color var(--bl-hover), color var(--bl-hover);}
-.bl-vl-q:hover, .bl-vl-q:focus-visible {background:var(--bl-accent-soft); color:var(--bl-fg);}
-.bl-vl-q:focus-visible {outline:2px solid var(--bl-accent); outline-offset:2px;}
 /* ── Clear, at the right-hand end of the tab line ──────────────────────────
    The tab row is a band this box already spends; Clear rides on its empty
    right-hand end rather than taking a band of its own under the JSON pane,
@@ -788,8 +776,10 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
    widget's help shows; only the muting is ours, because it offers detail rather
    than reporting a problem. */
 .bl-q {display:inline-flex; vertical-align:-.18em; margin-left:.25rem;
-       color:var(--bl-fg-muted); opacity:.7;}
-.bl-q:hover {opacity:1;}
+       color:var(--bl-fg-muted); opacity:.7; border-radius:50%;}
+.bl-q:hover, .bl-q:focus-visible {opacity:1;}
+/* It is in the tab order, so it has to show where the tab landed. */
+.bl-q:focus-visible {outline:2px solid var(--bl-accent); outline-offset:2px;}
 .bl-q svg {width:16px; height:16px;}   /* the size Streamlit renders its own at */
 
 /* The fetch ring, drawn where that row's button was. Sized to the button it
