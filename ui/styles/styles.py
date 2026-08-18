@@ -749,8 +749,11 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
    glance.  Built from st.columns rather than a real <table>: the last cell holds
    a working button, which no markdown table can carry. */
 .bl-th {font-size:.72rem; font-weight:700; letter-spacing:.04em;
-        text-transform:uppercase; color:var(--bl-fg-muted);
-        padding:0 0 .3rem; border-bottom:1px solid var(--bl-border);}
+        text-transform:uppercase; color:var(--bl-fg-muted); padding:0 0 .3rem;}
+/* One rule across the whole header row. Bordering each header cell instead left
+   a line under the empty button column with no heading above it, which reads as
+   a stray mark rather than as part of a table. */
+.bl-thrule {border-top:1px solid var(--bl-border); margin:0 0 .1rem;}
 .bl-td {font-size:.84rem; line-height:1.5; padding:.55rem 0 .5rem;
         color:var(--bl-fg-muted);}
 /* The name is what the eye lands on when scanning the column of lists. */

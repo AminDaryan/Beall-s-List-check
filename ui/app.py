@@ -740,9 +740,6 @@ def _reference_lists_section():
     reason on the control rather than as a failure at run time.
     """
     with _options_section("📚", "Reference lists", "what counts as predatory"):
-        st.caption("Which published lists this run screens your papers against. "
-                   "A venue on **any** of them is flagged, and the report names "
-                   "which one — so a paper can show that two lists agree.")
         chosen = []
         cols = st.columns(max(2, len(reference_lists.ids())))
         for col, pid in zip(cols, reference_lists.ids()):

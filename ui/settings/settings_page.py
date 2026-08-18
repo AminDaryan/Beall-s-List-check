@@ -245,11 +245,16 @@ def _reference_lists_block():
     # One row per list, under a header — a reader comparing two catalogues is
     # asking the same four questions of each, and stacked prose makes that a
     # scroll instead of a glance.
-    widths = [2.0, 1.5, 4.6, 2.0, 2.4, 1.5]
+    # Sized to what each column holds: a sentence or two of description, against
+    # short facts either side of it.
+    widths = [1.8, 1.4, 4.0, 1.8, 2.4, 1.3]
     head = st.columns(widths, vertical_alignment="bottom")
-    for col, name in zip(head, ("List", "Source", "What it covers", "Kept up to date",
+    for col, name in zip(head, ("List", "Source", "What it covers", "How it updates",
                                 "On this computer", "")):
         col.markdown(f"<div class='bl-th'>{name}</div>", unsafe_allow_html=True)
+    # One rule under the whole row, not one per cell. Per-cell borders left a
+    # stray line hanging under the empty button column, which read as a mistake.
+    st.markdown("<div class='bl-thrule'></div>", unsafe_allow_html=True)
 
     for pid in reference_lists.ids():
         state = reference_lists.status(pid)
@@ -266,55 +271,63 @@ def _reference_lists_block():
         row[2].markdown(f"<div class='bl-td'>{reference_lists.description(pid)}</div>",
                         unsafe_allow_html=True)
 
-        # How a copy is REFRESHED — never whether a run queries the list live.
-        # Every run reads a dated snapshot from this computer, which is what lets
-        # the same papers be checked twice and answer the same; see
-        # reference_lists.has_api.
+        # How a fresh copy is FETCHED. Not whether a run queries the list live:
+        # every run reads a dated snapshot held on this computer, which is what
+        # lets the same papers be checked twice and answer the same.
         if reference_lists.has_api(pid):
-            access, access_note = "Online — their API", ("An update asks the "
-                                                         "publisher's API what changed.")
+            how, how_note = "Asks their API", ("Kscien serves the list over an API, "
+                                               "so an update asks what changed.")
         else:
-            access, access_note = "Offline — read from the page", (
-                "The publisher serves no API, so an update re-reads their website.")
+            how, how_note = "Re-reads their site", ("No API is published, so an "
+                                                    "update reads the pages again.")
         row[3].markdown(
             f"<div class='bl-td'><span class='bl-help' "
-            f"title='{html.escape(access_note, quote=True)}'>{access}</span></div>",
+            f"title='{html.escape(how_note, quote=True)}'>{how}</span></div>",
             unsafe_allow_html=True)
 
+        # Shipping with the tool and being updatable are different questions, and
+        # answering only the first is what left Beall's List with no button —
+        # reading as "this list cannot be updated" when its scraper had been in
+        # the repository all along.
         if vendored:
-            row[4].markdown(
-                f"<div class='bl-td bl-td-ok'>Ships with the tool<br>"
-                f"<span class='bl-dir-sub'>{state['entries']} entries · "
-                f"nothing to download</span></div>", unsafe_allow_html=True)
-            row[5].markdown("<div class='bl-td bl-dir-sub'>—</div>",
-                            unsafe_allow_html=True)
-            continue
-
-        if state["error"]:
+            cell = (f"<div class='bl-td bl-td-ok'>Ships with the tool<br>"
+                    f"<span class='bl-dir-sub'>{state['entries']:,} entries</span></div>")
+        elif state["error"]:
             cell = f"<div class='bl-td bl-td-warn'>⚠️ {state['error']}</div>"
         elif not state["held"]:
-            cell = ("<div class='bl-td bl-td-warn'>Not on this computer<br>"
+            cell = ("<div class='bl-td bl-td-warn'>Not here yet<br>"
                     "<span class='bl-dir-sub'>Step 3 offers it greyed out "
                     "until it is</span></div>")
         else:
             age = state["age_days"]
             when = "today" if age == 0 else f"{age} day(s) ago"
-            parts = ", ".join(f"{n} {k.replace('_', ' ')}"
-                              for k, n in sorted(state["counts"].items(),
-                                                 key=lambda kv: -kv[1]))
-            cell = (f"<div class='bl-td bl-td-ok'>{state['entries']} entries · "
-                    f"{_bytes_human(state['bytes'])}<br><span class='bl-dir-sub'>"
-                    f"downloaded {when}" + (f" · {parts}" if parts else "")
-                    + "</span></div>")
+            # The per-list breakdown goes on the hover, not in the cell. Spelled
+            # out it ran to ten wrapped lines in a column this narrow — six counts
+            # in a space sized for two — which buried the two facts a reader came
+            # for: how many entries, and how old.
+            parts = " · ".join(f"{k.replace('_', ' ')}: {n:,}"
+                               for k, n in sorted(state["counts"].items(),
+                                                  key=lambda kv: -kv[1]))
+            cell = (f"<div class='bl-td bl-td-ok'><span class='bl-help' title='"
+                    f"{html.escape(parts, quote=True)}'>{state['entries']:,} entries · "
+                    f"{_bytes_human(state['bytes'])}</span><br>"
+                    f"<span class='bl-dir-sub'>downloaded {when}</span></div>")
         row[4].markdown(cell, unsafe_allow_html=True)
 
+        if reference_lists.fetch_command(pid) is None:
+            row[5].markdown("<div class='bl-td bl-dir-sub'>—</div>",
+                            unsafe_allow_html=True)
+            continue
+
         with row[5]:
-            clicked = st.button("Update" if state["held"] else "Download",
+            clicked = st.button("Download" if not (state["held"] or vendored)
+                                else "Update",
                                 key=f"fetch_{pid}", width="stretch",
-                                help=("Checks for changes and fetches only those; "
-                                      "the first download is larger."
-                                      if state["held"] else
-                                      "One download, then kept on this computer."))
+                                help=("One download, then kept on this computer."
+                                      if not (state["held"] or vendored) else
+                                      "Fetches the list again and replaces the "
+                                      "copy here. The one you have keeps working "
+                                      "if it fails."))
 
         if clicked:
             bar = st.progress(0.0, text=f"Fetching {label}…")

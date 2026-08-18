@@ -60,6 +60,13 @@ PROVIDERS = {
         # Read by scraping the site's HTML: no API is published, so an update is
         # a re-scrape rather than a query.
         "api": False,
+        # Shipping a copy and being able to refresh it are different things. The
+        # snapshot in data/ is the one this tool was released with; beallslist.net
+        # keeps changing, and the scraper that produced the file can run again.
+        # Without this the Settings page offered no way to update Beall's List,
+        # which read as "this list cannot be updated" when the scraper had been
+        # there all along.
+        "fetch_with": "scrape_bealls_list/scrape_bealls_list.py",
     },
     "kscien": {
         "label": "Kscien's list",
