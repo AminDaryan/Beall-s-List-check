@@ -743,6 +743,14 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
               margin:.1rem 0 .1rem;}
 .bl-dir-about {font-size:.84rem; line-height:1.5; color:var(--bl-fg-muted);
                margin-bottom:.55rem;}
+/* The "?" beside a directory's name, holding everything that describes it rather
+   than changes it. Muted and small: it is an offer of detail, not a warning, and
+   the name it follows has to stay the thing the eye lands on. */
+.bl-dir-q {font-size:.78rem; font-weight:700; color:var(--bl-fg-muted);
+           border:1px solid var(--bl-fg-muted); border-radius:999px;
+           padding:0 .34rem; margin-left:.2rem; vertical-align:middle;
+           line-height:1.35; opacity:.75;}
+.bl-dir-q:hover {opacity:1;}
 /* The status line, stated as a fact rather than as a warning: searching over the
    internet is one of the two answers and the one the app starts with, not a
    fault and not a thing left undone.  So it is the muted tone and a downloaded

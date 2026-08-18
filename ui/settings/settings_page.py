@@ -21,6 +21,8 @@ Nothing is downloaded until "on this computer" is chosen — which is the point.
 first run of this app should cost nothing it was not asked for.
 """
 
+import html
+import re
 import streamlit as st
 
 import sys
@@ -46,12 +48,14 @@ import venue_lookup
 from notices import flush_notices, notify_next_run
 
 
-# The two answers, worded as places rather than as states.  "Over the internet"
-# and "On this computer" are both things the app *does*; "on" and "off" are not,
-# and the off of a switch is read as a feature withheld.  Named here because the
-# status line and the recovery message quote them back.
-ONLINE = "Over the internet"
-LOCAL = "On this computer"
+# The two answers.  They were spelled out as places — "Over the internet" and "On
+# this computer" — so that neither could be read as the off of a switch, i.e. as
+# the box being disabled.  That job is now done by the captions under them, which
+# price both answers, and by the "?" beside each, so the options themselves can
+# be the two words a reader is already scanning for.  Named here because the
+# recovery message quotes them back.
+ONLINE = "Online"
+LOCAL = "Offline"
 
 
 def _bytes_human(n):
@@ -122,25 +126,54 @@ def _state_line(module, state, title):
                 f"downloaded {_age_human(state['age_days'])}"), "bl-dir-present"
 
 
+def _plain(text):
+    """Tag-free, entity-free text, for somewhere only plain text renders.
+
+    The prose here is written as HTML because that is how the page draws it; a
+    ``title`` attribute and a Markdown link title both show the characters they
+    are given, so a ``<b>`` or a ``&nbsp;`` would be read out literally.
+    """
+    return html.unescape(re.sub(r"<[^>]+>", "", text)).replace("\xa0", " ")
+
+
+def _md_tip(text):
+    """A "?" carrying *text* as a hover tooltip, for a Markdown-only slot.
+
+    Streamlit's ``help=`` belongs to a radio as a whole, so it can only ever sit
+    against the group's label — and there is no group label here any more.  A
+    Markdown link title is the one tooltip a caption can carry, so the answer to
+    "what does this option cost me?" can sit against the option it is about
+    rather than above both of them.  The title is one line: the syntax ends at a
+    newline and at an unescaped quote.
+    """
+    clean = " ".join(_plain(text).split()).replace('"', "'")
+    return f'[?](# "{clean}")'
+
+
 def _directory(module, *, title, key, searched_by, about, online, local, help_text):
     """One directory: what it is, where it is searched, and what is on disk.
 
-    Three bands, in the order the question is asked.  *about* says what the
-    directory is and which of Step 3's boxes uses it, so the choice below it is
-    about something the reader can already picture.  The control names both
-    answers and prices both — *online* and *local* are the captions under them —
-    so nothing has to be tried to find out what it costs.  The line last is the
-    only part that changes by itself: it reports the copy on disk.
+    Two bands now, not three.  Everything that describes the directory rather
+    than changing it — what it is, which of Step 3's boxes searches it, and what
+    is on disk right now — hangs off the "?" beside the name, because it is read
+    once and then never again, while the choice under it is the whole reason to
+    open this page.  The control names both answers and prices both in the
+    captions, and each caption carries its own "?" for the detail behind it.
     """
-    st.markdown(f"<div class='bl-dir-name'>{title}</div>"
-                f"<div class='bl-dir-about'>{searched_by}<br>{about}</div>",
-                unsafe_allow_html=True)
-
     on = module.held()
     state = module.status()
+    line, _tone = _state_line(module, state, title)
+    st.markdown(
+        f"<div class='bl-dir-name'>{title} "
+        f"<span class='bl-help bl-dir-q' title='"
+        f"{html.escape(_plain(f'{searched_by} {about} {line}'), quote=True)}'>?</span>"
+        f"</div>", unsafe_allow_html=True)
+
     choice = st.radio(f"Where {title} is searched", [ONLINE, LOCAL],
-                      index=1 if on else 0, captions=[online, local],
-                      horizontal=True, key=f"where_{key}", help=help_text)
+                      index=1 if on else 0,
+                      captions=[f"{_md_tip(help_text)} {online}", local],
+                      horizontal=True, key=f"where_{key}",
+                      label_visibility="collapsed")
 
     if choice == LOCAL and not on:
         module.hold(True)
@@ -160,9 +193,6 @@ def _directory(module, *, title, key, searched_by, about, online, local, help_te
         notify_next_run(f"{title}: searching over the internet again. "
                         "The downloaded copy is kept.", icon="🌐")
         st.rerun()
-
-    line, tone = _state_line(module, state, title)
-    st.markdown(f"<div class='bl-dir-state {tone}'>{line}</div>", unsafe_allow_html=True)
 
 
 def _fetch_directory(module, title):
@@ -307,11 +337,12 @@ def page_settings():
         online="About 0.1 s a search · needs a connection · nothing stored",
         local="Instant, and no connection needed · one 25 MB download",
         help_text=(
-            "Over the internet, the box asks DOAJ's own search API — fast, but DOAJ "
-            "can refuse a search when it is busy. On this computer, the whole list is "
-            "downloaded once (25 MB, a few seconds) and searched here instead.\n\n"
-            "Going back to the internet keeps the downloaded file, so choosing the "
-            "copy again is instant rather than another download."))
+            "Online, the box asks DOAJ's own search API over the internet — fast, but "
+            "DOAJ can refuse a search when it is busy. Offline, the whole list is "
+            "downloaded once (25 MB, a few seconds) and searched on this computer "
+            "instead, with nothing to ask and nothing to refuse. "
+            "Going back to online keeps the downloaded file, so choosing offline "
+            "again is instant rather than another download."))
 
     st.divider()
 
@@ -325,13 +356,13 @@ def page_settings():
         online="About 0.5 s a search · needs a connection · starts at two letters",
         local="Instant, from the first letter · one 51 MB download",
         help_text=(
-            "Over the internet, the box asks Crossref's own search API, which is why "
-            "it waits for a second letter — one letter costs a request and answers "
-            "nothing useful. On this computer, the whole journal list is downloaded "
-            "once (51 MB, about twenty seconds) and searched here instead, with no "
-            "request to wait for and so no such floor.\n\n"
-            "Going back to the internet keeps the downloaded file, so choosing the "
-            "copy again is instant rather than another download."))
+            "Online, the box asks Crossref's own search API over the internet, which "
+            "is why it waits for a second letter — one letter costs a request and "
+            "answers nothing useful. Offline, the whole journal list is downloaded "
+            "once (51 MB, about twenty seconds) and searched on this computer "
+            "instead, with no request to wait for and so no such floor. "
+            "Going back to online keeps the downloaded file, so choosing offline "
+            "again is instant rather than another download."))
 
     st.divider()
     _reference_lists_block()
