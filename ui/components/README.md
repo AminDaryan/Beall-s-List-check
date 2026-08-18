@@ -47,14 +47,34 @@ Everything returns an HTML string for `st.markdown(..., unsafe_allow_html=True)`
 The module holds no Streamlit import and no state, so each piece can be exercised
 on its own.
 
+### The panel
+
+Both `hint()` and `help_icon()` open the same panel, `.bl-tip`, styled to the one
+Streamlit renders for a widget's `help=` — 8px radius, 6px/12px padding, 14px on
+a 22.4px line, its one-pixel shadow, its surface in both colour schemes. Those
+numbers were measured off Streamlit's panel, not guessed.
+
+It is deliberately **not** the browser's `title` attribute. A title is drawn by
+the operating system: it cannot be styled, so beside Streamlit's own panel it
+reads as a different control however identical the mark is; it cannot render
+markup, so prose written as HTML arrives in it as `<b>whitelist</b>`; and it
+never appears for a keyboard.
+
+Text is passed through `plain()` inside both functions, so markup cannot leak
+into a panel by accident.
+
+Pass `align="end"` for a mark near the right edge of the page — the panel opens
+rightwards by default and would otherwise run off it.
+
+Keep the text to a few lines. Everything true of a thing is not what a tooltip is
+for: the Settings panel once held a description, both prices, a long explanation
+and the disk state, ran to twelve wrapped lines, and pushed the part a reader
+came for past its own bottom edge.
+
 ### `tooltip(text) -> str`
 
-The raw attributes — `class='bl-help' title='...'` — for an element built by
-hand. Prefer `hint()` or `help_icon()`; reach for this only when neither shape
-fits.
-
-Native browser tooltip on purpose: reachable by keyboard and screen reader, never
-clipped by the viewport, and no JavaScript in a page Streamlit already re-renders.
+The raw attributes for an element built entirely by hand. Prefer `hint()` or
+`help_icon()`; reach for this only when neither shape fits.
 
 ### `hint(inner_html, text, *, cls="") -> str`
 

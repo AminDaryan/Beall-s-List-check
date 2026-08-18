@@ -236,6 +236,14 @@ _TOKENS = """
   --bl-hover:120ms cubic-bezier(.2,0,.2,1);
   --bl-lift:0 2px 8px rgba(15,23,42,.18);
 
+  /* The tooltip panel's surface. The one pair of literal colours in this file,
+     because they are not ours: they are the values measured off the panel
+     Streamlit renders for a widget's help=, and the whole point of .bl-tip is to
+     be indistinguishable from it. A currentColor mix could not do it — the panel
+     is opaque and sits above the page, so it needs a real colour, not a tint. */
+  --bl-tip-bg:#ffffff;
+  --bl-tip-fg:#1e293b;
+
   /* A gear, as a mask rather than an <img>, so it inherits the toolbar's colour
      and therefore needs no light/dark pair either. Material Symbols "settings". */
   --bl-gear:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg'\
@@ -244,6 +252,11 @@ _TOKENS = """
  1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm112-260q58 0 99-41t41-99q0-58-41-99t-99\
 -41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Z'/%3E%3C/svg%3E");
 }
+/* Streamlit follows the browser's colour scheme, so the panel does too. */
+@media (prefers-color-scheme: dark) {
+  :root {--bl-tip-bg:#1e293b; --bl-tip-fg:#f1f5f9;}
+}
+
 """
 
 
@@ -776,10 +789,32 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
    widget's help shows; only the muting is ours, because it offers detail rather
    than reporting a problem. */
 .bl-q {display:inline-flex; vertical-align:-.18em; margin-left:.25rem;
-       color:var(--bl-fg-muted); opacity:.7; border-radius:50%;}
+       color:var(--bl-fg-muted); opacity:.7; border-radius:50%; position:relative;}
 .bl-q:hover, .bl-q:focus-visible {opacity:1;}
 /* It is in the tab order, so it has to show where the tab landed. */
 .bl-q:focus-visible {outline:2px solid var(--bl-accent); outline-offset:2px;}
+
+/* The panel the mark opens, matching what Streamlit shows for a widget's help=
+   down to the numbers measured off it: 8px radius, 6px/12px padding, 14px on a
+   22.4px line, and its one-pixel shadow. The mark was already Streamlit's icon;
+   with the browser's own title tooltip behind it the two still looked nothing
+   alike, because a title attribute is drawn by the operating system and cannot
+   be styled at all. It also cannot render markup, which is why prose written as
+   HTML arrived in it as "<b>whitelist</b>". */
+.bl-tip {position:absolute; z-index:1000; top:calc(100% + 6px); left:-4px;
+         width:max-content; max-width:min(430px, 44vw);
+         padding:6px 12px; border-radius:8px;
+         background:var(--bl-tip-bg); color:var(--bl-tip-fg);
+         box-shadow:rgba(0,0,0,.16) 0 1px 4px 0;
+         font-size:14px; font-weight:400; line-height:1.6; text-align:left;
+         white-space:normal; opacity:0; visibility:hidden;
+         transition:opacity var(--bl-hover), visibility var(--bl-hover);}
+.bl-tip-host {position:relative;}
+.bl-q:hover .bl-tip, .bl-q:focus-visible .bl-tip,
+.bl-tip-host:hover .bl-tip, .bl-tip-host:focus-visible .bl-tip
+    {opacity:1; visibility:visible;}
+/* Near the right edge of the page a panel that opens rightwards runs off it. */
+.bl-tip-end {left:auto; right:-4px;}
 .bl-q svg {width:16px; height:16px;}   /* the size Streamlit renders its own at */
 
 /* The fetch ring, drawn where that row's button was. Sized to the button it

@@ -151,6 +151,10 @@ def _directory(module, *, title, key, searched_by, about, online, local, help_te
     on = module.held()
     state = module.status()
     line, _tone = _state_line(module, state, title)
+    # Kept to about five lines. Everything true of the directory used to go in
+    # here — description, both prices, the long explanation and the disk state —
+    # which ran to ten wrapped lines and past the bottom of the panel, so the
+    # part a reader came for was the part they could not see.
     detail = " ".join([searched_by, about, help_text,
                        f"Online: {online}.", f"Offline: {local}.", line])
 
@@ -296,7 +300,7 @@ def _reference_lists_block():
         # reading as "this list cannot be updated" when its scraper had been in
         # the repository all along.
         if vendored:
-            cell = f"<div class='bl-td bl-td-ok'>Ships with the tool {components.help_icon(tip)}</div>"
+            cell = f"<div class='bl-td bl-td-ok'>Ships with the tool {components.help_icon(tip, align='end')}</div>"
         elif state["error"]:
             cell = f"<div class='bl-td bl-td-warn'>⚠️ {state['error']}</div>"
         elif not state["held"]:
@@ -307,7 +311,7 @@ def _reference_lists_block():
             age = state["age_days"]
             when = "today" if age == 0 else f"{age} day(s) ago"
             cell = (f"<div class='bl-td bl-td-ok'>{_bytes_human(state['bytes'])} · "
-                    f"downloaded {when} {components.help_icon(tip)}</div>")
+                    f"downloaded {when} {components.help_icon(tip, align='end')}</div>")
         row[3].markdown(cell, unsafe_allow_html=True)
 
         if reference_lists.fetch_command(pid) is None:
@@ -393,41 +397,26 @@ def page_settings():
 
     _directory(
         doaj, title="DOAJ", key="doaj",
-        searched_by="Searched by Step 3's <b>whitelist</b> box "
-                    "(<i>only check these venues</i>).",
+        searched_by="Searched by Step 3's whitelist box.",
         about="The Directory of Open Access Journals: about 23,000 journals that "
-              "passed its editorial screening. Each has a name, an ISSN, a publisher "
-              "and a website.",
+              "passed its editorial screening.",
         online="About 0.1 s a search · needs a connection · nothing stored",
         local="Instant, and no connection needed · one 25 MB download",
-        help_text=(
-            "Online, the box asks DOAJ's own search API over the internet — fast, but "
-            "DOAJ can refuse a search when it is busy. Offline, the whole list is "
-            "downloaded once (25 MB, a few seconds) and searched on this computer "
-            "instead, with nothing to ask and nothing to refuse. "
-            "Going back to online keeps the downloaded file, so choosing offline "
-            "again is instant rather than another download."))
+        help_text=("Online asks DOAJ's search API, which can refuse a search when it "
+                   "is busy; offline searches a downloaded copy and cannot."))
 
     # No rule between the two directories. They are two rows of one group now,
     # not two sections, and a divider between them was most of the empty band
     # each used to own. The rules around the group still separate it.
     _directory(
         crossref, title="Crossref", key="crossref",
-        searched_by="Searched by Step 3's <b>blacklist</b> box "
-                    "(<i>also treat these venues as predatory</i>).",
-        about="The DOI registry: about 167,000 journals, screened by nobody — which is "
-              "what a blacklist needs. All have a name, 82% an ISSN, almost all a "
-              "publisher, and none a website.",
+        searched_by="Searched by Step 3's blacklist box.",
+        about="The DOI registry: about 167,000 journals, screened by nobody — which "
+              "is what a blacklist needs.",
         online="About 0.5 s a search · needs a connection · starts at two letters",
         local="Instant, from the first letter · one 51 MB download",
-        help_text=(
-            "Online, the box asks Crossref's own search API over the internet, which "
-            "is why it waits for a second letter — one letter costs a request and "
-            "answers nothing useful. Offline, the whole journal list is downloaded "
-            "once (51 MB, about twenty seconds) and searched on this computer "
-            "instead, with no request to wait for and so no such floor. "
-            "Going back to online keeps the downloaded file, so choosing offline "
-            "again is instant rather than another download."))
+        help_text=("Online asks Crossref's search API, which is why it waits for a "
+                   "second letter; offline searches a downloaded copy from the first."))
 
     st.divider()
     _reference_lists_block()

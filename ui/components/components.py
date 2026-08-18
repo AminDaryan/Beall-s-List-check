@@ -47,22 +47,29 @@ def tooltip(text):
     return f"class='bl-help' title='{html.escape(text, quote=True)}'"
 
 
-def hint(inner_html, text, *, cls=""):
-    """Wrap *inner_html* so hovering it explains it.
+def hint(inner_html, text, *, cls="", align="start"):
+    """Wrap something already on the page so hovering it explains it.
 
-    The general form: a chip, a value in a summary line, a word in a table cell.
-    Use :func:`help_icon` instead when there is nothing to hover — when the
-    explanation belongs to a heading or a column rather than to a phrase.
+    A chip, a value in a summary line, a phrase in a table cell.  Opens the same
+    ``.bl-tip`` panel :func:`help_icon` does, so one gesture has one appearance
+    wherever it is used.
+
+    Returns *inner_html* untouched when *text* is empty, so a caller need not
+    branch.  Use :func:`help_icon` instead when there is nothing to hover — when
+    the explanation belongs to a heading or a column rather than to a phrase.
     """
     classes = f"{cls} " if cls else ""
     if not text:
         return f"<span class='{cls}'>{inner_html}</span>" if cls else inner_html
-    return (f"<span class='{classes}bl-help' "
-            f"title='{html.escape(text, quote=True)}'>{inner_html}</span>")
+    side = " bl-tip-end" if align == "end" else ""
+    return (f"<span class='{classes}bl-help bl-tip-host' "
+            f"aria-label='{html.escape(plain(text), quote=True)}'>{inner_html}"
+            f"<span class='bl-tip{side}' role='tooltip'>"
+            f"{html.escape(plain(text))}</span></span>")
 
 
-def help_icon(text, *, label=""):
-    """The "?" mark, offering *text* on hover — where no phrase can carry it.
+def help_icon(text, *, label="", align="start"):
+    """The "?" mark, opening the app's tooltip panel on *text*.
 
     For a heading, a column, or a field label: everything describing a thing
     rather than changing it goes here, so a page can say what it is for without
@@ -71,17 +78,26 @@ def help_icon(text, *, label=""):
     ONE per section.  Two of these within a few pixels are two invitations to the
     same explanation, and the reader has to try both to find out they are not.
 
-    Reachable without a mouse.  A bare ``title`` is a mouse-only fact: it never
-    appears for anyone tabbing through the page and is announced inconsistently,
-    which matters most exactly where this mark is the only explanation there is.
-    ``tabindex`` puts it in the tab order and ``aria-label`` gives a screen
-    reader something to read; *label* names what the text is about, so the
-    announcement is "Whitelist: ..." rather than a sentence with no subject.
+    The panel is ``.bl-tip``, styled to Streamlit's own, NOT the browser's
+    ``title`` attribute.  A title attribute is drawn by the operating system: it
+    cannot be styled, so beside Streamlit's panel it read as a different control
+    however identical the mark was; it cannot render markup, so prose written as
+    HTML arrived in it as "<b>whitelist</b>"; and it does not appear for a
+    keyboard at all.
+
+    *text* is passed through :func:`plain` — the prose on these pages is written
+    as HTML because that is how the page draws it, and a tooltip shows the
+    characters it is given.
+
+    *align* is ``"end"`` for a mark near the right edge of the page, where a
+    panel opening rightwards would run off it.
     """
-    spoken = f"{label}: {text}" if label else text
+    spoken = f"{label}: {plain(text)}" if label else plain(text)
+    side = " bl-tip-end" if align == "end" else ""
     return (f"<span class='bl-help bl-q' tabindex='0' role='note' "
-            f"aria-label='{html.escape(spoken, quote=True)}' "
-            f"title='{html.escape(text, quote=True)}'>{HELP_SVG}</span>")
+            f"aria-label='{html.escape(spoken, quote=True)}'>{HELP_SVG}"
+            f"<span class='bl-tip{side}' role='tooltip'>"
+            f"{html.escape(plain(text))}</span></span>")
 
 
 def progress_ring(fraction, label=""):
