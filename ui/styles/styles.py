@@ -244,6 +244,14 @@ _TOKENS = """
   --bl-tip-bg:#ffffff;
   --bl-tip-fg:#1e293b;
 
+  /* The page's own surface, needed wherever something has to sit ON the page
+     rather than tint it — the pinned step rail covers the content sliding under
+     it, so it needs a real colour and not a translucent mix. Measured off the
+     app, like the tooltip's. And the height of Streamlit's toolbar, which is
+     opaque and owns the top 60px of the scrolling area. */
+  --bl-page-bg:#ffffff;
+  --bl-header-h:60px;
+
   /* A gear, as a mask rather than an <img>, so it inherits the toolbar's colour
      and therefore needs no light/dark pair either. Material Symbols "settings". */
   --bl-gear:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg'\
@@ -254,7 +262,7 @@ _TOKENS = """
 }
 /* Streamlit follows the browser's colour scheme, so the panel does too. */
 @media (prefers-color-scheme: dark) {
-  :root {--bl-tip-bg:#1e293b; --bl-tip-fg:#f1f5f9;}
+  :root {--bl-tip-bg:#1e293b; --bl-tip-fg:#f1f5f9; --bl-page-bg:#0f172a;}
 }
 
 """
@@ -449,6 +457,11 @@ a.bl-step-n:hover {filter:brightness(1.12);}
    `!important` rather than a longer selector to win. */
 h2.bl-step-t, h3.bl-opt-t {padding:0 !important; margin:0 !important;
                            scroll-margin-top:0 !important; line-height:1.3 !important;}
+/* Except for the step headings, which ARE anchor targets: the rail pins itself
+   over the top of the page, so landing on one has to clear the toolbar and the
+   rail together. Set here, with the same weight, because the reset above zeroes
+   it — a separate rule further down the file simply lost. */
+h2.bl-step-t {scroll-margin-top:calc(var(--bl-header-h) + 5rem) !important;}
 h2.bl-step-t {font-size:1.3rem !important; font-weight:700 !important;}
 h3.bl-opt-t {font-size:1rem !important; font-weight:700 !important;}
 .bl-step-t {font-size:1.3rem; font-weight:700; letter-spacing:-.01em;
@@ -824,8 +837,18 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
    step is ticked and quiet, the current one is the accent, the ones ahead are
    faint — three weights, so the eye finds the live one without reading. Each is
    a link to its own step. */
+/* Pinned, so the four steps stay readable while scrolling the one long page
+   they describe. The sticky element is the CONTAINER Streamlit wraps the rail
+   in, not the rail: a sticky element travels inside its own parent's box, and
+   the rail's parent is exactly as tall as the rail, which would leave it
+   nowhere to go. Offset by the toolbar, which is opaque and owns the top of
+   the scrolling area. */
+[data-testid="stElementContainer"]:has(.bl-rail)
+    {position:sticky; top:var(--bl-header-h); z-index:900;}
 .bl-rail {display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
-          margin:.2rem 0 1.4rem;}
+          margin:0; padding:.55rem 0 .6rem;
+          background:var(--bl-page-bg); border-bottom:1px solid var(--bl-border);}
+
 .bl-rail-step {display:inline-flex; align-items:center; gap:.5rem;
                text-decoration:none !important; padding:.25rem .55rem;
                border-radius:999px; transition:background-color var(--bl-hover);}

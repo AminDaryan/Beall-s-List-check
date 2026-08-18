@@ -768,9 +768,9 @@ def _venue_list_section():
             bl = venue_lists.venue_list_editor(
                 "Blacklist", "bl",
                 "Also treat these venues as predatory. They count as predatory for this "
-                "run in addition to everything on Beall's List. Leave empty to use "
-                "Beall's List as it stands.",
-                "Empty — Beall's List is used as it stands.",
+                "run in addition to everything on the lists chosen above. Leave empty "
+                "to use those lists as they stand.",
+                "Empty — the chosen lists are used as they stand.",
                 # Crossref, not DOAJ: a venue worth blacklisting is one no
                 # directory of vetted journals will have, and the DOI registry
                 # screens nobody. See _DIRECTORIES.

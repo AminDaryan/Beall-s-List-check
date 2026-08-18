@@ -995,7 +995,7 @@ def venue_list_editor(label: str, key: str, about: str, empty: str,
 
     *empty* is what the list says when it holds nothing, and the two lists must
     say different things: an empty whitelist means every paper is checked, while
-    an empty blacklist means Beall's List is used as it stands.  One sentence
+    an empty blacklist means the chosen lists are used as they stand.  One sentence
     covering both would have to be vague about the only fact worth stating.
 
     *about* is everything there is to say about the list — what it does and what
