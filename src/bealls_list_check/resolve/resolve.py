@@ -51,6 +51,26 @@ from match import _hit, _review_reason, _best
 import data_quality                       # the shared, cached Crossref client
 
 
+# The caveat every clearance carries, written once because it was written four
+# times and has to be identical in all of them.
+#
+# It used to say "not on Beall's List", which was a true sentence while there was
+# one catalogue and became a false one the moment a run could screen against a
+# second (Kscien, or the reader's own blacklist) — a paper cleared against Kscien
+# was told it was not on a list nobody had consulted.  ``descriptions.py`` fixed
+# the same sentence on the Results sheet; these four notes were missed, and a
+# report that attributes its findings to the wrong catalogue is not one a
+# researcher can cite.
+#
+# "Unlisted" is avoided for a second reason: to a reader of scholarly metadata an
+# "unlisted journal" is one that is not INDEXED — absent from Scopus, Web of
+# Science, DOAJ — which is a claim about quality, and close to the opposite of
+# what is meant here.  What is meant is only ever "it does not appear on the
+# predatory lists this run checked".
+_CLEAN_MEANS = ("('Clean' here means 'does not appear on the lists this run checked', "
+                "not 'proven reputable'.)")
+
+
 def resolve_review(r, paper, index):
     """Settle one verdict using the paper's DOI.
 
@@ -205,9 +225,9 @@ def _clear_hijacked_if_genuine(r, paper, index):
 def _mark_cleared(r, counterfeit, why):
     """Flip a cleared hijacked paper to 'clean' and record the transparent reason."""
     expl = (f"Cleared after a check. The venue NAME matched a hijacked-journal entry "
-            f"on Beall's List (the counterfeit at {counterfeit or '—'}), which raised "
-            f"doubt — but {why}, so this paper is not in the predatory clone. ('Clean' "
-            "here means 'not on Beall's List', not 'proven reputable'.)")
+            f"on one of the lists this run checked (the counterfeit at "
+            f"{counterfeit or '—'}), which raised doubt — but {why}, so this paper is "
+            f"not in the predatory clone. {_CLEAN_MEANS}")
     r["status"] = "clean"
     r["cleared_reason"] = expl
     r.setdefault("data_quality", []).append(expl)   # keep it visible on the Data-quality sheet
@@ -321,9 +341,9 @@ def _mark_alt_cleared(r, who, detail, real_domain, how):
             f"for this venue pointing to the listed '{listed}', which raised doubt — "
             f"but the paper's DOI identifies its venue as {who} ({detail}; "
             f"{real_domain}), matched by {how}: this is the paper's own canonical "
-            f"venue and is not on Beall's List. Semantic Scholar had merged two "
-            f"same-named journals; this paper belongs to the unlisted one. ('Clean' "
-            f"here means 'not on Beall's List', not 'proven reputable'.)")
+            f"venue and is on none of the lists this run checked. Semantic Scholar "
+            f"had merged two same-named journals; this paper belongs to the one that "
+            f"is not on those lists. {_CLEAN_MEANS}")
     r["status"] = "clean"
     r["cleared_reason"] = expl
     r["review_reason"] = ""
@@ -400,9 +420,9 @@ def _mark_oa_cleared(r, who, detail, real_domain, how):
     expl = (f"Cleared after a check. The paper's free PDF is hosted on the listed "
             f"'{listed}', which raised doubt — but the paper's DOI identifies its "
             f"venue as {who} ({detail}; {real_domain}), matched by {how}: this is the "
-            f"paper's own canonical venue and is not on Beall's List, so the listed "
-            f"site merely re-hosted the PDF and did not publish the paper. ('Clean' "
-            f"here means 'not on Beall's List', not 'proven reputable'.)")
+            f"paper's own canonical venue and is on none of the lists this run "
+            f"checked, so the listed site merely re-hosted the PDF and did not "
+            f"publish the paper. {_CLEAN_MEANS}")
     r["status"] = "clean"
     r["cleared_reason"] = expl
     r["review_reason"] = ""
@@ -487,9 +507,8 @@ def _mark_name_exact_cleared(r, who, detail, real_domain, how):
     expl = (f"Cleared after a check. The venue NAME matched the listed '{listed}', "
             f"which raised doubt — but the paper's DOI identifies its venue as {who} "
             f"({detail}; {real_domain}), matched by {how} (not the shared name): this "
-            f"is a different journal that merely shares the name, and it is not on "
-            f"Beall's List. ('Clean' here means 'not on Beall's List', not 'proven "
-            f"reputable'.)")
+            f"is a different journal that merely shares the name, and it is on none "
+            f"of the lists this run checked. {_CLEAN_MEANS}")
     r["status"] = "clean"
     r["cleared_reason"] = expl
     r["review_reason"] = ""
