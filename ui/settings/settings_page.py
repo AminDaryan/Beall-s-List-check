@@ -154,13 +154,21 @@ def _directory(module, *, title, key, searched_by, about, online, local, help_te
     on = module.held()
     state = module.status()
     line, _tone = _state_line(module, state, title)
+    # Everything describing the directory, including what each answer costs,
+    # behind the one mark beside its name.
+    detail = " ".join([searched_by, about, help_text,
+                       f"Online: {online}.", f"Offline: {local}.", line])
     st.markdown(f"<div class='bl-dir-name'>{title} "
-                f"{components.help_icon(f'{searched_by} {about} {help_text} {line}')}</div>",
+                f"{components.help_icon(detail)}</div>",
                 unsafe_allow_html=True)
 
+    # No captions under the options. Streamlit sizes a horizontal radio's columns
+    # to their captions, so two options priced in different numbers of words sat
+    # at different distances on each row and the two Offline buttons never lined
+    # up down the page. Both prices moved into the "?" above, which leaves two
+    # words to choose between and a column that is straight.
     choice = st.radio(f"Where {title} is searched", [ONLINE, LOCAL],
-                      index=1 if on else 0, captions=[online, local],
-                      horizontal=True, key=f"where_{key}",
+                      index=1 if on else 0, horizontal=True, key=f"where_{key}",
                       label_visibility="collapsed")
 
     if choice == LOCAL and not on:
@@ -360,6 +368,13 @@ def page_settings():
                "blacklist, and nothing else.")
 
     st.divider()
+
+    # Its own heading, like Reference lists below. Two named things sat under the
+    # page title with nothing saying what they were, so the page read as one list
+    # of settings rather than two sections answering different questions.
+    st.subheader("Venue directories")
+    st.caption("Where each of Step 3's two venue boxes looks a journal up while "
+               "you type. Neither decides any verdict.")
 
     _directory(
         doaj, title="DOAJ", key="doaj",

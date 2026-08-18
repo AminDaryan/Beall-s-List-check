@@ -763,9 +763,10 @@ def _reference_lists_section():
                     reference_lists.label(pid),
                     value=pid in reference_lists.default_ids() and usable,
                     key=f"list_{pid}", disabled=not usable, help=help_text)
-                if usable:
-                    st.caption(f"{state['entries']} entries")
-                else:
+                # No entry count here: the checkbox's own "?" already carries it,
+                # and printed twice a pair of numbers reads as two different facts.
+                # The missing-list warning stays — it says why the box is disabled.
+                if not usable:
                     st.caption("⚠️ not downloaded")
                 if on and usable:
                     chosen.append(pid)
