@@ -84,34 +84,34 @@
     "2": 22.0,
     "3": 30.0,
     "4": 16.0,
-    "5": 22.5,
-    "6": 22.5,
+    "5": 30.0,
+    "6": 30.0,
     "7": 30.0,
     "8": 16.0,
     "9": 22.5,
     "10": 22.5,
     "11": 30.0,
     "12": 16.0,
-    "13": 16.0,
-    "14": 16.0,
+    "13": 22.5,
+    "14": 22.5,
     "15": 16.0,
     "16": 16.0,
-    "17": 22.5,
-    "18": 22.5,
+    "17": 30.0,
+    "18": 30.0,
     "19": 30.0,
     "20": 16.0,
     "21": 45.0,
     "22": 45.0,
     "23": 30.0,
-    "24": 16.0,
+    "24": 30.0,
     "25": 70.0,
     "26": 70.0,
     "27": 30.0,
-    "28": 16.0,
+    "28": 30.0,
     "29": 37.5,
     "30": 37.5,
     "31": 30.0,
-    "32": 16.0,
+    "32": 30.0,
     "33": 37.5,
     "34": 37.5,
     "35": 30.0,
@@ -224,7 +224,7 @@
     },
     {
      "ref": "F4",
-     "value": "Listed on: Beall's List — predatory publisher"
+     "value": "Found on: Beall's List, in its list of publishers"
     },
     {
      "ref": "C5",
@@ -237,7 +237,7 @@
     },
     {
      "ref": "F5",
-     "value": "Why flagged: the venue's own website (dodgypub.test) is on Beall's List as 'Dodgy Publishing Group' — the most reliable signal."
+     "value": "Why flagged: 'Dodgy Publishing Group' is an entry on that list. This venue's own website (dodgypub.test) is that entry's website. A website belongs to one publisher, so this is the same venue."
     },
     {
      "ref": "C6",
@@ -293,7 +293,7 @@
     },
     {
      "ref": "F8",
-     "value": "Listed on: Beall's List — predatory publisher",
+     "value": "Found on: Beall's List, in its list of publishers",
      "fill": "00F2F4F8"
     },
     {
@@ -309,7 +309,7 @@
     },
     {
      "ref": "F9",
-     "value": "Why flagged: the venue's website (ojs.subhost.test) sits under the listed site of 'Subhost Press' — a high-confidence match.",
+     "value": "Why flagged: 'Subhost Press' is an entry on that list. This venue's website (ojs.subhost.test) is part of that entry's website.",
      "fill": "00F2F4F8"
     },
     {
@@ -360,7 +360,7 @@
     },
     {
      "ref": "F12",
-     "value": "Listed on: Beall's List — standalone predatory journal"
+     "value": "Found on: Beall's List, in its list of individual journals"
     },
     {
      "ref": "C13",
@@ -372,7 +372,7 @@
     },
     {
      "ref": "F13",
-     "value": "Why flagged: the venue's ISSN (1111-2222) matches the listed 'Journal of Dubious Results' — a high-confidence match."
+     "value": "Why flagged: 'Journal of Dubious Results' is an entry on that list. This venue's ISSN (1111-2222) is the ISSN of that entry. An ISSN identifies exactly one journal."
     },
     {
      "ref": "C14",
@@ -427,7 +427,7 @@
     },
     {
      "ref": "F16",
-     "value": "Listed on: Beall's List — standalone predatory journal",
+     "value": "Found on: Beall's List, in its list of individual journals",
      "fill": "00F2F4F8"
     },
     {
@@ -443,7 +443,7 @@
     },
     {
      "ref": "F17",
-     "value": "Why flagged: the venue name 'Bulletin of Unlisted Sites' exactly matches the listed 'Bulletin of Unlisted Sites' — a high-confidence match.",
+     "value": "Why flagged: 'Bulletin of Unlisted Sites' is an entry on that list. This venue's name, 'Bulletin of Unlisted Sites', is that exact name, and its website is that entry's website too.",
      "fill": "00F2F4F8"
     },
     {
@@ -495,7 +495,7 @@
     },
     {
      "ref": "F20",
-     "value": "Listed on: Beall's List — standalone predatory journal"
+     "value": "Found on: Beall's List, in its list of individual journals"
     },
     {
      "ref": "C21",
@@ -564,7 +564,7 @@
     },
     {
      "ref": "F24",
-     "value": "Listed on: Beall's List — hijacked / cloned journal",
+     "value": "Found on: Beall's List, in its list of hijacked (counterfeit) journals",
      "fill": "00F2F4F8"
     },
     {
@@ -632,7 +632,7 @@
     },
     {
      "ref": "F28",
-     "value": "Listed on: Beall's List — vanity press (book publisher)"
+     "value": "Found on: Beall's List, in its list of vanity presses (book publishers)"
     },
     {
      "ref": "C29",
@@ -701,7 +701,7 @@
     },
     {
      "ref": "F32",
-     "value": "Listed on: Beall's List — fake-metrics company",
+     "value": "Found on: Beall's List, in its list of companies selling fake metrics",
      "fill": "00F2F4F8"
     },
     {
@@ -768,7 +768,7 @@
     },
     {
      "ref": "F36",
-     "value": "Listed on: Beall's List — standalone predatory journal"
+     "value": "Found on: Beall's List, in its list of individual journals"
     },
     {
      "ref": "C37",
@@ -842,7 +842,7 @@
     },
     {
      "ref": "F40",
-     "value": "Listed on: Beall's List — hijacked / cloned journal; predatory publisher",
+     "value": "Found on: Beall's List, in its list of hijacked (counterfeit) journals; its list of publishers",
      "fill": "00F2F4F8"
     },
     {
@@ -916,7 +916,7 @@
     },
     {
      "ref": "F44",
-     "value": "Listed on: Kscien's list — predatory conference"
+     "value": "Found on: Kscien's list, in its list of conferences"
     },
     {
      "ref": "C45",
@@ -1239,22 +1239,22 @@
     "2": 22.0,
     "3": 30.0,
     "4": 16.0,
-    "5": 22.5,
-    "6": 22.5,
+    "5": 30.0,
+    "6": 30.0,
     "7": 30.0,
     "8": 16.0,
     "9": 22.5,
     "10": 22.5,
     "11": 30.0,
     "12": 16.0,
-    "13": 16.0,
-    "14": 16.0,
+    "13": 22.5,
+    "14": 22.5,
     "15": 16.0,
     "16": 16.0,
-    "17": 22.5,
-    "18": 22.5,
+    "17": 30.0,
+    "18": 30.0,
     "19": 30.0,
-    "20": 16.0,
+    "20": 30.0,
     "21": 70.0,
     "22": 70.0,
     "23": 45.0,
@@ -1262,7 +1262,7 @@
     "25": 60.0,
     "26": 60.0,
     "27": 30.0,
-    "28": 16.0,
+    "28": 30.0,
     "29": 37.5,
     "30": 37.5,
     "31": 30.0,
@@ -1278,7 +1278,7 @@
     "41": 37.5,
     "42": 37.5,
     "43": 30.0,
-    "44": 16.0,
+    "44": 30.0,
     "45": 37.5,
     "46": 37.5
    },
@@ -1363,7 +1363,7 @@
     },
     {
      "ref": "F4",
-     "value": "Listed on: Beall's List — predatory publisher"
+     "value": "Found on: Beall's List, in its list of publishers"
     },
     {
      "ref": "C5",
@@ -1376,7 +1376,7 @@
     },
     {
      "ref": "F5",
-     "value": "Why flagged: the venue's own website (dodgypub.test) is on Beall's List as 'Dodgy Publishing Group' — the most reliable signal."
+     "value": "Why flagged: 'Dodgy Publishing Group' is an entry on that list. This venue's own website (dodgypub.test) is that entry's website. A website belongs to one publisher, so this is the same venue."
     },
     {
      "ref": "C6",
@@ -1432,7 +1432,7 @@
     },
     {
      "ref": "F8",
-     "value": "Listed on: Beall's List — predatory publisher",
+     "value": "Found on: Beall's List, in its list of publishers",
      "fill": "00F2F4F8"
     },
     {
@@ -1448,7 +1448,7 @@
     },
     {
      "ref": "F9",
-     "value": "Why flagged: the venue's website (ojs.subhost.test) sits under the listed site of 'Subhost Press' — a high-confidence match.",
+     "value": "Why flagged: 'Subhost Press' is an entry on that list. This venue's website (ojs.subhost.test) is part of that entry's website.",
      "fill": "00F2F4F8"
     },
     {
@@ -1499,7 +1499,7 @@
     },
     {
      "ref": "F12",
-     "value": "Listed on: Beall's List — standalone predatory journal"
+     "value": "Found on: Beall's List, in its list of individual journals"
     },
     {
      "ref": "C13",
@@ -1511,7 +1511,7 @@
     },
     {
      "ref": "F13",
-     "value": "Why flagged: the venue's ISSN (1111-2222) matches the listed 'Journal of Dubious Results' — a high-confidence match."
+     "value": "Why flagged: 'Journal of Dubious Results' is an entry on that list. This venue's ISSN (1111-2222) is the ISSN of that entry. An ISSN identifies exactly one journal."
     },
     {
      "ref": "C14",
@@ -1566,7 +1566,7 @@
     },
     {
      "ref": "F16",
-     "value": "Listed on: Beall's List — standalone predatory journal",
+     "value": "Found on: Beall's List, in its list of individual journals",
      "fill": "00F2F4F8"
     },
     {
@@ -1582,7 +1582,7 @@
     },
     {
      "ref": "F17",
-     "value": "Why flagged: the venue name 'Bulletin of Unlisted Sites' exactly matches the listed 'Bulletin of Unlisted Sites' — a high-confidence match.",
+     "value": "Why flagged: 'Bulletin of Unlisted Sites' is an entry on that list. This venue's name, 'Bulletin of Unlisted Sites', is that exact name, and its website is that entry's website too.",
      "fill": "00F2F4F8"
     },
     {
@@ -1634,7 +1634,7 @@
     },
     {
      "ref": "F20",
-     "value": "Listed on: Beall's List — hijacked / cloned journal"
+     "value": "Found on: Beall's List, in its list of hijacked (counterfeit) journals"
     },
     {
      "ref": "C21",
@@ -1709,7 +1709,7 @@
     },
     {
      "ref": "F24",
-     "value": "Listed on: Beall's List — hijacked / cloned journal; predatory publisher",
+     "value": "Found on: Beall's List, in its list of hijacked (counterfeit) journals; its list of publishers",
      "fill": "00F2F4F8"
     },
     {
@@ -1783,7 +1783,7 @@
     },
     {
      "ref": "F28",
-     "value": "Listed on: Beall's List — fake-metrics company"
+     "value": "Found on: Beall's List, in its list of companies selling fake metrics"
     },
     {
      "ref": "C29",
@@ -1852,7 +1852,7 @@
     },
     {
      "ref": "F32",
-     "value": "Listed on: Kscien's list — predatory conference",
+     "value": "Found on: Kscien's list, in its list of conferences",
      "fill": "00F2F4F8"
     },
     {
@@ -1920,7 +1920,7 @@
     },
     {
      "ref": "F36",
-     "value": "Listed on: Beall's List — standalone predatory journal"
+     "value": "Found on: Beall's List, in its list of individual journals"
     },
     {
      "ref": "C37",
@@ -1988,7 +1988,7 @@
     },
     {
      "ref": "F40",
-     "value": "Listed on: Beall's List — standalone predatory journal",
+     "value": "Found on: Beall's List, in its list of individual journals",
      "fill": "00F2F4F8"
     },
     {
@@ -2055,7 +2055,7 @@
     },
     {
      "ref": "F44",
-     "value": "Listed on: Beall's List — vanity press (book publisher)"
+     "value": "Found on: Beall's List, in its list of vanity presses (book publishers)"
     },
     {
      "ref": "C45",
@@ -2350,7 +2350,7 @@
     },
     {
      "ref": "F4",
-     "value": "Listed on: Beall's List — hijacked / cloned journal; predatory publisher"
+     "value": "Found on: Beall's List, in its list of hijacked (counterfeit) journals; its list of publishers"
     },
     {
      "ref": "C5",

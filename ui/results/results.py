@@ -44,12 +44,16 @@ except Exception:
 _STATUS_ORDER = ("on_list", "review", "clean", "no_venue", "error")
 
 
-def _chip(text, tone="mute", *, title=None, flow=False):
+def _chip(text, tone="mute", *, title=None, flow=False, align="start"):
     """A small pill in one of the palette's tones.
 
     *tone* is ``mute``, ``ok`` or ``warn`` — a class rather than a colour, so the
     pill picks up the light or dark value of that tone from :data:`_TOKENS`
     instead of carrying a hex that only works against one background.
+
+    *align* is ``"end"`` for a pill near the right-hand edge of the page, so its
+    explanation opens leftwards instead of past the edge — a panel that overhangs
+    gives the whole page a horizontal scrollbar while it is shown.
 
     *title* becomes the browser's hover text — the sentence of detail that does
     not fit inside a pill — and marks the pill with the help cursor so there is
@@ -58,7 +62,7 @@ def _chip(text, tone="mute", *, title=None, flow=False):
     because the margin would push it off the cell's vertical centre.
     """
     cls = f"bl-chip bl-{tone}" + (" bl-flow" if flow else "")
-    return components.hint(text, title, cls=cls)
+    return components.hint(text, title, cls=cls, align=align)
 
 
 def readable_on(fill: str) -> str:

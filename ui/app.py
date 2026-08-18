@@ -628,9 +628,16 @@ def _step_choose_check(checker):
             row[1].markdown(_grid((
                 f"<b>{c.icon} {c.title}</b><br><span class='bl-sub'>{c.tagline}</span>",
                 c.description,
-                results._chip(c.cost_label, "warn" if c.needs_llm else "ok", title=c.cost_note),
-                results._chip(c.records_label, "mute", title=c.records_note),
-                results._chip(c.output_label, "mute", title=c.output_note),
+                # All three priced columns sit in the right half of the table, so
+                # every one of their panels opens leftwards. Rightwards, a 430px
+                # explanation runs past the edge — which used to give the page a
+                # horizontal scrollbar and, once that was clipped, cut the text off.
+                results._chip(c.cost_label, "warn" if c.needs_llm else "ok",
+                              title=c.cost_note, align="end"),
+                results._chip(c.records_label, "mute", title=c.records_note,
+                              align="end"),
+                results._chip(c.output_label, "mute", title=c.output_note,
+                              align="end"),
             )), unsafe_allow_html=True)
 
     # The LLM-readiness line.  Its slot is rendered whatever is selected and is
@@ -1003,15 +1010,20 @@ def _step_run(checker, items, llm, options):
                         llm_msg or "The LLM configuration could not be verified.")
         summary.insert(1, ("LLM", *llm_cell))
 
-    def _cell(k, v, cls, why):
-        value = components.hint(v, why, cls=f"bl-sum-v {cls}")
+    def _cell(k, v, cls, why, i=0, n=1):
+        # Cells in the right-hand half open their explanation leftwards; a panel
+        # opening the other way runs past the edge of the page on a narrow window
+        # and gets clipped.
+        side = "end" if i >= n / 2 else "start"
+        value = components.hint(v, why, cls=f"bl-sum-v {cls}", align=side)
         return f"<div><span class='bl-sum-k'>{k}</span>{value}</div>"
 
     # Keyed so that the screenshot script can wait on this summary — the one place
     # that states which check a press of Run would actually start.
     with st.container(key="runsummary"):
         st.markdown("<div class='bl-sum'>"
-                    + "".join(_cell(*row) for row in summary)
+                    + "".join(_cell(*row, i=i, n=len(summary))
+                              for i, row in enumerate(summary))
                     + "</div>", unsafe_allow_html=True)
     run = st.button("▶ Run check", type="primary", key="run",
                     disabled=items is None or not lists,

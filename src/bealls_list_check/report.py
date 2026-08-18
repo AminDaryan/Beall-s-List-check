@@ -137,13 +137,17 @@ def _match_subrows(r, provider_labels=None, lists_label=""):
     """Three labelled rows for the Match column.
 
     For a flagged paper:
-      Listed as   — the listed entry that matched; the link opens that
-                    entry's OWN website (the listed/predatory venue), NOT the
-                    paper's venue
-      Listed on   — which catalogue and which of its lists, in plain language
-      Why flagged — one plain-English line naming HOW it matched and the concrete
-                    listed entry (high-confidence for on_list, or the
-                    verify-by-hand reason for review).
+      Listed as        — the listed entry that matched; the link opens that
+                         entry's OWN website (the listed venue), NOT the paper's
+      Found on         — which catalogue, and which SECTION of it the entry sits
+                         in. The section, not a category, because "Beall's List —
+                         standalone predatory journal" reads as this tool calling
+                         the journal predatory, and because naming the section
+                         answers the question that row kept provoking: is the
+                         journal really listed, or was this inferred from its
+                         publisher?
+      Why flagged      — how it matched, one idea per sentence, naming the entry
+                         first (or the verify-by-hand reason, for review).
     For clean / no_venue / error rows the first row carries a short note and the
     rest are blank.  The plain-English wording comes from descriptions.py.
     """
@@ -189,7 +193,7 @@ def _match_subrows(r, provider_labels=None, lists_label=""):
             listed_cell = f"Listed as: {listed}"
         return [
             (listed_cell, listed_url),
-            (f"Listed on: {_listed_on(r, provider_labels)}", None),
+            (f"Found on: {_listed_on(r, provider_labels)}", None),
             (f"Why flagged: {why}", None),
         ]
     return [(note, None)]

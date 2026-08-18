@@ -196,6 +196,35 @@ LIST_INFO = {
                            "supplied for this run"),
 }
 
+# Which SECTION of a catalogue an entry was taken from, said as a place rather
+# than as a verdict.
+#
+# The 'Listed on' row used to read "Beall's List — standalone predatory journal",
+# which a reader takes as the tool calling the journal predatory. It is not: it
+# is the name of the page the entry sits on. Saying WHERE it was found also
+# answers the question that row kept provoking — "is this journal really listed,
+# or did you infer it from its publisher?" — because a journal in the
+# standalone-journals section is one the list names in its own right.
+LIST_SECTION = {
+    "publishers":           "its list of publishers",
+    "standalone_journal":   "its list of individual journals",
+    "hijacked":             "its list of hijacked (counterfeit) journals",
+    "vanity_press":         "its list of vanity presses (book publishers)",
+    "misleading_metric":    "its list of companies selling fake metrics",
+    "predatory_conference": "its list of conferences",
+    "unclassified":         "the list, under no named section",
+    "blacklist":            "the blacklist you supplied for this run",
+}
+
+
+def _section_plain(list_source):
+    """Where on a catalogue an entry sits, for a possibly '; '-joined source."""
+    parts = [p.strip() for p in (list_source or "").split(";") if p.strip()]
+    seen = list(dict.fromkeys(LIST_SECTION.get(p, "the list") for p in parts))
+    return "; ".join(seen) if seen else "the list"
+
+
+
 
 def _signal_plain(matched_on):
     """Short plain-language phrase for a match signal (falls back to the code)."""
@@ -228,10 +257,14 @@ def _listed_on(r, provider_labels=None):
     """
     labels = provider_labels or {}
     providers = [labels.get(p, p) for p in split_list_sources(r.get("provider"))]
-    category = _list_plain(r.get("list_source"))
+    # The SECTION, not the category. "Beall's List — standalone predatory journal"
+    # reads as this tool calling the journal predatory; "Beall's List, in its list
+    # of individual journals" says where the entry was found and lets the reader
+    # draw their own conclusion — which is the only thing the check is entitled to.
+    section = _section_plain(r.get("list_source"))
     if not providers:
-        return category
-    return f"{'; '.join(dict.fromkeys(providers))} — {category}"
+        return section
+    return f"{'; '.join(dict.fromkeys(providers))}, in {section}"
 
 
 def _list_plain(list_source):
@@ -324,36 +357,48 @@ def _on_list_why(r, provider_labels=None):
         return (f"you put this venue on the blacklist for this run, and {how}. "
                 "This is your own entry, not a finding from any published "
                 "list — the run treats it as predatory because you said to.")
+    # One idea per sentence, and the entry named in the first one. A reader is
+    # deciding whether to trust a flag, and the old wording made them assemble
+    # that from a single clause carrying three facts and two asides.
+    # Where it was found is the row directly above this one, so this sentence
+    # does not repeat it — it says only that the entry exists and what it is.
+    named = f"'{listed}' is an entry on that list."
     if mo == "domain":
-        # The catalogue alone, not "<catalogue> — <category>": the category is
-        # already on the 'Listed on' row directly above, and repeating it here
-        # made the sentence read "is listed on Beall's List — predatory publisher
-        # as 'X'".
-        where = _providers_plain(r, provider_labels) or "a reference list"
-        return (f"the venue's own website ({r.get('venue_domain') or '—'}) is on "
-                f"{where} as '{listed}' — the most reliable signal.")
+        return (f"{named} This venue's own website ({r.get('venue_domain') or '—'}) "
+                f"is that entry's website. A website belongs to one publisher, so "
+                f"this is the same venue.")
     if mo == "domain_subdomain":
-        return (f"the venue's website ({r.get('venue_domain') or '—'}) sits under "
-                f"the listed site of '{listed}' — a high-confidence match.")
+        return (f"{named} This venue's website ({r.get('venue_domain') or '—'}) is "
+                f"part of that entry's website.")
     if mo == "issn":
-        return (f"the venue's ISSN ({r.get('issn') or '—'}) matches the listed "
-                f"'{listed}' — a high-confidence match.")
+        return (f"{named} This venue's ISSN ({r.get('issn') or '—'}) is the ISSN of "
+                f"that entry. An ISSN identifies exactly one journal.")
     if mo == "name_exact":
-        return (f"the venue name '{r.get('venue') or '—'}' exactly matches the "
-                f"listed '{listed}' — a high-confidence match.")
+        return (f"{named} This venue's name, '{r.get('venue') or '—'}', is that "
+                f"exact name, and its website is that entry's website too.")
     if mo == "domain_alternate_url_doi":
-        return (f"an alternate web link for this venue pointed to the listed "
-                f"'{listed}', and the paper's DOI confirms (via Crossref, the "
-                f"publisher registry) it was published there — so the alternate is "
-                f"this paper's real venue, not a different same-named journal.")
+        return (f"{named} It is listed in its own right, not because of its "
+                f"publisher. Semantic Scholar recorded two "
+                f"websites for this venue, and one of them is that entry's site. "
+                f"The paper's DOI settles which is correct: Crossref, the registry "
+                f"publishers file their DOIs with, records this paper as published "
+                f"in '{listed}'.")
     if mo == "domain_open_access_pdf_doi":
-        return (f"the paper's free PDF is hosted on the listed '{listed}', and the "
-                f"paper's DOI confirms (via Crossref, the publisher registry) it was "
-                f"published there — not merely re-hosted, so this is a real match.")
+        return (f"{named} The free PDF of this paper is hosted on that entry's "
+                f"site. A PDF alone proves nothing, since anyone can re-host one — "
+                f"so the DOI was checked: Crossref, the registry publishers file "
+                f"their DOIs with, records this paper as published there.")
     if mo == "name_exact_doi":
-        return (f"the venue name matches the listed '{listed}', and the paper's DOI "
-                f"confirms (via Crossref, by publisher website or ISSN — not the shared "
-                f"name) it really is that journal, not a different same-named one.")
+        return (f"{named} This venue has that same name. Many journals share a "
+                f"name, so the name alone was not enough: the paper's DOI was "
+                f"checked against Crossref, and matched that entry by website or "
+                f"ISSN — not by the shared name.")
+    if mo in ("domain_crossref_doi", "issn_crossref_doi"):
+        by = "website" if mo == "domain_crossref_doi" else "ISSN"
+        return (f"{named} Semantic Scholar reported a different venue for this "
+                f"paper, one that is on no list — but the paper's DOI is "
+                f"registered to '{listed}', matched by {by}. Semantic Scholar had "
+                f"the wrong venue.")
     # The catch-all.  It used to end "so it appears on Beall's List", which is a
     # claim about a specific catalogue made by the one branch that does not know
     # which catalogue matched — wrong for every future signal and for every list

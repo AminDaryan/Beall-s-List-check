@@ -290,6 +290,14 @@ _CHROME_CSS = """
    three on Settings — so every page started its heading at a different height:
    112px, 128px, 144px. Collapsed here, by the one shape that is unambiguously
    style-only: a markdown container whose single child is a <style>. */
+/* The page scrolls up and down, never sideways. Nothing in this layout is meant
+   to be wider than the window, so a horizontal scrollbar is always a bug — and
+   flipping each offending tooltip one call site at a time only ever fixed the
+   width it was measured at. This makes it structural: an overhang is clipped
+   instead of becoming a scrollbar, and the panels that could overhang open
+   leftwards (see .bl-tip-end) so nothing is clipped in practice. */
+[data-testid="stMain"] {overflow-x:hidden;}
+
 [data-testid="stElementContainer"]:has([data-testid="stMarkdownContainer"] > style:only-child)
     {display:none;}
 
@@ -824,13 +832,12 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
    be styled at all. It also cannot render markup, which is why prose written as
    HTML arrived in it as "<b>whitelist</b>". */
 .bl-tip {position:absolute; z-index:1000; top:calc(100% + 6px); left:-4px;
-         width:max-content; max-width:min(430px, 44vw);
+         width:max-content; max-width:min(320px, 34vw);
          padding:6px 12px; border-radius:8px;
          background:var(--bl-tip-bg); color:var(--bl-tip-fg);
          box-shadow:rgba(0,0,0,.16) 0 1px 4px 0;
          font-size:14px; font-weight:400; line-height:1.6; text-align:left;
-         white-space:normal; opacity:0; visibility:hidden;
-         transition:opacity var(--bl-hover), visibility var(--bl-hover);}
+         white-space:normal; display:none;}
 /* ── The step rail ─────────────────────────────────────────────────────────
    Four steps on one scrolling page, so the question the rail answers is not
    "which screen is this" but "how far along am I, and what is left". A done
@@ -883,7 +890,17 @@ a.bl-rail-step, a.bl-rail-step:visited, a.bl-rail-step:hover
 .bl-tip-host {position:relative;}
 .bl-q:hover .bl-tip, .bl-q:focus-visible .bl-tip,
 .bl-tip-host:hover .bl-tip, .bl-tip-host:focus-visible .bl-tip
-    {opacity:1; visibility:visible;}
+    {display:block;}
+/* display:none, not visibility:hidden. A hidden panel is still laid out, and an
+   absolutely-positioned box outside its scroll container still counts toward that
+   container's scrollWidth — so six resting tooltips, 430px wide and anchored near
+   the right-hand edge, gave the whole page a horizontal scrollbar it should never
+   have had. Measured: 212px of overhang, exactly the page's overflow. The cost is
+   the fade, which cannot transition display; Streamlit's own tooltip appears
+   instantly too. */
+/* Narrow enough that it rarely reaches an edge at all. At 430px a panel opening
+   rightwards from the middle of the page still ran past the right-hand side on a
+   1280px window; the text simply sets taller instead. */
 /* Near the right edge of the page a panel that opens rightwards runs off it. */
 .bl-tip-end {left:auto; right:-4px;}
 .bl-q svg {width:16px; height:16px;}   /* the size Streamlit renders its own at */
