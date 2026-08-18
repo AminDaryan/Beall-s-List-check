@@ -755,8 +755,11 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
    Each is three bands in the order the question is asked: what the directory is,
    where it should be searched, and what is on disk right now.  The first two are
    the same on every render; only the last one moves. */
-.bl-dir-name {font-size:1.05rem; font-weight:700; line-height:1.4;
-              margin:.1rem 0 .1rem;}
+/* Set against a radio on the same row: a plain block sat on the text baseline
+   while the control beside it centred on its own taller box, so the name read as
+   belonging under the options rather than to them. */
+.bl-dir-name {font-size:1.05rem; font-weight:700; line-height:1.4; margin:0;
+              display:flex; align-items:center; min-height:24px;}
 .bl-dir-about {font-size:.84rem; line-height:1.5; color:var(--bl-fg-muted);
                margin-bottom:.55rem;}
 /* ── The reference-list table ──────────────────────────────────────────────

@@ -45,7 +45,7 @@ import venue_lists
 import components
 import reference_lists
 import venue_lookup
-from notices import flush_notices, notify_next_run
+from notices import flush_notices, notify, notify_next_run
 
 
 # The two answers.  They were spelled out as places — "Over the internet" and "On
@@ -136,40 +136,43 @@ def _host(url):
 
 
 def _directory(module, *, title, key, searched_by, about, online, local, help_text):
-    """One directory: what it is, where it is searched, and what is on disk.
+    """One directory, on one row: its name, where it is searched, and any work.
 
-    Two bands now, not three, and ONE place to ask for detail.  Everything that
-    describes the directory rather than changing it — what it is, which of Step
-    3's boxes searches it, how the two answers differ, and what is on disk right
-    now — hangs off the single "?" beside the name.  The captions under the
-    options carry the part that decides the choice: what each one costs.
+    Name, choice and progress sit side by side rather than stacked. Stacked, each
+    directory owned a band of the page most of which was empty — a heading, two
+    words, and a gap the height of both waiting for a download that happens once
+    and takes seconds. On a row the block is as tall as the thing it holds.
 
-    There were briefly two question marks, a second one inside the Online
-    caption.  In a Markdown-only slot it could only render as a bare glyph — no
-    border, no button, nothing to say it could be hovered — so it read as a typo
-    in the middle of a sentence and wrapped the caption onto a second line.  A
-    help affordance that has to be explained is not one, and a section this small
-    does not have room for two.
+    Everything describing the directory hangs off the one "?" beside its name;
+    what a download is doing appears at the right of its own row and nowhere
+    else; and anything that goes wrong is a toast, because a failure that pushes
+    the page around is a second problem on top of the first.
     """
     on = module.held()
     state = module.status()
     line, _tone = _state_line(module, state, title)
-    # Everything describing the directory, including what each answer costs,
-    # behind the one mark beside its name.
     detail = " ".join([searched_by, about, help_text,
                        f"Online: {online}.", f"Offline: {local}.", line])
-    st.markdown(f"<div class='bl-dir-name'>{title} "
-                f"{components.help_icon(detail)}</div>",
-                unsafe_allow_html=True)
 
-    # No captions under the options. Streamlit sizes a horizontal radio's columns
-    # to their captions, so two options priced in different numbers of words sat
-    # at different distances on each row and the two Offline buttons never lined
-    # up down the page. Both prices moved into the "?" above, which leaves two
-    # words to choose between and a column that is straight.
-    choice = st.radio(f"Where {title} is searched", [ONLINE, LOCAL],
-                      index=1 if on else 0, horizontal=True, key=f"where_{key}",
-                      label_visibility="collapsed")
+    # The name column is sized to the longer of the two names and no more, so
+    # the options sit beside the title instead of across the page from it.
+    # Aligned to the top, not the centre. Streamlit's radio group is 40px tall
+    # while its labels occupy the top 24 — the rest is empty — so centring the
+    # row put the name 16px below the options it belongs to.
+    name_col, choice_col, work_col = st.columns([1.5, 4, 2], vertical_alignment="top")
+    name_col.markdown(f"<div class='bl-dir-name'>{title} "
+                      f"{components.help_icon(detail)}</div>",
+                      unsafe_allow_html=True)
+    with choice_col:
+        # No captions under the options: Streamlit sizes a horizontal radio's
+        # columns to them, so options priced in different numbers of words put
+        # the second button at a different distance on each row. Both prices are
+        # in the "?" instead, which leaves two words and a column that is straight.
+        choice = st.radio(f"Where {title} is searched", [ONLINE, LOCAL],
+                          index=1 if on else 0, horizontal=True, key=f"where_{key}",
+                          label_visibility="collapsed")
+    with work_col:
+        slot = st.empty()
 
     if choice == LOCAL and not on:
         module.hold(True)
@@ -180,9 +183,7 @@ def _directory(module, *, title, key, searched_by, about, online, local, help_te
             notify_next_run(f"{title}: searching the copy already on this computer.",
                             icon="✅")
             st.rerun()
-        # Only reached when the fetch failed and said so; a fetch that worked
-        # rerenders from the top, so `state` below is still what is on disk.
-        _fetch_directory(module, title)
+        _fetch_directory(module, title, slot)
     elif choice == ONLINE and on:
         module.hold(False)
         venue_lists.clear_directory_caches()
@@ -191,26 +192,40 @@ def _directory(module, *, title, key, searched_by, about, online, local, help_te
         st.rerun()
 
 
-def _fetch_directory(module, title):
-    """Download one directory's list, with a bar, then forget the old index."""
-    bar = st.progress(0.0, text=f"Downloading {title}…")
+def _fetch_directory(module, title, slot):
+    """Download one directory's list into *slot*, then forget the old index.
+
+    The ring is the app's one way of showing work that belongs to a single
+    control — the same component the reference-list table uses for its own
+    downloads — drawn where that row's own progress belongs and leaving the rest
+    of the page still.
+
+    A failure is a toast. It used to be an st.error block, which appeared under
+    the row and pushed everything below it down, so a download that went wrong
+    also moved the thing the reader was about to click. The copy on this computer
+    is untouched either way, and the "?" beside the name says what is there.
+    """
+    slot.markdown(components.progress_ring(0.0, f"Downloading {title}…"),
+                  unsafe_allow_html=True)
     try:
         def on_progress(fraction):
-            # A server that sends no length gives None; the bar then only says
-            # "running" rather than lying about how far along it is.
-            bar.progress(fraction if fraction is not None else 0.5,
-                         text=f"Downloading {title}…"
-                              + (f" {int(fraction * 100)}%" if fraction else ""))
+            # A server that sends no length gives None; the ring then holds at
+            # zero rather than claiming a share of the work that is not known.
+            slot.markdown(
+                components.progress_ring(fraction or 0.0, f"Downloading {title}…"),
+                unsafe_allow_html=True)
 
         journals, error = module.load_journals(refresh=True, progress=on_progress)
-        bar.progress(1.0, text=f"Reading {len(journals):,} journals…")
+        slot.markdown(components.progress_ring(1.0, f"Reading {len(journals):,} journals…"),
+                      unsafe_allow_html=True)
     except Exception as exc:                      # a download must not break the page
         journals, error = [], f"{type(exc).__name__}: {exc}"
     finally:
-        bar.empty()
+        slot.empty()
     venue_lists.clear_directory_caches()
     if error:
-        st.error(error)
+        notify(f"{title} could not be downloaded — still searching over the "
+               f"internet. {error}", icon="⚠️")
     else:
         notify_next_run(f"{title}: {len(journals):,} journals are now on this computer.",
                         icon="✅")
@@ -393,8 +408,9 @@ def page_settings():
             "Going back to online keeps the downloaded file, so choosing offline "
             "again is instant rather than another download."))
 
-    st.divider()
-
+    # No rule between the two directories. They are two rows of one group now,
+    # not two sections, and a divider between them was most of the empty band
+    # each used to own. The rules around the group still separate it.
     _directory(
         crossref, title="Crossref", key="crossref",
         searched_by="Searched by Step 3's <b>blacklist</b> box "
