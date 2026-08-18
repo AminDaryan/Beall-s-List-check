@@ -280,6 +280,9 @@ def fetch_entries(session, term_map, modified_after=None):
                 skipped += 1
             else:
                 entries.append(entry)
+        # "[i/N]" is this project's progress token — the UI reads it to fill a
+        # ring, the same way it reads the corpus pass and the LLM pass.
+        print(f"  [{page}/{pages}] {len(entries)} entries so far", flush=True)
         if page >= pages or not items:
             break
         page += 1

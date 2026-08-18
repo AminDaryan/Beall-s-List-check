@@ -276,8 +276,11 @@ def scrape() -> dict:
     """Scrape all list pages and return the snapshot dict."""
     all_entries = []
     counts = {}
-    for path, list_source, mode in LIST_PAGES:
-        print(f"Fetching {BASE + path} ...", end=" ", flush=True)
+    for step, (path, list_source, mode) in enumerate(LIST_PAGES, 1):
+        # "[i/N]" is this project's progress token — the UI reads it to fill a
+        # ring, the same way it reads the corpus pass and the LLM pass.
+        print(f"[{step}/{len(LIST_PAGES)}] Fetching {BASE + path} ...",
+              end=" ", flush=True)
         html = strip_excluded_sections(fetch(path))
         if mode == "hijacked_table":
             entries = parse_hijacked_table(html, list_source)

@@ -146,6 +146,28 @@ def _help(title):
             f"{html.escape(_plain(title), quote=True)}'>{_HELP_SVG}</span>")
 
 
+def _ring(fraction, label=""):
+    """A progress ring with the percentage inside it, sized like the button.
+
+    Drawn where the Update button was, rather than as a full-width bar under the
+    table: the work belongs to one row, and a bar spanning the page says it
+    belongs to the page.  An SVG circle whose dash offset is the remaining
+    fraction — no library, no animation frames, one redraw per progress line.
+    """
+    frac = max(0.0, min(1.0, fraction))
+    r = 15                                     # radius; 2πr is the full sweep
+    circumference = 2 * 3.14159 * r
+    return (
+        f"<div class='bl-ring' title='{html.escape(label, quote=True)}'>"
+        f"<svg viewBox='0 0 40 40'>"
+        f"<circle cx='20' cy='20' r='{r}' class='bl-ring-track'></circle>"
+        f"<circle cx='20' cy='20' r='{r}' class='bl-ring-arc' "
+        f"stroke-dasharray='{circumference:.1f}' "
+        f"stroke-dashoffset='{circumference * (1 - frac):.1f}'></circle>"
+        f"<text x='20' y='20' class='bl-ring-pct'>{round(frac * 100)}%</text>"
+        f"</svg></div>")
+
+
 def _host(url):
     """The bare host of a URL — what a reader recognises a source by.
 
@@ -274,6 +296,7 @@ def _reference_lists_block():
     # stray line hanging under the empty button column, which read as a mistake.
     st.markdown("<div class='bl-thrule'></div>", unsafe_allow_html=True)
 
+    slots, pending = {}, None
     for pid in reference_lists.ids():
         state = reference_lists.status(pid)
         label = reference_lists.label(pid)
@@ -321,33 +344,49 @@ def _reference_lists_block():
                             unsafe_allow_html=True)
             continue
 
+        # A placeholder, so the ring can replace this one button later without
+        # the row being redrawn.
         with row[4]:
-            clicked = st.button("Download" if not (state["held"] or vendored)
-                                else "Update",
-                                key=f"fetch_{pid}", width="stretch",
-                                help=("One download, then kept on this computer."
-                                      if not (state["held"] or vendored) else
-                                      "Fetches the list again and replaces the "
-                                      "copy here. The one you have keeps working "
-                                      "if it fails."))
+            slot = st.empty()
+        slots[pid] = slot
+        with slot.container():
+            if st.button("Download" if not (state["held"] or vendored) else "Update",
+                         key=f"fetch_{pid}", width="stretch",
+                         help=("One download, then kept on this computer."
+                               if not (state["held"] or vendored) else
+                               "Fetches the list again and replaces the copy here. "
+                               "The one you have keeps working if it fails.")):
+                pending = pid
 
-        if clicked:
-            bar = st.progress(0.0, text=f"Fetching {label}…")
-            log = st.empty()
-            seen = []
+    # The fetch runs AFTER every row is on the page, not in the middle of the
+    # loop. Run inline, it blocked before the remaining rows were drawn: pressing
+    # Update on the first list made the second list vanish for the length of the
+    # download, so the page appeared to lose half the table.
+    if pending:
+        _run_fetch(pending, slots[pending])
 
-            def on_line(line, _log=log, _seen=seen):
-                _seen.append(line)
-                _log.caption(line[:140])
 
-            ok, output = reference_lists.fetch(pid, on_line=on_line)
-            bar.progress(1.0, text=f"{label}: done" if ok else f"{label}: failed")
-            if ok:
-                notify_next_run(f"{label} is ready to use in Step 3.", icon="✅")
-                st.rerun()
-            else:
-                st.error(f"Could not fetch {label}. The list is unchanged.")
-                st.code(output[-1500:] or "(no output)")
+def _run_fetch(pid, slot):
+    """Fetch one list, showing progress in the ring where its button was."""
+    label = reference_lists.label(pid)
+    step = re.compile(r"\[\s*(\d+)\s*/\s*(\d+)\s*\]")   # the fetchers' progress token
+    seen = []
+
+    def on_line(line):
+        seen.append(line)
+        m = step.search(line)
+        if m and int(m.group(2)):
+            frac = min(int(m.group(1)) / int(m.group(2)), 1.0)
+            slot.markdown(_ring(frac, line.strip()), unsafe_allow_html=True)
+
+    slot.markdown(_ring(0.0, f"Fetching {label}…"), unsafe_allow_html=True)
+    ok, output = reference_lists.fetch(pid, on_line=on_line)
+    slot.markdown(_ring(1.0, f"{label}: done"), unsafe_allow_html=True)
+    if ok:
+        notify_next_run(f"{label} is ready to use in Step 3.", icon="✅")
+        st.rerun()
+    st.error(f"Could not fetch {label}. The list on this computer is unchanged.")
+    st.code(output[-1500:] or "(no output)")
 
 
 def page_settings():

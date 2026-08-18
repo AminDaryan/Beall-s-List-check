@@ -772,6 +772,18 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
        color:var(--bl-fg-muted); opacity:.7;}
 .bl-q:hover {opacity:1;}
 .bl-q svg {width:16px; height:16px;}   /* the size Streamlit renders its own at */
+
+/* The fetch ring, drawn where that row's button was. Sized to the button it
+   replaces, so pressing Update changes what the cell says and not how the table
+   is laid out. */
+.bl-ring {display:flex; justify-content:center; align-items:center; height:38px;}
+.bl-ring svg {width:38px; height:38px; transform:rotate(-90deg);}  /* 0% at 12 o'clock */
+.bl-ring-track {fill:none; stroke:var(--bl-border); stroke-width:4;}
+.bl-ring-arc {fill:none; stroke:var(--bl-accent, #4c8bf5); stroke-width:4;
+              stroke-linecap:round; transition:stroke-dashoffset .25s linear;}
+.bl-ring-pct {fill:var(--bl-fg); font-size:11px; font-weight:700;
+              text-anchor:middle; dominant-baseline:central;
+              transform:rotate(90deg); transform-origin:20px 20px;}
 /* The status line, stated as a fact rather than as a warning: searching over the
    internet is one of the two answers and the one the app starts with, not a
    fault and not a thing left undone.  So it is the muted tone and a downloaded
