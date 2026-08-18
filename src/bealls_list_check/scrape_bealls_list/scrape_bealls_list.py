@@ -82,10 +82,8 @@ _CHROME_TEXTS = {
 }
 
 _TAG_RE = re.compile(r"<[^>]+>")
-_LI_A_RE = re.compile(
-    r"<li[^>]*>\s*<a[^>]+href=\"(https?://[^\"]+)\"[^>]*>(.*?)</a>",
-    re.IGNORECASE | re.DOTALL,
-)
+_A_TAG_RE = re.compile(r'<a\b[^>]*href="(https?://[^"]+)"[^>]*>(.*?)</a>',
+                       re.IGNORECASE | re.DOTALL)
 _TR_RE = re.compile(r"<tr[^>]*>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
 _TD_RE = re.compile(r"<t[dh][^>]*>(.*?)</t[dh]>", re.IGNORECASE | re.DOTALL)
 _HREF_RE = re.compile(r"href=\"(https?://[^\"]+)\"", re.IGNORECASE)
@@ -161,33 +159,118 @@ def fetch(path: str, retries: int = 4, backoff: float = 3.0) -> str:
     raise last_err
 
 
+def _entry_anchors(li_html: str) -> list:
+    """External ``(url, name)`` links inside one ``<li>``, in order.
+
+    The name is the anchor's own text, EXCEPT where the character immediately
+    before the link is a letter.  beallslist.net sometimes opens the link one
+    character into the name — ``<li>I<a ...>nternational Journal ...</a>`` — and
+    the anchor text alone would file that venue under a name missing its first
+    letter, which then matches nothing.
+
+    Only a lone capital joined to a lower-case continuation counts, because that
+    is the shape of a split word and nothing else is. Gluing whatever letters
+    happened to precede the link turned "The<a>Journal of Reading and Literacy"
+    into "heJournal of Reading and Literacy".
+    """
+    out = []
+    for m in _A_TAG_RE.finditer(li_html):
+        url = m.group(1)
+        if "beallslist.net" in url.lower():
+            continue
+        name = _text(m.group(2))
+        glued = re.search(r"(?<![A-Za-z])([A-Z])$", li_html[:m.start()])
+        if glued and name[:1].islower():
+            name = glued.group(1) + name
+        out.append((url, name, _text(li_html[:m.start()])))
+    return out
+
+
+def _clean_alias(alias: str) -> str:
+    """Tidy the name taken from the text before a "see" cross-reference.
+
+    Splitting a bullet at its "see" cuts through whatever punctuation happened
+    to be open, so "Lambert Academic Publishing (LAP, see ..." arrives as
+    "Lambert Academic Publishing (LAP" — a name carrying a bracket it never
+    closes, which normalizes to something no venue will ever match. Close the
+    cut by dropping the unfinished bracket, then any trailing aside that only
+    points elsewhere.
+    """
+    alias = alias.strip(" ,;:.-—")
+    while alias.count("(") > alias.count(")"):
+        alias = alias[:alias.rindex("(")].strip(" ,;:.-—")
+    alias = re.sub(r"\s*\((?:also|note|see)\b[^)]*\)\s*$", "", alias,
+                   flags=re.IGNORECASE).strip(" ,;:.-—")
+    return alias
+
+
 def parse_links(html: str, list_source: str) -> list:
     """Parse a ``<li><a href=...>Name</a>`` list page into entries.
 
-    Two kinds of entry are captured:
-      * linked    — ``<li><a href="https://...">Name</a></li>`` (the common case).
-                    Only external links are kept; the site's own nav/footer
-                    links point back to beallslist.net and are dropped.
-      * name-only — ``<li>Name</li>`` with no link (a few predatory publishers
-                    are listed as plain text). These have no domain and can
-                    only match by name, but omitting them would be a recall gap.
-                    They are taken ONLY from ``<ul>`` blocks that already hold
-                    real linked entries, so navigation/footer/info lists never
-                    leak in. A "Alias SEE Canonical Name" cross-reference keeps
-                    just the alias.
+    Three kinds of entry are captured:
+
+      * linked    — the bullet's first external link.  The link does NOT have to
+                    open the bullet: this used to require ``<li>`` to be followed
+                    immediately by ``<a>``, so every bullet written "The <a>Grant
+                    Medical Journals</a> (GMJ)" was dropped whole — 31 publishers
+                    and journals absent from the snapshot, each one a venue that
+                    would have been reported clean.
+      * alias     — the name before a "see" cross-reference ("Canadian Academy of
+                    Oriental and Occidental Culture see CSCanada"), and any
+                    FURTHER link in the same bullet, which is how a publisher's
+                    second brand is listed ("Kowsar Publishing (also Brieflands)").
+                    Both are the same predatory outfit under another name, so a
+                    paper filed under either has to match.
+      * name-only — ``<li>Name</li>`` with no link at all.  Taken ONLY from
+                    ``<ul>`` blocks that already hold real linked entries, so
+                    navigation and footer lists never leak in.
+
+    A bullet that reads as a sentence is not an entry.  The criteria on the
+    misleading-metrics page are full sentences carrying an inline link, and
+    reading that link as a venue would invent one.
     """
     entries = []
     linked_names = set()
 
-    # 1) Linked entries.
-    for url, inner in _LI_A_RE.findall(html):
-        if "beallslist.net" in url.lower():
+    # 1) Linked entries, and the aliases that share a bullet with them.
+    for m in _LI_RE.finditer(html):
+        inner = m.group(1)
+        whole = _text(inner)
+        anchors = _entry_anchors(inner)
+        if not anchors:
             continue
-        name = _text(inner)
+        url, name, before = anchors[0]
+        # An entry's bullet opens with its name; a prose bullet reaches its link
+        # only part-way through a sentence. So the test is how much text stands
+        # BEFORE the link, not whether the bullet ends in a full stop — the
+        # criteria on the misleading-metrics page are sentences carrying an
+        # inline link, while "Spring City Culture International Group Pte Ltd.
+        # Also: here." is an entry that happens to end in one.
+        if len(before) > 25 and not re.search(r"\bsee\b[:,]?\s*$", before, re.IGNORECASE):
+            continue
         if name.lower() in _CHROME_TEXTS or len(name) < 2:
             continue
         linked_names.add(name.lower())
         entries.append(_make_entry(name, url, list_source))
+
+        # "Alias see Canonical" — the alias is the text before the "see".
+        if re.search(r"\bsee\b", whole, re.IGNORECASE):
+            alias = _clean_alias(re.split(r"\bsee\b", whole, maxsplit=1,
+                                          flags=re.IGNORECASE)[0])
+            if (len(alias) >= 8 and len(alias.split()) >= 2
+                    and alias.lower() not in _CHROME_TEXTS
+                    and alias.lower() not in linked_names):
+                linked_names.add(alias.lower())
+                entries.append(_make_entry(alias, "", list_source))
+
+        # A bullet's SECOND link is deliberately ignored. It is sometimes the
+        # publisher's other brand (Kowsar Publishing "(also Brieflands)"), but it
+        # is far more often a pointer — "(see here)", a bare URL, "member of
+        # COPE", "transferred to SAGE" — and no filter told those apart
+        # reliably: reading them as entries put publicationethics.org and
+        # uk.sagepub.com on the predatory list. Missing one rebrand costs a
+        # recall gap; flagging SAGE costs the report its credibility, and a
+        # false flag is the error this check must not make.
 
     # 2) Name-only entries, scoped to <ul> blocks that are real entry lists.
     seen = set()
