@@ -276,6 +276,15 @@ _TOKENS = """
 # dark resolves it — a dark code block on a light page is ordinary in
 # documentation — after which one set of light token colours serves both themes.
 _CHROME_CSS = """
+/* A stylesheet injected with st.markdown still gets an element container, and a
+   container still costs the page's 16px stack gap even when it draws nothing.
+   Each page injects a different number of them — one on Run, two on Tutorial,
+   three on Settings — so every page started its heading at a different height:
+   112px, 128px, 144px. Collapsed here, by the one shape that is unambiguously
+   style-only: a markdown container whose single child is a <style>. */
+[data-testid="stElementContainer"]:has([data-testid="stMarkdownContainer"] > style:only-child)
+    {display:none;}
+
 /* Code blocks: always dark, so the token colours below have one background to
    be legible against. Ratios are on #0f172a. */
 [data-testid="stCode"] pre, .stCode pre, .stMarkdown pre {
@@ -809,6 +818,35 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
          font-size:14px; font-weight:400; line-height:1.6; text-align:left;
          white-space:normal; opacity:0; visibility:hidden;
          transition:opacity var(--bl-hover), visibility var(--bl-hover);}
+/* ── The step rail ─────────────────────────────────────────────────────────
+   Four steps on one scrolling page, so the question the rail answers is not
+   "which screen is this" but "how far along am I, and what is left". A done
+   step is ticked and quiet, the current one is the accent, the ones ahead are
+   faint — three weights, so the eye finds the live one without reading. Each is
+   a link to its own step. */
+.bl-rail {display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
+          margin:.2rem 0 1.4rem;}
+.bl-rail-step {display:inline-flex; align-items:center; gap:.5rem;
+               text-decoration:none !important; padding:.25rem .55rem;
+               border-radius:999px; transition:background-color var(--bl-hover);}
+.bl-rail-step:hover {background:var(--bl-surface);}
+.bl-rail-n {display:inline-flex; align-items:center; justify-content:center;
+            width:1.55rem; height:1.55rem; border-radius:50%;
+            font-size:.82rem; font-weight:700; line-height:1;}
+.bl-rail-t {font-size:.86rem; font-weight:600;}
+/* The line between two steps: a rule, not a dotted path, because the steps are
+   done in order but the page does not stop you skipping one. */
+.bl-rail-link {flex:1 1 1.5rem; min-width:1rem; height:2px; border-radius:2px;
+               background:var(--bl-border);}
+
+.bl-rail-step.is-done .bl-rail-n {background:var(--bl-ok-bg); color:var(--bl-fg);}
+.bl-rail-step.is-done .bl-rail-t {color:var(--bl-fg-muted);}
+.bl-rail-step.is-now .bl-rail-n {background:var(--bl-accent); color:var(--bl-on-accent);}
+.bl-rail-step.is-now .bl-rail-t {color:var(--bl-fg);}
+.bl-rail-step.is-ahead .bl-rail-n {background:var(--bl-mute-bg); color:var(--bl-fg-faint);}
+.bl-rail-step.is-ahead .bl-rail-t {color:var(--bl-fg-faint);}
+a.bl-rail-step, a.bl-rail-step:visited, a.bl-rail-step:hover {text-decoration:none;}
+
 .bl-tip-host {position:relative;}
 .bl-q:hover .bl-tip, .bl-q:focus-visible .bl-tip,
 .bl-tip-host:hover .bl-tip, .bl-tip-host:focus-visible .bl-tip

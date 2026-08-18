@@ -1,17 +1,24 @@
-# Beall's List predatory-venue check
+# Predatory venue check
 
 A small, transparent tool that screens a batch of research papers and tells you
-**which were published in a journal or by a publisher on
-[Beall's List](https://beallslist.net)** — the best-known (if unofficial and
-contested) catalogue of *"predatory"* academic venues. Checking 500 journals by
-hand takes hours; this does it in a single run and hands you a colour-coded Excel
-report you can audit line by line.
+**which were published in a journal or by a publisher on a published list of
+*"predatory"* academic venues**. Checking 500 journals by hand takes hours; this
+does it in a single run and hands you a colour-coded Excel report you can audit
+line by line.
+
+Three sources of "predatory", and a run says which one it matched:
+
+| List | What it is |
+|---|---|
+| [Beall's List](https://beallslist.net) | Jeffrey Beall's catalogue, kept as an unofficial archived copy since he withdrew the originals in 2017. Ships with the tool. |
+| [Kscien's list](https://kscien.org/non-recommended-journals-lists/) | The Kscien Organization's five non-recommended lists. Still maintained. Downloaded once, on request. |
+| Your own blacklist | Venues you supply for a single run. |
 
 > [!IMPORTANT]
-> **A match means one thing: *"this venue appears on Beall's List."*** It does NOT
-> mean the paper is bad or fraudulent — the tool judges the **venue**, never the
-> paper. Beall's List is unofficial, archived, and contested (some listed venues,
-> e.g. *Frontiers*, are widely regarded as legitimate), so a match is an
+> **A match means one thing: *"this venue appears on a list you screened
+> against."*** It does NOT mean the paper is bad or fraudulent — the tool judges
+> the **venue**, never the paper. These lists are unofficial and contested (some
+> listed venues, e.g. *Frontiers*, are widely regarded as legitimate), so a match is an
 > **allegation as of the snapshot date**, not proof. Uncertain matches are flagged
 > for a human, never asserted.
 

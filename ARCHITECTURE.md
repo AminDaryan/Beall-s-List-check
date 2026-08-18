@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the structure of the Beall's List predatory-venue check:
+This document describes the structure of the predatory-venue check:
 the processing pipeline, the responsibility of each module, the shared data
 structure, and the design rules that the code is expected to uphold. It is
 intended as a reference for developers extending or maintaining the project.
@@ -13,9 +13,10 @@ For an end-user description of *what the tool does and how to run it*, see the
 ## 1. Overview
 
 The tool reads a corpus of **Semantic Scholar paper records** (JSON) and, for each
-paper, classifies its **publication venue** against a vendored snapshot of
-**Beall's List** of allegedly predatory venues. The output is a single **Excel
-workbook** in which every paper receives one of five verdicts — `on_list`,
+paper, classifies its **publication venue** against the snapshots of the
+**predatory lists a run screens against** — Beall's List (vendored), Kscien's
+list (fetched on request), and any blacklist the user supplies. The output is a
+single **Excel workbook** in which every paper receives one of five verdicts — `on_list`,
 `review`, `clean`, `no_venue`, or `error` — accompanied by the
 evidence behind that verdict so it can be audited manually.
 
@@ -24,9 +25,10 @@ every verdict is explainable from the input data. An optional second pass
 (`bealls_llm_check.py`) adds language-model recommendations for the `review`
 papers only and never overrides a deterministic verdict.
 
-> A verdict of `on_list` means "the venue appears on Beall's List," not "the venue
-> is predatory." Beall's List is unofficial, archived (~2021), and contested. See
-> the README's "Limitations and responsible use" section.
+> A verdict of `on_list` means "the venue appears on one of the lists this run
+> screened against," not "the venue is predatory." Those lists are unofficial and
+> contested, and the workbook names which one matched. See the README's
+> "Limitations and responsible use" section.
 
 ---
 

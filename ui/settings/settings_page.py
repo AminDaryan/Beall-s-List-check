@@ -383,8 +383,8 @@ def page_settings():
         "is faster and needs no connection, the internet needs no download. **Nothing "
         "is downloaded until you ask for it here.**")
     st.caption("Neither directory takes any part in any verdict. They only help you "
-               "*name* a venue — what counts as predatory is Beall's List and your own "
-               "blacklist, and nothing else.")
+               "*name* a venue — what counts as predatory is the predatory lists you chose "
+               "in Step 3 and your own blacklist, and nothing else.")
 
     st.divider()
 

@@ -10,6 +10,7 @@ Import-safe (no Streamlit), like ``runners.py``, so it can be exercised on its o
 """
 
 import json
+from collections import Counter
 import subprocess
 import sys
 import time
@@ -92,8 +93,16 @@ def status(pid):
 
     meta = snap.get("meta") or {}
     out["held"] = True
-    out["entries"] = len(snap.get("entries") or [])
-    out["counts"] = meta.get("counts") or {}
+    entries = snap.get("entries") or []
+    out["entries"] = len(entries)
+    # Counted from the entries rather than read out of meta. Each fetcher names
+    # that key its own way — Kscien writes "counts", the Beall's scraper writes
+    # "counts_raw" from before its own de-duplication — so reading one key gave
+    # Kscien a breakdown on hover and Beall's an empty one. Counting here is the
+    # same answer for every provider, present or future, and it agrees with the
+    # entry total beside it because it is derived from the same list.
+    out["counts"] = dict(Counter(e.get("list_source", "") for e in entries))
+    out["counts"].pop("", None)
     out["scraped_utc"] = meta.get("scraped_utc") or ""
     if out["scraped_utc"]:
         try:

@@ -1,4 +1,4 @@
-"""Streamlit UI for the Beall's List predatory-venue check.
+"""Streamlit UI for the predatory-venue check.
 
 Launch from the repo root (with the venv active):
 
@@ -62,7 +62,7 @@ except Exception:
 
 load_dotenv(runners.REPO_ROOT / ".env")
 
-st.set_page_config(page_title="Beall's List check", page_icon="🕵️", layout="wide")
+st.set_page_config(page_title="Predatory venue check", page_icon="🕵️", layout="wide")
 # Best-effort: show Streamlit toasts in the top-right (falls back to default).
 st.markdown("<style>div[data-testid='stToast']{position:fixed;top:3.5rem;right:1rem;}</style>",
             unsafe_allow_html=True)
@@ -187,11 +187,11 @@ def sidebar():
     pickers, and whether they *work* is reported by Step 1's readiness line and
     again in Step 4's summary, beside the rest of what is about to run.
     """
-    st.sidebar.markdown("### Beall's List check")
+    st.sidebar.markdown("### Predatory venue check")
     st.sidebar.caption(
-        "Is a paper's **journal or publisher** on Beall's List of *potentially* "
-        "predatory venues? A match means the **venue appears on the list** — not "
-        "that the paper is bad.")
+        "Is a paper's **journal or publisher** on a published list of *potentially* "
+        "predatory venues? A match means the **venue appears on a list you chose** — "
+        "not that the paper is bad.")
     st.sidebar.caption("📘 New here? Open the **Tutorial** page above.")
 
 
@@ -202,6 +202,39 @@ def _example_corpus_text():
         return _EXAMPLE_CORPUS.read_text(encoding="utf-8")
     except OSError:
         return ""
+
+
+STEPS = [("Choose a check", "choose-a-check"), ("Provide the papers", "provide-the-papers"),
+         ("Options", "options"), ("Run", "run")]
+
+
+def step_rail(items, has_result):
+    """The four steps as a rail across the top of the page, marking where you are.
+
+    The flow is one long page, so "which screen am I on" has no answer — but
+    "how far along am I, and what is still outstanding" does, and that is the
+    question the rail answers. A step is *done* when it holds a usable answer,
+    *now* when it is the first one that does not, and *ahead* after that.
+
+    Every number is the link to its own step, the same anchor its header badge
+    carries, so the rail doubles as the way back to any of them.
+
+    Rendered into a slot reserved before the steps and filled after they have
+    run: what to mark depends on what Step 2 loaded and whether Step 4 has a
+    result, and Streamlit paints in script order.
+    """
+    done = [True, bool(items), bool(items), bool(has_result)]
+    now = next((i for i, ok in enumerate(done) if not ok), None)
+    out = []
+    for i, (title, anchor) in enumerate(STEPS):
+        state = "done" if done[i] else ("now" if i == now else "ahead")
+        if i:
+            out.append("<span class='bl-rail-link'></span>")
+        out.append(
+            f"<a class='bl-rail-step is-{state}' href='#{anchor}'>"
+            f"<span class='bl-rail-n'>{'✓' if done[i] else i + 1}</span>"
+            f"<span class='bl-rail-t'>{title}</span></a>")
+    return f"<nav class='bl-rail' aria-label='Progress through the four steps'>{''.join(out)}</nav>"
 
 
 def _seed_example_corpus():
@@ -1094,13 +1127,14 @@ def page_check():
     # below the new one — and Streamlit's magic renders a bare expression, so it
     # was being *printed at the top of the page*, above the title, on every
     # render. Caught by retaking the screenshots, which is what they are for.
-    st.title("🕵️ Beall's List predatory-venue check")
-    st.caption("Is the paper's **journal/publisher on Beall's List** of potentially predatory "
-               "venues? Add your papers as JSON, run, and download the Excel report. "
-               "Step-by-step instructions are on the **Tutorial** page.")
+    st.title("🕵️ Predatory venue check")
+    st.caption("Is the paper's **journal or publisher on a predatory list** — Beall's, "
+               "Kscien's, or your own? Add your papers as JSON, run, and download the "
+               "Excel report. Step-by-step instructions are on the **Tutorial** page.")
     st.markdown(styles.PAGE_CSS, unsafe_allow_html=True)
     # The one pair of colours the stylesheet cannot work out for itself.
     st.markdown(styles.field_placeholder_css(), unsafe_allow_html=True)
+    rail_slot = st.empty()          # filled once the steps below have run
     # Anything the previous render queued on its way out — see notices.notify_next_run.
     notices.flush_notices()
 
@@ -1116,6 +1150,8 @@ def page_check():
     _seed_example_corpus()
     llm = _step_choose_check(checker)
     items, token, quality_slot = _step_provide_papers()
+    rail_slot.markdown(step_rail(items, st.session_state.get("res")),
+                       unsafe_allow_html=True)
     options = _step_options(checker, llm)
     # The data-quality panel goes into the place Step 2 kept for it, and it is
     # written here — after Step 3, before Step 4 — for two reasons that used to
