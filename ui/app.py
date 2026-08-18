@@ -208,13 +208,21 @@ STEPS = [("Choose a check", "choose-a-check"), ("Provide the papers", "provide-t
          ("Options", "options"), ("Run", "run")]
 
 
-def step_rail(items, has_result):
+def step_rail(own_papers, has_result):
     """The four steps as a rail across the top of the page, marking where you are.
 
     The flow is one long page, so "which screen am I on" has no answer — but
     "how far along am I, and what is still outstanding" does, and that is the
     question the rail answers. A step is *done* when it holds a usable answer,
     *now* when it is the first one that does not, and *ahead* after that.
+
+    *own_papers* is the reader's own corpus, NOT the example this page seeds
+    itself with. The rail first read "are there papers", which is true the
+    instant the page opens — so a reader who had done nothing was shown three
+    ticks and told the only thing left was to press Run. The example is there to
+    make the app runnable on arrival, not to stand in for their data, and
+    _is_example_corpus exists because Step 2's banner and Step 4's summary had
+    already had to make the same distinction.
 
     Every number is the link to its own step, the same anchor its header badge
     carries, so the rail doubles as the way back to any of them.
@@ -223,7 +231,7 @@ def step_rail(items, has_result):
     run: what to mark depends on what Step 2 loaded and whether Step 4 has a
     result, and Streamlit paints in script order.
     """
-    done = [True, bool(items), bool(items), bool(has_result)]
+    done = [True, bool(own_papers), bool(own_papers), bool(has_result)]
     now = next((i for i, ok in enumerate(done) if not ok), None)
     out = []
     for i, (title, anchor) in enumerate(STEPS):
@@ -1150,8 +1158,9 @@ def page_check():
     _seed_example_corpus()
     llm = _step_choose_check(checker)
     items, token, quality_slot = _step_provide_papers()
-    rail_slot.markdown(step_rail(items, st.session_state.get("res")),
-                       unsafe_allow_html=True)
+    rail_slot.markdown(
+        step_rail(items and not _is_example_corpus(), st.session_state.get("res")),
+        unsafe_allow_html=True)
     options = _step_options(checker, llm)
     # The data-quality panel goes into the place Step 2 kept for it, and it is
     # written here — after Step 3, before Step 4 — for two reasons that used to

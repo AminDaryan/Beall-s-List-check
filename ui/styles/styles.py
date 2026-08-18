@@ -868,7 +868,17 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
 .bl-rail-step.is-now .bl-rail-t {color:var(--bl-fg);}
 .bl-rail-step.is-ahead .bl-rail-n {background:var(--bl-mute-bg); color:var(--bl-fg-faint);}
 .bl-rail-step.is-ahead .bl-rail-t {color:var(--bl-fg-faint);}
-a.bl-rail-step, a.bl-rail-step:visited, a.bl-rail-step:hover {text-decoration:none;}
+/* The rail's own text colour, and the reason it needs stating.
+   Every token in this file is mixed from `currentColor` so one definition works
+   in both themes — but inside an <a>, currentColor is the LINK colour, not the
+   page's. Streamlit paints links blue, so --bl-fg-muted became 82% blue,
+   --bl-fg-faint 66% blue, and --bl-mute-bg an 8.6%-alpha blue that was all but
+   invisible on white: the whole rail read as a row of links in four shades of
+   the same wash. Restoring the inherited page colour makes every mix below it
+   resolve against the text colour again.
+   Any future element that uses these tokens INSIDE a link needs the same line. */
+a.bl-rail-step, a.bl-rail-step:visited, a.bl-rail-step:hover
+    {color:inherit !important; text-decoration:none;}
 
 .bl-tip-host {position:relative;}
 .bl-q:hover .bl-tip, .bl-q:focus-visible .bl-tip,
