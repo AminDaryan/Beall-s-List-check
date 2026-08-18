@@ -380,6 +380,18 @@ def _row_key(checker_id: str) -> str:
     return "pickrow-" + checker_id.replace(".", "-")
 
 
+def _heading_id(title):
+    """The id Streamlit gives a heading it renders, worked out the same way.
+
+    Lower-cased, punctuation dropped, runs of whitespace hyphenated — so
+    "Choose a check" is "choose-a-check". Derived rather than hard-coded so a
+    renamed step keeps a working link, and checked against the rendered ids in
+    the UI test.
+    """
+    slug = re.sub(r"[^\w\s-]", "", title).strip().lower()
+    return re.sub(r"[\s_]+", "-", slug)
+
+
 def step_header(num, title, hint="", state="", tone="idle", into=None, learn=""):
     """The header bar for one step of the flow.
 
@@ -411,8 +423,16 @@ def step_header(num, title, hint="", state="", tone="idle", into=None, learn="")
     # and 380 words of undifferentiated text.  The number stays out of the heading
     # so the heading's text is the step's name; the pill and the hint stay out for
     # the same reason, and because they change while the name does not.
+    # The number is the link to this step. Streamlit gives every heading it
+    # renders an id and a chain-link icon beside the text; the icon is hidden
+    # (see PAGE_CSS) and its job moved onto the number, which is already the
+    # thing a reader points at when naming a step. Same destination, one less
+    # mark in a header that carries three.
+    anchor = _heading_id(title)
+    number = (f"<a class='bl-step-n' href='#{anchor}' "
+              f"title='Link to this step'>{num}</a>")
     st_.markdown(
-        f"<div class='bl-step'><span class='bl-step-n'>{num}</span>"
+        f"<div class='bl-step'>{number}"
         f"<h2 class='bl-step-t'>{title}</h2>{info}"
         + (f"<span class='bl-step-h'>{hint}</span>" if hint else "")
         + (f"<span class='bl-step-s bl-{tone}'>{state}</span>" if state else "")

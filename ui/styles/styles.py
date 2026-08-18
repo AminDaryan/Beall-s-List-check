@@ -399,10 +399,26 @@ PAGE_CSS = "<style>" + _TOKENS + _CHROME_CSS + """
           background:var(--bl-surface);
           border:1px solid var(--bl-border);
           border-left:4px solid var(--bl-accent);}
+/* The number is also the link to its step, so it carries the anchor Streamlit
+   would otherwise put beside the title as a chain icon.  It is styled as the
+   badge it already was: a link that announced itself as one would add a third
+   mark to a header that already holds a title, a hint and a state pill. */
 .bl-step-n {flex:0 0 auto; width:2rem; height:2rem; border-radius:50%;
             display:inline-flex; align-items:center; justify-content:center;
             background:var(--bl-accent); color:var(--bl-on-accent);
-            font-size:1rem; font-weight:700;}
+            font-size:1rem; font-weight:700;
+            text-decoration:none; cursor:pointer;}
+/* Streamlit underlines links inside a markdown block, and it wins on
+   specificity, so the badge came out with a rule under its digit. */
+a.bl-step-n, a.bl-step-n:visited, a.bl-step-n:hover, a.bl-step-n:active
+    {color:var(--bl-on-accent); text-decoration:none !important;}
+a.bl-step-n:hover {filter:brightness(1.12);}
+/* Streamlit's own heading anchor, hidden on the step headers only — their
+   number carries the link instead. Step 3's subsection headings keep theirs,
+   because they have no badge to move it onto and hiding it there would drop the
+   anchor rather than relocate it. Targeted by test id rather than by the hashed
+   emotion class beside it, which changes between releases. */
+.bl-step-t [data-testid="stHeaderActionElements"] {display:none !important;}
 /* The step's title is an <h2> and the section's an <h3> — the page is read by
    structure as well as by eye — and both are pinned here because Streamlit
    styles its own headings: 2.25rem, weight 600, 1rem of vertical padding and a
