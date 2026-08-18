@@ -60,6 +60,15 @@ from report import save_workbook          # Excel workbook writer; re-exported h
 #                                           bealls_list_check.save_workbook(...) unchanged.
 
 
+# How many papers are matched offline before their DOIs are fetched together.
+# Only bounds how much of the corpus is held at once and how long one fetch runs
+# — the concurrency itself is Crossref's (3 for the polite pool), and a few dozen
+# DOIs already saturate that, so this trades nothing away.  Small enough that a
+# batch's fetch is tens of seconds rather than minutes, since a batch is the unit
+# the progress line's counter moves in.
+CROSSREF_BATCH = 250
+
+
 # =============================================================================
 # LOADING
 # =============================================================================
@@ -218,27 +227,66 @@ def classify_corpus(index, whitelist=None, crossref="off"):
     """
     results, corpus_files, n_excluded = [], set(), 0
     progress = Progress("papers", note=crossref_note(crossref))
-    for source_file, paper in load_corpus(progress):
-        corpus_files.add(source_file)
-        if whitelist is not None and whitelist.active and not whitelist.in_scope(paper):
-            n_excluded += 1
-            progress.tick()              # counted: it was read, even though it is not reported on
-            continue                     # outside the whitelist: not in this run at all
-        # match_paper never raises — a bad record returns an 'error' result.
-        r = match_paper(index, paper, source_file)
-        use_cr = crossref == "all" or (crossref == "flagged"
-                                       and r["status"] in ("on_list", "review"))
-        r["data_quality"] = input_quality.validate_input(paper, use_crossref=use_cr)
-        # The DOI resolvers all hit the network (Crossref), so they only run when
-        # Crossref is enabled.  With --crossref off (or no internet — see
-        # resolve_crossref_mode) the whole pass is purely offline and cannot stall
-        # on a slow connection.
-        if use_cr:
-            resolve_review(r, paper, index)
-        results.append(r)
-        progress.tick()
+    for batch in _batched(load_corpus(progress), CROSSREF_BATCH):
+        # Pass 1 — offline. Matching is pure computation (~5,500 papers/second),
+        # so every verdict in the batch is known before a single request is made,
+        # which is what lets the next step know WHICH DOIs this batch will need.
+        staged = []
+        for source_file, paper in batch:
+            corpus_files.add(source_file)
+            if whitelist is not None and whitelist.active and not whitelist.in_scope(paper):
+                n_excluded += 1
+                progress.tick()          # counted: it was read, even though it is not reported on
+                continue                 # outside the whitelist: not in this run at all
+            # match_paper never raises — a bad record returns an 'error' result.
+            r = match_paper(index, paper, source_file)
+            use_cr = crossref == "all" or (crossref == "flagged"
+                                           and r["status"] in ("on_list", "review"))
+            staged.append((paper, r, use_cr))
+
+        # Pass 2 — network, concurrently. Every lookup the batch is about to make
+        # is for a paper's OWN DOI, so warming those fills the cache for all of
+        # them at once. Without this the run proceeds at one round-trip per paper
+        # (~8/second however fast the connection), because each lookup happens in
+        # the middle of classifying its own paper and nothing overlaps.
+        if crossref != "off":
+            data_quality.prefetch(
+                [((p.get("externalIds") or {}).get("DOI") or "").strip()
+                 for p, _r, use_cr in staged if use_cr],
+                # Nothing finishes during a prefetch, so the paper counter cannot
+                # move; the heartbeat keeps the rate, the estimate and the lookup
+                # tally updating so the wait still reads as work.
+                on_progress=progress.heartbeat)
+
+        # Pass 3 — finish each paper. Every Crossref call below is a cache hit.
+        for paper, r, use_cr in staged:
+            r["data_quality"] = input_quality.validate_input(paper, use_crossref=use_cr)
+            # The DOI resolvers all hit the network (Crossref), so they only run
+            # when Crossref is enabled.  With --crossref off (or no internet — see
+            # resolve_crossref_mode) the whole pass is purely offline and cannot
+            # stall on a slow connection.
+            if use_cr:
+                resolve_review(r, paper, index)
+            results.append(r)
+            progress.tick()
     progress.close()
     return results, sorted(corpus_files), n_excluded
+
+
+def _batched(iterable, size):
+    """Yield lists of up to *size* items — the corpus in bites, not all at once.
+
+    The corpus is streamed rather than held in memory, so batching is what lets a
+    group of DOIs be fetched together without loading every paper first.
+    """
+    batch = []
+    for item in iterable:
+        batch.append(item)
+        if len(batch) >= size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
 
 
 def load_corpus(progress=None):

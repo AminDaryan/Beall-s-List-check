@@ -95,6 +95,22 @@ class Progress:
         self._last = now
         self._emit()
 
+    def heartbeat(self):
+        """Re-print the current line without advancing the count.
+
+        For a stretch that is slow but finishes no items — the concurrent
+        Crossref prefetch, which spends half a minute filling the cache before a
+        single paper can be completed.  The counter stands still (nothing
+        finished, and claiming otherwise would be a lie) while the rate, the
+        estimate and the note keep moving, so the lookups can be watched climbing
+        and the reader can tell waiting from hanging.
+        """
+        now = time.time()
+        if (now - self._last) < self.every:
+            return
+        self._last = now
+        self._emit()
+
     def close(self):
         """Print a final line, so the last thing shown is the finished count.
 

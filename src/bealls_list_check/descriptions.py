@@ -144,6 +144,38 @@ SIGNAL_INFO = {
         "this is asserted as on_list. Example: a paper whose only listed signal is "
         "a frontiersin.org PDF, where the DOI registers the paper to Frontiers.",
     ),
+    # The three below come from re-checking a CLEAN verdict against the DOI. The
+    # matcher only ever sees Semantic Scholar's venue fields, so when those are
+    # wrong a paper in a listed venue is reported clean; these say the DOI proved
+    # otherwise. The first word of each is "the DOI" on purpose — it is the whole
+    # difference between them and the same-named signals above.
+    "domain_crossref_doi": (
+        "the DOI is registered to a listed website",
+        "on_list",
+        "Semantic Scholar reported a venue that is on no list, so this paper first "
+        "looked clean — but its DOI is registered (in Crossref, the publisher "
+        "registry) to a publisher website that IS listed. A website belongs to one "
+        "publisher, so this identifies the paper's real venue: Semantic Scholar had "
+        "the wrong journal for it. Example: a paper Semantic Scholar files under a "
+        "well-known conference whose DOI resolves to a listed publisher's own site.",
+    ),
+    "issn_crossref_doi": (
+        "the DOI is registered under a listed ISSN",
+        "on_list",
+        "As above, but matched on the ISSN Crossref records for the paper's DOI "
+        "rather than on the website. An ISSN identifies exactly one journal, so a "
+        "listed ISSN identifies the paper's real venue as that listed journal, "
+        "whatever venue Semantic Scholar reported.",
+    ),
+    "name_crossref_doi": (
+        "the DOI's journal name matches the list",
+        "review",
+        "The paper first looked clean, and the journal name Crossref records for its "
+        "DOI matches a listed name — but ONLY the name matches, and legitimate and "
+        "predatory journals share names (that is what a hijacked journal is). The "
+        "name alone cannot say which one this is, so it is raised for a human "
+        "instead of asserted.",
+    ),
 }
 
 # Plain-language name + weight for each list a match can come from.

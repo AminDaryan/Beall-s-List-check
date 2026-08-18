@@ -8,19 +8,30 @@ each case the paper's **DOI** is the authoritative tiebreaker: Crossref (the
 publisher-deposited registry) records which journal that exact paper was really
 published in.
 
-:func:`resolve_review` runs four resolvers over one result; each is a no-op
-unless the row is the specific kind of ``review`` it handles:
+:func:`resolve_review` runs five resolvers over one result; each is a no-op
+unless the row is the specific kind it handles.  Four settle a ``review``:
 
   * :func:`_clear_hijacked_if_genuine` — a hijacked-by-name review.
   * :func:`_resolve_alternate_url`     — an alternate-URL review.
   * :func:`_resolve_open_access_pdf`   — a free-PDF-on-a-listed-site review.
   * :func:`_resolve_name_exact`        — a name-matches-but-website-differs review.
 
+The fifth asks the opposite question of the papers nobody flagged:
+
+  * :func:`_flag_clean_if_crossref_venue_listed` — a ``clean`` verdict whose DOI
+    turns out to be registered to a LISTED venue, because the matcher only ever
+    saw Semantic Scholar's venue fields and those are sometimes simply wrong.
+
 The ONE rule they all obey: **only act on positive proof.**  A row is promoted to
 ``on_list`` only when the DOI confirms the listed venue, and cleared to ``clean``
 only when the DOI positively identifies the paper's own, unlisted venue (by
 domain/ISSN — never by a shared name).  Anything ambiguous stays ``review`` —
 a false clear is the one error this check must not make.
+
+That rule is why the fifth resolver is safe to act on rather than merely warn
+about: flagging a clean paper whose DOI is registered to a listed venue REMOVES a
+false clear instead of creating one, and its worst case is a false alarm carrying
+the evidence a human needs to dismiss it.
 
 Every resolver makes a (cached) Crossref lookup, so ``classify_corpus`` calls
 :func:`resolve_review` only when ``--crossref`` is enabled.
@@ -41,17 +52,24 @@ import data_quality                       # the shared, cached Crossref client
 
 
 def resolve_review(r, paper, index):
-    """Try to settle one ``review`` verdict using the paper's DOI.
+    """Settle one verdict using the paper's DOI.
 
-    Runs the four DOI resolvers in order (predatory-confirming ones first); each
-    no-ops unless ``r`` is the kind of review it handles.  Mutates ``r`` in place.
-    Called once per paper by ``classify_corpus``, but ONLY when Crossref is
-    enabled — these all hit the network.
+    Runs the four ``review`` resolvers in order (predatory-confirming ones
+    first), then the ``clean`` re-check; each no-ops unless ``r`` is the kind of
+    result it handles.  Mutates ``r`` in place.  Called once per paper by
+    ``classify_corpus``, but ONLY when Crossref is enabled — these all hit the
+    network.
+
+    The first four ask "is this ``review`` really predatory?".  The fifth asks
+    the opposite question of the papers nobody flagged — see
+    :func:`_flag_clean_if_crossref_venue_listed`.  It runs last so that a review
+    the resolvers above deliberately CLEARED is not immediately re-flagged by it.
     """
     _clear_hijacked_if_genuine(r, paper, index)
     _resolve_alternate_url(r, paper, index)
     _resolve_open_access_pdf(r, paper, index)
     _resolve_name_exact(r, paper, index)
+    _flag_clean_if_crossref_venue_listed(r, paper, index)
 
 
 # ---------------------------------------------------------------------------
@@ -476,3 +494,97 @@ def _mark_name_exact_cleared(r, who, detail, real_domain, how):
     r["cleared_reason"] = expl
     r["review_reason"] = ""
     r.setdefault("data_quality", []).append(expl)   # keep it visible on the Data-quality sheet
+
+
+# ---------------------------------------------------------------------------
+# (5) clean  ->  flag when the DOI's REGISTERED venue is listed after all
+# ---------------------------------------------------------------------------
+
+def _flag_clean_if_crossref_venue_listed(r, paper, index):
+    """Re-check a ``clean`` paper against the venue its DOI is registered to.
+
+    The four resolvers above all start from a ``review`` and ask whether it is
+    really predatory.  This one asks the opposite question of the papers nobody
+    flagged, because a ``clean`` verdict is only ever as good as the metadata it
+    was reached from: the matcher sees Semantic Scholar's venue fields and
+    nothing else, so when S2 carries the WRONG venue — a known and common failure
+    — a paper published in a listed venue is reported clean and no other stage
+    ever looks again.  Crossref records which venue actually registered this DOI,
+    which is the one authority on the question.
+
+    Three tiers, and the tier decides the verdict rather than just the wording:
+
+      * the DOI's registered publisher WEBSITE is listed        -> ``on_list``
+      * the DOI's registered ISSN is listed                     -> ``on_list``
+      * only the registered journal NAME matches an entry       -> ``review``
+
+    Domain and ISSN are identities: they name one venue and cannot be shared with
+    an unrelated journal, so they are asserted.  A name can be shared — that is
+    the whole hijacked-journal problem — so a name-only hit is raised for a human
+    instead of asserted, exactly as ``_hit`` already downgrades a name match
+    against a hijacked entry.
+
+    This is the one resolver that can make a verdict STRICTER rather than looser,
+    and that is deliberate: every other rule here obeys "only act on positive
+    proof" because a false CLEAR is the error this check must not make.  The same
+    rule points the other way here — acting on positive proof that a clean paper
+    belongs to a listed venue removes a false clear rather than creating one, and
+    the worst case is a false alarm a human can dismiss from the evidence
+    recorded below.
+
+    Never touches a paper an earlier resolver deliberately cleared
+    (``cleared_reason``): that decision was made from the DOI too, with evidence
+    specific to this paper, and re-flagging it here would silently overrule it.
+    """
+    if r["status"] != "clean" or r.get("cleared_reason"):
+        return
+    doi = ((paper.get("externalIds") or {}).get("DOI") or "").strip()
+    if not doi:
+        return                                          # no DOI -> nothing to ask Crossref
+    msg = data_quality._crossref_lookup(doi)
+    if not msg:
+        return                                          # not in Crossref / lookup failed
+    real_domain = _crossref_publisher_domain(msg)
+
+    # (1) The website the DOI resolves to is itself on a list.
+    if real_domain:
+        entry, _how = index.domain_match(real_domain)
+        if entry:
+            _flag_clean(r, entry, paper, doi, "on_list", "domain_crossref_doi",
+                        f"its publisher website ({real_domain})")
+            return
+
+    # (2) The ISSN the DOI is registered under is on a list.
+    for issn in sorted({normalize_issn(i) for i in (msg.get("ISSN") or [])
+                        if normalize_issn(i)}):
+        if issn in index.by_issn:
+            _flag_clean(r, _best(index.by_issn[issn]), paper, doi, "on_list",
+                        "issn_crossref_doi", f"its ISSN ({issn})")
+            return
+
+    # (3) Only the NAME matches -> a human decides, because names are shared.
+    cr_title = ((msg.get("container-title") or [""])[0] or "").strip()
+    nm = normalize_name(cr_title)
+    if nm and nm in index.by_name:
+        _flag_clean(r, _best(index.by_name[nm]), paper, doi, "review",
+                    "name_crossref_doi", f"its journal name ({cr_title!r})")
+
+
+def _flag_clean(r, entry, paper, doi, status, matched_on, matched_by):
+    """Move a clean paper to *status*, recording what Crossref showed and why."""
+    pv = paper.get("publicationVenue") or {}
+    s2_venue = pv.get("name") or paper.get("venue") or ""
+    _hit(r, entry, status, matched_on)
+    r["review_reason"] = _review_reason(r)     # "" once on_list; real text if downgraded
+    said = f"reported this paper's venue as {s2_venue!r}" if s2_venue else \
+           "recorded no venue for this paper"
+    note = (f"Found by re-checking a clean verdict against the DOI. Semantic Scholar "
+            f"{said}, which is on no list being screened against — but the paper's DOI "
+            f"({doi}) is registered to '{entry['name']}', which IS listed, matched by "
+            f"{matched_by}. Semantic Scholar's venue was wrong or incomplete for this "
+            f"paper, so the clean verdict was reached from the wrong journal."
+            + ("" if status == "on_list" else
+               " Only the NAME matches, and journal names are shared by legitimate and "
+               "predatory venues alike, so this is raised for a human rather than "
+               "asserted."))
+    r.setdefault("data_quality", []).append(note)
