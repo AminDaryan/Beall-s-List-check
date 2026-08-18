@@ -45,10 +45,10 @@ website, or exact journal name — and names which one for the audit trail. For 
 `name_exact` or hijacked review the *name* signal is disabled (`allow_name=False`),
 because the name is the very thing in doubt; only domain/ISSN can discriminate.
 
-## The four resolvers
+## The five resolvers
 
-`resolve_review()` runs four resolvers over one result; each is a no-op unless the
-row is the specific kind of `review` it handles:
+`resolve_review()` runs five resolvers over one result; each is a no-op unless the
+row is the specific kind it handles. The first four settle a `review`:
 
 | Resolver | Handles | Outcome |
 |---|---|---|
@@ -57,8 +57,56 @@ row is the specific kind of `review` it handles:
 | `_resolve_open_access_pdf` | a `domain_open_access_pdf` review | DOI says the listed PDF host **published** it → `on_list`; DOI identifies the paper's own unlisted venue (PDF merely re-hosted) → `clean`; else `review`. |
 | `_resolve_name_exact` | a `name_exact` review | DOI's venue **is** the listed journal (domain/ISSN only) → `on_list`; DOI identifies a different same-named unlisted venue → `clean`; else `review`. |
 
-Every promotion or clearance records a plain-English note on the **Data quality**
-sheet explaining the doubt and how the DOI resolved it.
+The fifth asks the opposite question, of the papers nobody flagged:
+
+| Resolver | Handles | Outcome |
+|---|---|---|
+| `_flag_clean_if_crossref_venue_listed` | a `clean` verdict with a DOI | DOI's registered publisher **website** is listed → `on_list`; its registered **ISSN** is listed → `on_list`; only the registered **name** matches → `review`; otherwise untouched. |
+
+### Why a `clean` verdict is re-checked at all
+
+A `clean` verdict is only ever as good as the metadata behind it. `match.py` sees
+Semantic Scholar's venue fields and nothing else, so when those are wrong — a
+known and common failure — a paper published in a listed venue is reported
+`clean` and no later stage looks again. Crossref records which venue actually
+registered the DOI, and that is the one authority on the question.
+
+Measured on 1,500 papers of a real corpus: 4 caught, every one a Frontiers
+journal whose abbreviated Semantic Scholar name (`Frontiers Artif. Intell.`)
+matches no list entry while its DOI resolves to the listed `frontiersin.org`.
+
+The tier decides the verdict, not just the wording. A domain and an ISSN each
+identify exactly one venue, so they are asserted; a *name* is shared between
+legitimate and predatory journals — that is what a hijacked journal is — so a
+name-only hit is raised for a human rather than asserted.
+
+This is the only resolver that makes a verdict **stricter**, which follows the
+positive-proof rule rather than breaking it: acting on proof that a clean paper
+belongs to a listed venue *removes* a false clear instead of creating one, and
+its worst case is a false alarm carrying the evidence to dismiss it. It never
+touches a paper an earlier resolver deliberately cleared (`cleared_reason`) —
+that decision was made from the DOI too, on evidence specific to that paper.
+
+Every promotion, clearance or re-flag records a plain-English note on the **Data
+quality** sheet explaining the doubt and how the DOI resolved it.
+
+## What is never asked of Crossref
+
+Two DOI prefixes' worth of requests are skipped rather than sent, because their
+answer is known: a DOI registered with **DataCite** (arXiv `10.48550`, Zenodo,
+figshare, Dryad, OSF) is absent from Crossref *by definition*. Asking is a
+guaranteed-wasted round-trip, and reporting the miss as "not found in the
+publisher registry" reads as a red flag when it is the correct and expected
+answer for a preprint. On a machine-learning corpus this is not a detail: 42% of
+one 18,096-DOI corpus was arXiv.
+
+Lookups are also **batched and fetched concurrently** rather than made one at a
+time in the middle of classifying each paper — see `bealls_list_check.CROSSREF_BATCH`
+and `data_quality.prefetch()`. Setting `CROSSREF_MAILTO` in `.env` identifies the
+tool to Crossref and moves it into the *polite pool* (10 requests/second with
+concurrency 3, against 5/second with concurrency 1 anonymous); a shared rate
+limiter holds just under whichever ceiling applies. Together these took an
+18,482-paper run from ~38 minutes to ~20, with more checking done, not less.
 
 ## Data-quality resolution of "merged venues"
 

@@ -126,6 +126,15 @@ def _state_line(module, state, title):
                 f"downloaded {_age_human(state['age_days'])}"), "bl-dir-present"
 
 
+def _host(url):
+    """The bare host of a URL — what a reader recognises a source by.
+
+    A full URL in a table cell is mostly punctuation, and the path adds nothing
+    a name and a link do not already say.
+    """
+    return re.sub(r"^www\.", "", re.sub(r"^https?://", "", url or "").split("/")[0])
+
+
 def _plain(text):
     """Tag-free, entity-free text, for somewhere only plain text renders.
 
@@ -136,29 +145,21 @@ def _plain(text):
     return html.unescape(re.sub(r"<[^>]+>", "", text)).replace("\xa0", " ")
 
 
-def _md_tip(text):
-    """A "?" carrying *text* as a hover tooltip, for a Markdown-only slot.
-
-    Streamlit's ``help=`` belongs to a radio as a whole, so it can only ever sit
-    against the group's label — and there is no group label here any more.  A
-    Markdown link title is the one tooltip a caption can carry, so the answer to
-    "what does this option cost me?" can sit against the option it is about
-    rather than above both of them.  The title is one line: the syntax ends at a
-    newline and at an unescaped quote.
-    """
-    clean = " ".join(_plain(text).split()).replace('"', "'")
-    return f'[?](# "{clean}")'
-
-
 def _directory(module, *, title, key, searched_by, about, online, local, help_text):
     """One directory: what it is, where it is searched, and what is on disk.
 
-    Two bands now, not three.  Everything that describes the directory rather
-    than changing it — what it is, which of Step 3's boxes searches it, and what
-    is on disk right now — hangs off the "?" beside the name, because it is read
-    once and then never again, while the choice under it is the whole reason to
-    open this page.  The control names both answers and prices both in the
-    captions, and each caption carries its own "?" for the detail behind it.
+    Two bands now, not three, and ONE place to ask for detail.  Everything that
+    describes the directory rather than changing it — what it is, which of Step
+    3's boxes searches it, how the two answers differ, and what is on disk right
+    now — hangs off the single "?" beside the name.  The captions under the
+    options carry the part that decides the choice: what each one costs.
+
+    There were briefly two question marks, a second one inside the Online
+    caption.  In a Markdown-only slot it could only render as a bare glyph — no
+    border, no button, nothing to say it could be hovered — so it read as a typo
+    in the middle of a sentence and wrapped the caption onto a second line.  A
+    help affordance that has to be explained is not one, and a section this small
+    does not have room for two.
     """
     on = module.held()
     state = module.status()
@@ -166,12 +167,11 @@ def _directory(module, *, title, key, searched_by, about, online, local, help_te
     st.markdown(
         f"<div class='bl-dir-name'>{title} "
         f"<span class='bl-help bl-dir-q' title='"
-        f"{html.escape(_plain(f'{searched_by} {about} {line}'), quote=True)}'>?</span>"
-        f"</div>", unsafe_allow_html=True)
+        f"{html.escape(_plain(f'{searched_by} {about} {help_text} {line}'), quote=True)}'>"
+        f"?</span></div>", unsafe_allow_html=True)
 
     choice = st.radio(f"Where {title} is searched", [ONLINE, LOCAL],
-                      index=1 if on else 0,
-                      captions=[f"{_md_tip(help_text)} {online}", local],
+                      index=1 if on else 0, captions=[online, local],
                       horizontal=True, key=f"where_{key}",
                       label_visibility="collapsed")
 
@@ -242,47 +242,79 @@ def _reference_lists_block():
         "snapshot, so a run can be repeated and get the same answer — the workbook's "
         "Summary records which lists and which dates produced it.")
 
+    # One row per list, under a header — a reader comparing two catalogues is
+    # asking the same four questions of each, and stacked prose makes that a
+    # scroll instead of a glance.
+    widths = [2.0, 1.5, 4.6, 2.0, 2.4, 1.5]
+    head = st.columns(widths, vertical_alignment="bottom")
+    for col, name in zip(head, ("List", "Source", "What it covers", "Kept up to date",
+                                "On this computer", "")):
+        col.markdown(f"<div class='bl-th'>{name}</div>", unsafe_allow_html=True)
+
     for pid in reference_lists.ids():
         state = reference_lists.status(pid)
         label = reference_lists.label(pid)
-        st.markdown(f"<div class='bl-dir-name'>{label}</div>"
-                    f"<div class='bl-dir-about'>{reference_lists.home(pid)}</div>",
-                    unsafe_allow_html=True)
+        vendored = reference_lists.is_vendored(pid)
+        home = reference_lists.home(pid)
+        row = st.columns(widths, vertical_alignment="top")
 
-        if reference_lists.is_vendored(pid):
-            st.markdown(
-                f"<div class='bl-dir-state ok'>Ships with the tool — "
-                f"{state['entries']} entries, nothing to download.</div>",
-                unsafe_allow_html=True)
+        row[0].markdown(f"<div class='bl-td bl-td-name'>{label}</div>",
+                        unsafe_allow_html=True)
+        row[1].markdown(
+            f"<div class='bl-td'><a href='{home}' target='_blank' "
+            f"rel='noopener'>{_host(home)}</a></div>", unsafe_allow_html=True)
+        row[2].markdown(f"<div class='bl-td'>{reference_lists.description(pid)}</div>",
+                        unsafe_allow_html=True)
+
+        # How a copy is REFRESHED — never whether a run queries the list live.
+        # Every run reads a dated snapshot from this computer, which is what lets
+        # the same papers be checked twice and answer the same; see
+        # reference_lists.has_api.
+        if reference_lists.has_api(pid):
+            access, access_note = "Online — their API", ("An update asks the "
+                                                         "publisher's API what changed.")
+        else:
+            access, access_note = "Offline — read from the page", (
+                "The publisher serves no API, so an update re-reads their website.")
+        row[3].markdown(
+            f"<div class='bl-td'><span class='bl-help' "
+            f"title='{html.escape(access_note, quote=True)}'>{access}</span></div>",
+            unsafe_allow_html=True)
+
+        if vendored:
+            row[4].markdown(
+                f"<div class='bl-td bl-td-ok'>Ships with the tool<br>"
+                f"<span class='bl-dir-sub'>{state['entries']} entries · "
+                f"nothing to download</span></div>", unsafe_allow_html=True)
+            row[5].markdown("<div class='bl-td bl-dir-sub'>—</div>",
+                            unsafe_allow_html=True)
             continue
 
         if state["error"]:
-            tone, line = "warn", f"⚠️ {state['error']}"
+            cell = f"<div class='bl-td bl-td-warn'>⚠️ {state['error']}</div>"
         elif not state["held"]:
-            tone, line = "warn", "Not on this computer. Step 3 offers it greyed out until it is."
+            cell = ("<div class='bl-td bl-td-warn'>Not on this computer<br>"
+                    "<span class='bl-dir-sub'>Step 3 offers it greyed out "
+                    "until it is</span></div>")
         else:
             age = state["age_days"]
             when = "today" if age == 0 else f"{age} day(s) ago"
-            size = _bytes_human(state["bytes"])
             parts = ", ".join(f"{n} {k.replace('_', ' ')}"
                               for k, n in sorted(state["counts"].items(),
                                                  key=lambda kv: -kv[1]))
-            tone = "ok"
-            line = (f"{state['entries']} entries · {size} · downloaded {when}"
-                    + (f"<br><span class='bl-dir-sub'>{parts}</span>" if parts else ""))
-        st.markdown(f"<div class='bl-dir-state {tone}'>{line}</div>",
-                    unsafe_allow_html=True)
+            cell = (f"<div class='bl-td bl-td-ok'>{state['entries']} entries · "
+                    f"{_bytes_human(state['bytes'])}<br><span class='bl-dir-sub'>"
+                    f"downloaded {when}" + (f" · {parts}" if parts else "")
+                    + "</span></div>")
+        row[4].markdown(cell, unsafe_allow_html=True)
 
-        col_a, col_b = st.columns([1, 3])
-        with col_a:
-            label_btn = "Update" if state["held"] else "Download"
-            clicked = st.button(f"{label_btn} {label}", key=f"fetch_{pid}")
-        with col_b:
-            st.caption(
-                "Checks for changes in a single request and fetches only what "
-                "changed; the first download is larger."
-                if state["held"] else
-                "One download, then kept on this computer.")
+        with row[5]:
+            clicked = st.button("Update" if state["held"] else "Download",
+                                key=f"fetch_{pid}", width="stretch",
+                                help=("Checks for changes and fetches only those; "
+                                      "the first download is larger."
+                                      if state["held"] else
+                                      "One download, then kept on this computer."))
 
         if clicked:
             bar = st.progress(0.0, text=f"Fetching {label}…")

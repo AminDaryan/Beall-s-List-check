@@ -42,6 +42,24 @@ def home(pid):
     return PROVIDERS.get(pid, {}).get("home", "")
 
 
+def description(pid):
+    """What the list covers and how far it can be trusted, in a sentence or two."""
+    return PROVIDERS.get(pid, {}).get("description", "")
+
+
+def has_api(pid):
+    """True when the publisher serves the list over an API.
+
+    Decides only how a COPY is obtained and refreshed — never whether a run
+    queries it live.  A run matches every paper against the whole list (by
+    domain, ISSN, exact name and fuzzy name), so the list has to be in memory;
+    and a check whose answer depends on what a website returned that afternoon
+    could not be repeated, which for this tool is the point.  A list with an API
+    is one an update can ask "what changed?" instead of re-reading in full.
+    """
+    return bool(PROVIDERS.get(pid, {}).get("api"))
+
+
 def is_vendored(pid):
     """True when the list ships with the tool and needs no download.
 

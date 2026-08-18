@@ -71,7 +71,7 @@ script.)
 |---|---|
 | `bealls_list_check.py` | Conductor and command-line interface. Orchestrates the pipeline; contains no classification or rendering logic of its own. |
 | `match/match.py` ([`README`](src/bealls_list_check/match/README.md)) | Determines each paper's verdict from Semantic Scholar metadata (domain, ISSN, exact-name, and fuzzy-name signals). Defines `BeallIndex` and the result dictionary. |
-| `resolve/resolve.py` ([`README`](src/bealls_list_check/resolve/README.md)) | Upgrades or clears a `review` verdict using the paper's DOI via Crossref (four resolvers behind `resolve_review`). Network-dependent; invoked whenever Crossref is enabled (the default when online). |
+| `resolve/resolve.py` ([`README`](src/bealls_list_check/resolve/README.md)) | Upgrades or clears a `review` verdict using the paper's DOI via Crossref, and re-checks a `clean` one against the venue its DOI is registered to (five resolvers behind `resolve_review`). Network-dependent; invoked whenever Crossref is enabled (the default when online). |
 | `data_quality.py` | Structural and consistency checks on each Semantic Scholar record, and the cached Crossref client through which all network lookups pass. |
 | `descriptions.py` | All human-readable text presented in the workbook: signal explanations, Beall-list names, and the Legend sheet content. Contains no I/O and no layout code. |
 | `report.py` | Renders the Excel workbook with openpyxl (sheets, per-paper blocks, merges, fonts, colours). Contains no classification logic; its text is sourced from `descriptions.py`. |

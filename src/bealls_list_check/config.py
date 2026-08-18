@@ -50,6 +50,16 @@ PROVIDERS = {
         "home": "https://beallslist.net",
         # Shipped with the repo, so a clone can run offline with no download.
         "vendored": True,
+        # What a reader has to know to weigh a hit from this list, said in the
+        # table rather than left to be discovered in the workbook's caveat.
+        "description": (
+            "Jeffrey Beall's lists of potentially predatory publishers and "
+            "standalone journals, kept as an unofficial archived copy since he "
+            "withdrew the originals in 2017. Contested, and an allegation as of "
+            "the scrape date rather than proof."),
+        # Read by scraping the site's HTML: no API is published, so an update is
+        # a re-scrape rather than a query.
+        "api": False,
     },
     "kscien": {
         "label": "Kscien's list",
@@ -62,6 +72,13 @@ PROVIDERS = {
         # told to fetch one rather than silently checking against nothing.
         "vendored": False,
         "fetch_with": "fetch_kscien/fetch_kscien.py",
+        "description": (
+            "The Kscien Organization's five non-recommended lists — publishers, "
+            "standalone journals, hijacked journals, conferences and metrics "
+            "companies. Still maintained, unlike Beall's frozen copy."),
+        # Served by the site's WordPress REST API, so an update asks what changed
+        # instead of re-reading everything (see fetch_kscien/fetch_kscien.py).
+        "api": True,
     },
 }
 

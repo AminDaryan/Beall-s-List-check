@@ -743,6 +743,24 @@ div[class*="st-key-venuebox-"] [data-testid="stMarkdownContainer"] {margin:0;}
               margin:.1rem 0 .1rem;}
 .bl-dir-about {font-size:.84rem; line-height:1.5; color:var(--bl-fg-muted);
                margin-bottom:.55rem;}
+/* ── The reference-list table ──────────────────────────────────────────────
+   One row per published list, because a reader choosing between catalogues asks
+   the same questions of each and stacked prose makes that a scroll rather than a
+   glance.  Built from st.columns rather than a real <table>: the last cell holds
+   a working button, which no markdown table can carry. */
+.bl-th {font-size:.72rem; font-weight:700; letter-spacing:.04em;
+        text-transform:uppercase; color:var(--bl-fg-muted);
+        padding:0 0 .3rem; border-bottom:1px solid var(--bl-border);}
+.bl-td {font-size:.84rem; line-height:1.5; padding:.55rem 0 .5rem;
+        color:var(--bl-fg-muted);}
+/* The name is what the eye lands on when scanning the column of lists. */
+.bl-td-name {font-weight:700; color:var(--bl-fg); font-size:.92rem;}
+/* Present and absent are stated in the text; colour only reinforces it, so that
+   the table still reads correctly in monochrome or to a colour-blind reader. */
+.bl-td-ok {color:var(--bl-fg);}
+.bl-td-warn {color:var(--bl-fg);}
+.bl-dir-sub {font-size:.78rem; color:var(--bl-fg-muted); line-height:1.45;}
+
 /* The "?" beside a directory's name, holding everything that describes it rather
    than changes it. Muted and small: it is an offer of detail, not a warning, and
    the name it follows has to stay the thing the eye lands on. */
