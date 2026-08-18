@@ -126,6 +126,26 @@ def _state_line(module, state, title):
                 f"downloaded {_age_human(state['age_days'])}"), "bl-dir-present"
 
 
+# Streamlit's own help glyph, copied from what it renders for a widget's
+# ``help=``.  This page draws some of its help marks by hand, because a heading
+# and a table cell take no ``help=`` argument, and a hand-drawn "?" beside a
+# built-in one is two different marks for one meaning.  Same SVG, same 16px, same
+# currentColor stroke, so a reader sees one symbol throughout.
+_HELP_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" '
+    'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" '
+    'focusable="false"><circle cx="12" cy="12" r="10"></circle>'
+    '<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>'
+    '<line x1="12" y1="17" x2="12.01" y2="17"></line></svg>')
+
+
+def _help(title):
+    """Streamlit's help mark, carrying *title* as its hover text."""
+    return (f"<span class='bl-help bl-q' title='"
+            f"{html.escape(_plain(title), quote=True)}'>{_HELP_SVG}</span>")
+
+
 def _host(url):
     """The bare host of a URL — what a reader recognises a source by.
 
@@ -164,11 +184,9 @@ def _directory(module, *, title, key, searched_by, about, online, local, help_te
     on = module.held()
     state = module.status()
     line, _tone = _state_line(module, state, title)
-    st.markdown(
-        f"<div class='bl-dir-name'>{title} "
-        f"<span class='bl-help bl-dir-q' title='"
-        f"{html.escape(_plain(f'{searched_by} {about} {help_text} {line}'), quote=True)}'>"
-        f"?</span></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='bl-dir-name'>{title} "
+                f"{_help(f'{searched_by} {about} {help_text} {line}')}</div>",
+                unsafe_allow_html=True)
 
     choice = st.radio(f"Where {title} is searched", [ONLINE, LOCAL],
                       index=1 if on else 0, captions=[online, local],
@@ -247,9 +265,9 @@ def _reference_lists_block():
     # scroll instead of a glance.
     # Sized to what each column holds: a sentence or two of description, against
     # short facts either side of it.
-    widths = [1.8, 1.4, 4.0, 1.8, 2.4, 1.3]
+    widths = [1.8, 1.4, 4.4, 2.4, 1.3]
     head = st.columns(widths, vertical_alignment="bottom")
-    for col, name in zip(head, ("List", "Source", "What it covers", "How it updates",
+    for col, name in zip(head, ("List", "Source", "What it covers",
                                 "On this computer", "")):
         col.markdown(f"<div class='bl-th'>{name}</div>", unsafe_allow_html=True)
     # One rule under the whole row, not one per cell. Per-cell borders left a
@@ -271,27 +289,20 @@ def _reference_lists_block():
         row[2].markdown(f"<div class='bl-td'>{reference_lists.description(pid)}</div>",
                         unsafe_allow_html=True)
 
-        # How a fresh copy is FETCHED. Not whether a run queries the list live:
-        # every run reads a dated snapshot held on this computer, which is what
-        # lets the same papers be checked twice and answer the same.
-        if reference_lists.has_api(pid):
-            how, how_note = "Asks their API", ("Kscien serves the list over an API, "
-                                               "so an update asks what changed.")
-        else:
-            how, how_note = "Re-reads their site", ("No API is published, so an "
-                                                    "update reads the pages again.")
-        row[3].markdown(
-            f"<div class='bl-td'><span class='bl-help' "
-            f"title='{html.escape(how_note, quote=True)}'>{how}</span></div>",
-            unsafe_allow_html=True)
+        # The counts live on the hover, not in the cell. Spelled out they ran to
+        # ten wrapped lines in a column sized for two, and the total repeated a
+        # number the breakdown already adds up to.
+        counted = " · ".join(f"{k.replace('_', ' ')}: {n:,}"
+                             for k, n in sorted(state["counts"].items(),
+                                                key=lambda kv: -kv[1]))
+        tip = f"{state['entries']:,} entries" + (f" — {counted}" if counted else "")
 
         # Shipping with the tool and being updatable are different questions, and
         # answering only the first is what left Beall's List with no button —
         # reading as "this list cannot be updated" when its scraper had been in
         # the repository all along.
         if vendored:
-            cell = (f"<div class='bl-td bl-td-ok'>Ships with the tool<br>"
-                    f"<span class='bl-dir-sub'>{state['entries']:,} entries</span></div>")
+            cell = f"<div class='bl-td bl-td-ok'>Ships with the tool {_help(tip)}</div>"
         elif state["error"]:
             cell = f"<div class='bl-td bl-td-warn'>⚠️ {state['error']}</div>"
         elif not state["held"]:
@@ -301,25 +312,16 @@ def _reference_lists_block():
         else:
             age = state["age_days"]
             when = "today" if age == 0 else f"{age} day(s) ago"
-            # The per-list breakdown goes on the hover, not in the cell. Spelled
-            # out it ran to ten wrapped lines in a column this narrow — six counts
-            # in a space sized for two — which buried the two facts a reader came
-            # for: how many entries, and how old.
-            parts = " · ".join(f"{k.replace('_', ' ')}: {n:,}"
-                               for k, n in sorted(state["counts"].items(),
-                                                  key=lambda kv: -kv[1]))
-            cell = (f"<div class='bl-td bl-td-ok'><span class='bl-help' title='"
-                    f"{html.escape(parts, quote=True)}'>{state['entries']:,} entries · "
-                    f"{_bytes_human(state['bytes'])}</span><br>"
-                    f"<span class='bl-dir-sub'>downloaded {when}</span></div>")
-        row[4].markdown(cell, unsafe_allow_html=True)
+            cell = (f"<div class='bl-td bl-td-ok'>{_bytes_human(state['bytes'])} · "
+                    f"downloaded {when} {_help(tip)}</div>")
+        row[3].markdown(cell, unsafe_allow_html=True)
 
         if reference_lists.fetch_command(pid) is None:
-            row[5].markdown("<div class='bl-td bl-dir-sub'>—</div>",
+            row[4].markdown("<div class='bl-td bl-dir-sub'>—</div>",
                             unsafe_allow_html=True)
             continue
 
-        with row[5]:
+        with row[4]:
             clicked = st.button("Download" if not (state["held"] or vendored)
                                 else "Update",
                                 key=f"fetch_{pid}", width="stretch",
