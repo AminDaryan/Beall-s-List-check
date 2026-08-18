@@ -40,6 +40,7 @@ for _p in [_UI, *(d for d in _UI.iterdir() if d.is_dir() and any(d.glob("*.py"))
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+import components
 import notices
 import results
 import runners
@@ -941,9 +942,8 @@ def _step_run(checker, items, llm, options):
         summary.insert(1, ("LLM", *llm_cell))
 
     def _cell(k, v, cls, why):
-        attrs = (f" class='bl-sum-v {cls} bl-help' title='{html.escape(why, quote=True)}'"
-                 if why else f" class='bl-sum-v {cls}'")
-        return f"<div><span class='bl-sum-k'>{k}</span><span{attrs}>{v}</span></div>"
+        value = components.hint(v, why, cls=f"bl-sum-v {cls}")
+        return f"<div><span class='bl-sum-k'>{k}</span>{value}</div>"
 
     # Keyed so that the screenshot script can wait on this summary — the one place
     # that states which check a press of Run would actually start.

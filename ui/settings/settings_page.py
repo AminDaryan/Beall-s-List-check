@@ -21,7 +21,6 @@ Nothing is downloaded until "on this computer" is chosen — which is the point.
 first run of this app should cost nothing it was not asked for.
 """
 
-import html
 import re
 import streamlit as st
 
@@ -43,6 +42,7 @@ import crossref
 import doaj
 import styles
 import venue_lists
+import components
 import reference_lists
 import venue_lookup
 from notices import flush_notices, notify_next_run
@@ -126,48 +126,6 @@ def _state_line(module, state, title):
                 f"downloaded {_age_human(state['age_days'])}"), "bl-dir-present"
 
 
-# Streamlit's own help glyph, copied from what it renders for a widget's
-# ``help=``.  This page draws some of its help marks by hand, because a heading
-# and a table cell take no ``help=`` argument, and a hand-drawn "?" beside a
-# built-in one is two different marks for one meaning.  Same SVG, same 16px, same
-# currentColor stroke, so a reader sees one symbol throughout.
-_HELP_SVG = (
-    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" '
-    'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
-    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" '
-    'focusable="false"><circle cx="12" cy="12" r="10"></circle>'
-    '<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>'
-    '<line x1="12" y1="17" x2="12.01" y2="17"></line></svg>')
-
-
-def _help(title):
-    """Streamlit's help mark, carrying *title* as its hover text."""
-    return (f"<span class='bl-help bl-q' title='"
-            f"{html.escape(_plain(title), quote=True)}'>{_HELP_SVG}</span>")
-
-
-def _ring(fraction, label=""):
-    """A progress ring with the percentage inside it, sized like the button.
-
-    Drawn where the Update button was, rather than as a full-width bar under the
-    table: the work belongs to one row, and a bar spanning the page says it
-    belongs to the page.  An SVG circle whose dash offset is the remaining
-    fraction — no library, no animation frames, one redraw per progress line.
-    """
-    frac = max(0.0, min(1.0, fraction))
-    r = 15                                     # radius; 2πr is the full sweep
-    circumference = 2 * 3.14159 * r
-    return (
-        f"<div class='bl-ring' title='{html.escape(label, quote=True)}'>"
-        f"<svg viewBox='0 0 40 40'>"
-        f"<circle cx='20' cy='20' r='{r}' class='bl-ring-track'></circle>"
-        f"<circle cx='20' cy='20' r='{r}' class='bl-ring-arc' "
-        f"stroke-dasharray='{circumference:.1f}' "
-        f"stroke-dashoffset='{circumference * (1 - frac):.1f}'></circle>"
-        f"<text x='20' y='20' class='bl-ring-pct'>{round(frac * 100)}%</text>"
-        f"</svg></div>")
-
-
 def _host(url):
     """The bare host of a URL — what a reader recognises a source by.
 
@@ -175,16 +133,6 @@ def _host(url):
     a name and a link do not already say.
     """
     return re.sub(r"^www\.", "", re.sub(r"^https?://", "", url or "").split("/")[0])
-
-
-def _plain(text):
-    """Tag-free, entity-free text, for somewhere only plain text renders.
-
-    The prose here is written as HTML because that is how the page draws it; a
-    ``title`` attribute and a Markdown link title both show the characters they
-    are given, so a ``<b>`` or a ``&nbsp;`` would be read out literally.
-    """
-    return html.unescape(re.sub(r"<[^>]+>", "", text)).replace("\xa0", " ")
 
 
 def _directory(module, *, title, key, searched_by, about, online, local, help_text):
@@ -207,7 +155,7 @@ def _directory(module, *, title, key, searched_by, about, online, local, help_te
     state = module.status()
     line, _tone = _state_line(module, state, title)
     st.markdown(f"<div class='bl-dir-name'>{title} "
-                f"{_help(f'{searched_by} {about} {help_text} {line}')}</div>",
+                f"{components.help_icon(f'{searched_by} {about} {help_text} {line}')}</div>",
                 unsafe_allow_html=True)
 
     choice = st.radio(f"Where {title} is searched", [ONLINE, LOCAL],
@@ -325,7 +273,7 @@ def _reference_lists_block():
         # reading as "this list cannot be updated" when its scraper had been in
         # the repository all along.
         if vendored:
-            cell = f"<div class='bl-td bl-td-ok'>Ships with the tool {_help(tip)}</div>"
+            cell = f"<div class='bl-td bl-td-ok'>Ships with the tool {components.help_icon(tip)}</div>"
         elif state["error"]:
             cell = f"<div class='bl-td bl-td-warn'>⚠️ {state['error']}</div>"
         elif not state["held"]:
@@ -336,7 +284,7 @@ def _reference_lists_block():
             age = state["age_days"]
             when = "today" if age == 0 else f"{age} day(s) ago"
             cell = (f"<div class='bl-td bl-td-ok'>{_bytes_human(state['bytes'])} · "
-                    f"downloaded {when} {_help(tip)}</div>")
+                    f"downloaded {when} {components.help_icon(tip)}</div>")
         row[3].markdown(cell, unsafe_allow_html=True)
 
         if reference_lists.fetch_command(pid) is None:
@@ -377,11 +325,11 @@ def _run_fetch(pid, slot):
         m = step.search(line)
         if m and int(m.group(2)):
             frac = min(int(m.group(1)) / int(m.group(2)), 1.0)
-            slot.markdown(_ring(frac, line.strip()), unsafe_allow_html=True)
+            slot.markdown(components.progress_ring(frac, line.strip()), unsafe_allow_html=True)
 
-    slot.markdown(_ring(0.0, f"Fetching {label}…"), unsafe_allow_html=True)
+    slot.markdown(components.progress_ring(0.0, f"Fetching {label}…"), unsafe_allow_html=True)
     ok, output = reference_lists.fetch(pid, on_line=on_line)
-    slot.markdown(_ring(1.0, f"{label}: done"), unsafe_allow_html=True)
+    slot.markdown(components.progress_ring(1.0, f"{label}: done"), unsafe_allow_html=True)
     if ok:
         notify_next_run(f"{label} is ready to use in Step 3.", icon="✅")
         st.rerun()

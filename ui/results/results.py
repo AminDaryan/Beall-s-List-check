@@ -27,6 +27,7 @@ for _p in [_UI, *(d for d in _UI.iterdir() if d.is_dir() and any(d.glob("*.py"))
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+import components
 import runners
 
 # In-process validator for the live "Input data quality" panel. The two path
@@ -57,10 +58,7 @@ def _chip(text, tone="mute", *, title=None, flow=False):
     because the margin would push it off the cell's vertical centre.
     """
     cls = f"bl-chip bl-{tone}" + (" bl-flow" if flow else "")
-    if not title:
-        return f"<span class='{cls}'>{text}</span>"
-    return (f"<span class='{cls} bl-help' "
-            f"title='{html.escape(title, quote=True)}'>{text}</span>")
+    return components.hint(text, title, cls=cls)
 
 
 def readable_on(fill: str) -> str:

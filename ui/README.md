@@ -8,6 +8,7 @@
 > | [`app.py`](app.py) | the four-step flow, and the navigation |
 > | [`venues/`](venues/README.md) | Step 3's venue boxes, and the two directories behind them |
 > | [`styles/`](styles/README.md) | the palette, the stylesheets, the venue column's geometry |
+> | [`components/`](components/README.md) | **the shared UI pieces every page is built from — read before changing any interface** |
 > | [`tutorial/`](tutorial/README.md) | the Tutorial page and the markdown it renders |
 > | [`results/`](results/README.md) | what a run gives back, on screen |
 > | [`settings/`](settings/README.md) | where each venue directory is searched |
